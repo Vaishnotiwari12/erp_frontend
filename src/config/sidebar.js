@@ -6,35 +6,7 @@
 // - Top-level items with `path` are direct links (no expand/collapse).
 // - Top-level items with `children` become collapsible dropdowns.
 
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  ClipboardList,
-  UserSquare,
-  BookOpen,
-  Layers,
-  Library,
-  CalendarClock,
-  CalendarCheck,
-  ClipboardCheck,
-  CalendarDays,
-  FileText,
-  CalendarRange,
-  Award,
-  IdCard,
-  Printer,
-  FileBadge,
-  ScrollText,
-  BarChart3,
-  IndianRupee,
-  School,
-  Building2,
-  Globe,
-  ShieldCheck,
-  Crown,
-  Settings,
-} from 'lucide-react'
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog } from 'lucide-react'
 
 export const sidebarItems = [
   {
@@ -113,6 +85,48 @@ export const sidebarItems = [
       { title: 'Fees Type', path: '/fees/type' },
       { title: 'Fees Discount', path: '/fees/discount' },
       { title: 'Fees Carry Forward', path: '/fees/carry-forward' },
+    ],
+  },
+  {
+    id: 'hr',
+    title: 'Human Resources',
+    icon: UsersRound,
+    children: [
+      { title: 'Staff Directory', path: '/hr/staff' },
+      { title: 'Staff Attendance', path: '/hr/attendance' },
+      { title: 'Payroll', path: '/hr/payroll' },
+      { title: 'Approve Leave', path: '/hr/approve-leave' },
+      { title: 'Apply Leave', path: '/hr/apply-leave' },
+      { title: 'Leave Types', path: '/hr/leave-types' },
+      { title: 'Teachers Rating', path: '/hr/teachers-rating' },
+      { title: 'Department', path: '/hr/departments' },
+      { title: 'Designation', path: '/hr/designations' },
+      { title: 'Disabled Staff', path: '/hr/disabled-staff' },
+    ],
+  },
+  {
+    id: 'front-office',
+    title: 'Front Office',
+    icon: ConciergeBell,
+    children: [
+      { title: 'Admission Enquiry', path: '/front-office/enquiry' },
+      { title: 'Visitor Book', path: '/front-office/visitor-book' },
+      { title: 'Phone Call Log', path: '/front-office/call-log' },
+      { title: 'Postal Dispatch', path: '/front-office/dispatch' },
+      { title: 'Postal Receive', path: '/front-office/receive' },
+      { title: 'Complaint', path: '/front-office/complaint' },
+      { title: 'Setup Front Office', path: '/front-office/setup' },
+    ],
+  },
+  {
+    id: 'library',
+    title: 'Library',
+    icon: LibraryIcon,
+    children: [
+      { title: 'Book List', path: '/library/books' },
+      { title: 'Issue / Return', path: '/library/issue-return' },
+      { title: 'Add Book', path: '/library/add-book' },
+      { title: 'Library Staff', path: '/library/staff' },
     ],
   },
   {

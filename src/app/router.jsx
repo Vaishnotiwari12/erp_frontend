@@ -53,6 +53,34 @@ const FeesGroupPage = lazy(() => import('@/pages/fees/FeesGroup'))
 const FeesTypePage = lazy(() => import('@/pages/fees/FeesType'))
 const FeesDiscountPage = lazy(() => import('@/pages/fees/FeesDiscount'))
 const FeesCarryForwardPage = lazy(() => import('@/pages/fees/FeesCarryForward'))
+
+// HR module — lazy-loaded so the bundle only downloads when a user visits HR pages
+const StaffDirectoryPage = lazy(() => import('@/pages/hr/StaffDirectoryPage'))
+const StaffAttendancePage = lazy(() => import('@/pages/hr/StaffAttendancePage'))
+const PayrollPage = lazy(() => import('@/pages/hr/PayrollPage'))
+const ApproveLeaveHRPage = lazy(() => import('@/pages/hr/ApproveLeaveHRPage'))
+const ApplyLeavePage = lazy(() => import('@/pages/hr/ApplyLeavePage'))
+const LeaveTypesPage = lazy(() => import('@/pages/hr/LeaveTypesPage'))
+const TeachersRatingPage = lazy(() => import('@/pages/hr/TeachersRatingPage'))
+const DepartmentPage = lazy(() => import('@/pages/hr/DepartmentPage'))
+const DesignationPage = lazy(() => import('@/pages/hr/DesignationPage'))
+const DisabledStaffPage = lazy(() => import('@/pages/hr/DisabledStaffPage'))
+
+// Front Office module — lazy-loaded so the bundle only downloads when a user visits Front Office pages
+const AdmissionEnquiryPage = lazy(() => import('@/pages/front-office/AdmissionEnquiryPage'))
+const VisitorBookPage = lazy(() => import('@/pages/front-office/VisitorBookPage'))
+const PhoneCallLogPage = lazy(() => import('@/pages/front-office/PhoneCallLogPage'))
+const PostalDispatchPage = lazy(() => import('@/pages/front-office/PostalDispatchPage'))
+const PostalReceivePage = lazy(() => import('@/pages/front-office/PostalReceivePage'))
+const ComplaintPage = lazy(() => import('@/pages/front-office/ComplaintPage'))
+const SetupFrontOfficePage = lazy(() => import('@/pages/front-office/SetupFrontOfficePage'))
+
+// Library module — lazy-loaded so the bundle only downloads when a user visits Library pages
+const BookListPage = lazy(() => import('@/pages/library/BookListPage'))
+const IssueReturnPage = lazy(() => import('@/pages/library/IssueReturnPage'))
+const AddBookPage = lazy(() => import('@/pages/library/AddBookPage'))
+const AddStaffMemberPage = lazy(() => import('@/pages/library/AddStaffMemberPage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -128,6 +156,33 @@ export default function AppRouter() {
             <Route path="/super-admin" element={<SuperAdminPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+
+            {/* ── Human Resources ── */}
+            <Route path="/hr/staff" element={<StaffDirectoryPage />} />
+            <Route path="/hr/attendance" element={<StaffAttendancePage />} />
+            <Route path="/hr/payroll" element={<PayrollPage />} />
+            <Route path="/hr/approve-leave" element={<ApproveLeaveHRPage />} />
+            <Route path="/hr/apply-leave" element={<ApplyLeavePage />} />
+            <Route path="/hr/leave-types" element={<LeaveTypesPage />} />
+            <Route path="/hr/teachers-rating" element={<TeachersRatingPage />} />
+            <Route path="/hr/departments" element={<DepartmentPage />} />
+            <Route path="/hr/designations" element={<DesignationPage />} />
+            <Route path="/hr/disabled-staff" element={<DisabledStaffPage />} />
+
+            {/* ── Front Office ── */}
+            <Route path="/front-office/enquiry" element={<AdmissionEnquiryPage />} />
+            <Route path="/front-office/visitor-book" element={<VisitorBookPage />} />
+            <Route path="/front-office/call-log" element={<PhoneCallLogPage />} />
+            <Route path="/front-office/dispatch" element={<PostalDispatchPage />} />
+            <Route path="/front-office/receive" element={<PostalReceivePage />} />
+            <Route path="/front-office/complaint" element={<ComplaintPage />} />
+            <Route path="/front-office/setup" element={<SetupFrontOfficePage />} />
+
+            {/* ── Library ── */}
+            <Route path="/library/books" element={<BookListPage />} />
+            <Route path="/library/issue-return" element={<IssueReturnPage />} />
+            <Route path="/library/add-book" element={<AddBookPage />} />
+            <Route path="/library/staff" element={<AddStaffMemberPage />} />
           </Route>
 
           {/* Errors */}

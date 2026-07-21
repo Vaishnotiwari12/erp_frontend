@@ -54,6 +54,27 @@ export const NAV_GROUPS = [
       { title: 'Settings', to: '/settings', icon: 'Settings' },
     ],
   },
+  {
+    label: 'Front Office',
+    items: [
+      { title: 'Admission Enquiry', to: '/front-office/enquiry', icon: 'ClipboardList' },
+      { title: 'Visitor Book', to: '/front-office/visitor-book', icon: 'DoorOpen' },
+      { title: 'Phone Call Log', to: '/front-office/call-log', icon: 'PhoneCall' },
+      { title: 'Postal Dispatch', to: '/front-office/dispatch', icon: 'Send' },
+      { title: 'Postal Receive', to: '/front-office/receive', icon: 'Inbox' },
+      { title: 'Complaint', to: '/front-office/complaint', icon: 'MessageSquare' },
+      { title: 'Setup Front Office', to: '/front-office/setup', icon: 'Settings' },
+    ],
+  },
+  {
+    label: 'Library',
+    items: [
+      { title: 'Book List', to: '/library/books', icon: 'Library' },
+      { title: 'Issue / Return', to: '/library/issue-return', icon: 'ArrowLeftRight' },
+      { title: 'Add Book', to: '/library/add-book', icon: 'BookPlus' },
+      { title: 'Library Staff', to: '/library/staff', icon: 'UserCog' },
+    ],
+  },
 ]
 
 export const APP_NAME = 'Scholaria ERP'
