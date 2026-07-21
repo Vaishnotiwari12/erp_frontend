@@ -75,6 +75,12 @@ const PostalReceivePage = lazy(() => import('@/pages/front-office/PostalReceiveP
 const ComplaintPage = lazy(() => import('@/pages/front-office/ComplaintPage'))
 const SetupFrontOfficePage = lazy(() => import('@/pages/front-office/SetupFrontOfficePage'))
 
+// Library module — lazy-loaded so the bundle only downloads when a user visits Library pages
+const BookListPage = lazy(() => import('@/pages/library/BookListPage'))
+const IssueReturnPage = lazy(() => import('@/pages/library/IssueReturnPage'))
+const AddBookPage = lazy(() => import('@/pages/library/AddBookPage'))
+const AddStaffMemberPage = lazy(() => import('@/pages/library/AddStaffMemberPage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -171,6 +177,12 @@ export default function AppRouter() {
             <Route path="/front-office/receive" element={<PostalReceivePage />} />
             <Route path="/front-office/complaint" element={<ComplaintPage />} />
             <Route path="/front-office/setup" element={<SetupFrontOfficePage />} />
+
+            {/* ── Library ── */}
+            <Route path="/library/books" element={<BookListPage />} />
+            <Route path="/library/issue-return" element={<IssueReturnPage />} />
+            <Route path="/library/add-book" element={<AddBookPage />} />
+            <Route path="/library/staff" element={<AddStaffMemberPage />} />
           </Route>
 
           {/* Errors */}

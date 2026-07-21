@@ -6,51 +6,7 @@
 // - Top-level items with `path` are direct links (no expand/collapse).
 // - Top-level items with `children` become collapsible dropdowns.
 
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  ClipboardList,
-  UserSquare,
-  BookOpen,
-  Layers,
-  Library,
-  CalendarClock,
-  CalendarCheck,
-  ClipboardCheck,
-  CalendarDays,
-  FileText,
-  CalendarRange,
-  Award,
-  IdCard,
-  Printer,
-  FileBadge,
-  ScrollText,
-  BarChart3,
-  IndianRupee,
-  School,
-  Building2,
-  Globe,
-  ShieldCheck,
-  Crown,
-  Settings,
-  // HR module icons
-  Briefcase,
-  UsersRound,
-  Star,
-  Wallet,
-  CalendarX,
-  CalendarPlus,
-  Tags,
-  Ban,
-  // Front Office module icons
-  ConciergeBell,
-  DoorOpen,
-  PhoneCall,
-  Send,
-  Inbox,
-  MessageSquare,
-} from 'lucide-react'
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog } from 'lucide-react'
 
 export const sidebarItems = [
   {
@@ -160,6 +116,17 @@ export const sidebarItems = [
       { title: 'Postal Receive', path: '/front-office/receive' },
       { title: 'Complaint', path: '/front-office/complaint' },
       { title: 'Setup Front Office', path: '/front-office/setup' },
+    ],
+  },
+  {
+    id: 'library',
+    title: 'Library',
+    icon: LibraryIcon,
+    children: [
+      { title: 'Book List', path: '/library/books' },
+      { title: 'Issue / Return', path: '/library/issue-return' },
+      { title: 'Add Book', path: '/library/add-book' },
+      { title: 'Library Staff', path: '/library/staff' },
     ],
   },
   {

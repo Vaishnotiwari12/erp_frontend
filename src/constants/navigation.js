@@ -66,6 +66,15 @@ export const NAV_GROUPS = [
       { title: 'Setup Front Office', to: '/front-office/setup', icon: 'Settings' },
     ],
   },
+  {
+    label: 'Library',
+    items: [
+      { title: 'Book List', to: '/library/books', icon: 'Library' },
+      { title: 'Issue / Return', to: '/library/issue-return', icon: 'ArrowLeftRight' },
+      { title: 'Add Book', to: '/library/add-book', icon: 'BookPlus' },
+      { title: 'Library Staff', to: '/library/staff', icon: 'UserCog' },
+    ],
+  },
 ]
 
 export const APP_NAME = 'Scholaria ERP'
