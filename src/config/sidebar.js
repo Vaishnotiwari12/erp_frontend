@@ -43,6 +43,13 @@ import {
   CalendarPlus,
   Tags,
   Ban,
+  // Front Office module icons
+  ConciergeBell,
+  DoorOpen,
+  PhoneCall,
+  Send,
+  Inbox,
+  MessageSquare,
 } from 'lucide-react'
 
 export const sidebarItems = [
@@ -139,6 +146,20 @@ export const sidebarItems = [
       { title: 'Department', path: '/hr/departments' },
       { title: 'Designation', path: '/hr/designations' },
       { title: 'Disabled Staff', path: '/hr/disabled-staff' },
+    ],
+  },
+  {
+    id: 'front-office',
+    title: 'Front Office',
+    icon: ConciergeBell,
+    children: [
+      { title: 'Admission Enquiry', path: '/front-office/enquiry' },
+      { title: 'Visitor Book', path: '/front-office/visitor-book' },
+      { title: 'Phone Call Log', path: '/front-office/call-log' },
+      { title: 'Postal Dispatch', path: '/front-office/dispatch' },
+      { title: 'Postal Receive', path: '/front-office/receive' },
+      { title: 'Complaint', path: '/front-office/complaint' },
+      { title: 'Setup Front Office', path: '/front-office/setup' },
     ],
   },
   {

@@ -66,6 +66,15 @@ const DepartmentPage = lazy(() => import('@/pages/hr/DepartmentPage'))
 const DesignationPage = lazy(() => import('@/pages/hr/DesignationPage'))
 const DisabledStaffPage = lazy(() => import('@/pages/hr/DisabledStaffPage'))
 
+// Front Office module — lazy-loaded so the bundle only downloads when a user visits Front Office pages
+const AdmissionEnquiryPage = lazy(() => import('@/pages/front-office/AdmissionEnquiryPage'))
+const VisitorBookPage = lazy(() => import('@/pages/front-office/VisitorBookPage'))
+const PhoneCallLogPage = lazy(() => import('@/pages/front-office/PhoneCallLogPage'))
+const PostalDispatchPage = lazy(() => import('@/pages/front-office/PostalDispatchPage'))
+const PostalReceivePage = lazy(() => import('@/pages/front-office/PostalReceivePage'))
+const ComplaintPage = lazy(() => import('@/pages/front-office/ComplaintPage'))
+const SetupFrontOfficePage = lazy(() => import('@/pages/front-office/SetupFrontOfficePage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -153,6 +162,15 @@ export default function AppRouter() {
             <Route path="/hr/departments" element={<DepartmentPage />} />
             <Route path="/hr/designations" element={<DesignationPage />} />
             <Route path="/hr/disabled-staff" element={<DisabledStaffPage />} />
+
+            {/* ── Front Office ── */}
+            <Route path="/front-office/enquiry" element={<AdmissionEnquiryPage />} />
+            <Route path="/front-office/visitor-book" element={<VisitorBookPage />} />
+            <Route path="/front-office/call-log" element={<PhoneCallLogPage />} />
+            <Route path="/front-office/dispatch" element={<PostalDispatchPage />} />
+            <Route path="/front-office/receive" element={<PostalReceivePage />} />
+            <Route path="/front-office/complaint" element={<ComplaintPage />} />
+            <Route path="/front-office/setup" element={<SetupFrontOfficePage />} />
           </Route>
 
           {/* Errors */}
