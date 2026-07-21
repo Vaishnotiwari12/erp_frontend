@@ -1,7 +1,10 @@
-import Router from "./router";
+import Providers from './providers'
+import AppRouter from './router'
 
-function App() {
-  return <Router />;
+export default function App() {
+  return (
+    <Providers>
+      <AppRouter />
+    </Providers>
+  )
 }
-
-export default App;

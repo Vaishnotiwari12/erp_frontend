@@ -1,0 +1,89 @@
+import { useMemo, useState } from 'react'
+import { Plus, MoreHorizontal } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
+import PageHeader from '@/components/common/PageHeader'
+import SearchInput from '@/components/common/SearchInput'
+import FilterSelect from '@/components/common/FilterSelect'
+import FilterBar from '@/components/common/FilterBar'
+import ListState from '@/components/common/ListState'
+import StatusBadge from '@/components/common/StatusBadge'
+import RoleBadge from '@/components/common/RoleBadge'
+import DataTable from '@/components/tables/DataTable'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { usersService } from '@/services/users.service'
+import { STATUS_OPTIONS, ROLE_LABELS } from '@/constants/navigation'
+import { formatRelativeTime, initials } from '@/utils/format'
+
+export default function UsersPage() {
+  const { data, isLoading } = useAsyncData(() => usersService.list(), [])
+  const [search, setSearch] = useState('')
+  const [role, setRole] = useState('all')
+
+  const rows = data || []
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        const ms = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.email.toLowerCase().includes(search.toLowerCase())
+        const mr = role === 'all' || r.role === role
+        return ms && mr
+      }),
+    [rows, search, role],
+  )
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'User',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              {initials(row.original.name)}
+            </div>
+            <div>
+              <p className="font-medium">{row.original.name}</p>
+              <p className="text-xs text-muted-foreground">{row.original.email}</p>
+            </div>
+          </div>
+        ),
+      },
+      { accessorKey: 'school_name', header: 'Institution' },
+      { accessorKey: 'role', header: 'Role', cell: ({ row }) => <RoleBadge role={row.original.role} /> },
+      { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+      { accessorKey: 'lastActive', header: 'Last active', cell: ({ row }) => formatRelativeTime(row.original.lastActive) },
+      {
+        id: 'actions',
+        header: '',
+        cell: () => (
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        ),
+      },
+    ],
+    [],
+  )
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'User Management' }, { label: 'Users' }]} />
+      <PageHeader
+        title="Users"
+        description="Manage platform users — admins, staff, students, and parents across tenants."
+        actions={<Button><Plus className="mr-2 h-4 w-4" /> Invite User</Button>}
+      />
+      <FilterBar>
+        <SearchInput value={search} onChange={setSearch} placeholder="Search users…" className="max-w-sm" />
+        <FilterSelect
+          value={role}
+          onChange={setRole}
+          options={[{ value: 'all', label: 'All roles' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))]}
+        />
+      </FilterBar>
+      <ListState isLoading={isLoading} isEmpty={!isLoading && filtered.length === 0} emptyTitle="No users found">
+        <DataTable columns={columns} data={filtered} />
+      </ListState>
+    </div>
+  )
+}

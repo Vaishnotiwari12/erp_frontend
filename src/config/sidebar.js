@@ -1,0 +1,148 @@
+// Configuration-based sidebar. The Sidebar component renders dynamically from this file.
+// To add a new module, append a new section here — no changes needed in Sidebar.jsx.
+//
+// Shape:
+//   { id, title, icon, path?, children?: [{ title, path }] }
+// - Top-level items with `path` are direct links (no expand/collapse).
+// - Top-level items with `children` become collapsible dropdowns.
+
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  ClipboardList,
+  UserSquare,
+  BookOpen,
+  Layers,
+  Library,
+  CalendarClock,
+  CalendarCheck,
+  ClipboardCheck,
+  CalendarDays,
+  FileText,
+  CalendarRange,
+  Award,
+  IdCard,
+  Printer,
+  FileBadge,
+  ScrollText,
+  BarChart3,
+  IndianRupee,
+  School,
+  Building2,
+  Globe,
+  ShieldCheck,
+  Crown,
+  Settings,
+} from 'lucide-react'
+
+export const sidebarItems = [
+  {
+    id: 'dashboard',
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/dashboard',
+  },
+  {
+    id: 'students',
+    title: 'Student Information',
+    icon: Users,
+    children: [
+      { title: 'Student List', path: '/students' },
+      { title: 'Student Profile', path: '/students/profile' },
+      { title: 'Student Admission', path: '/students/admissions' },
+      { title: 'Student Categories', path: '/students/categories' },
+      { title: 'Student House', path: '/students/houses' },
+      { title: 'Disabled Students', path: '/students/disabled' },
+    ],
+  },
+  {
+    id: 'academics',
+    title: 'Academics',
+    icon: BookOpen,
+    children: [
+      { title: 'Classes', path: '/academics/classes' },
+      { title: 'Sections', path: '/academics/sections' },
+      { title: 'Subjects', path: '/academics/subjects' },
+      { title: 'Subject Groups', path: '/academics/subject-groups' },
+      { title: 'Class Timetable', path: '/academics/timetable' },
+      { title: 'Teachers Timetable', path: '/academics/teachers-timetable' },
+      { title: 'Assign Class Teacher', path: '/academics/assign-class-teacher' },
+      { title: 'Promote Students', path: '/academics/promote-students' },
+    ],
+  },
+  {
+    id: 'attendance',
+    title: 'Attendance',
+    icon: ClipboardCheck,
+    children: [
+      { title: 'Student Attendance', path: '/attendance' },
+      { title: 'Approve Leave', path: '/attendance/approve-leave' },
+      { title: 'Attendance By Date', path: '/attendance/by-date' },
+    ],
+  },
+  {
+    id: 'examinations',
+    title: 'Examinations',
+    icon: FileText,
+    children: [
+      { title: 'Exam Group', path: '/examinations/exam-groups' },
+      { title: 'Exam Schedule', path: '/examinations/schedule' },
+      { title: 'Exam Result', path: '/examinations/results' },
+      { title: 'Design Admit Card', path: '/examinations/design-admit-card' },
+      { title: 'Print Admit Card', path: '/examinations/print-admit-card' },
+      { title: 'Design Marksheet', path: '/examinations/design-marksheet' },
+      { title: 'Consolidated Marksheet', path: '/examinations/consolidated-marksheet' },
+      { title: 'Print Marksheet', path: '/examinations/print-marksheet' },
+      { title: 'Marks Grade', path: '/examinations/marks-grade' },
+      { title: 'Marks Division', path: '/examinations/marks-division' },
+    ],
+  },
+  {
+    id: 'fees',
+    title: 'Fees Collection',
+    icon: IndianRupee,
+    children: [
+      { title: 'Collect Fees', path: '/fees/collect' },
+      { title: 'Search Fees Payment', path: '/fees/search-payment' },
+      { title: 'Search Due Fees', path: '/fees/search-due' },
+      { title: 'Offline Bank Payment', path: '/fees/offline-payment' },
+      { title: 'Fees Report', path: '/fees/report' },
+      { title: 'Fees Master', path: '/fees/master' },
+      { title: 'Fees Group', path: '/fees/group' },
+      { title: 'Fees Type', path: '/fees/type' },
+      { title: 'Fees Discount', path: '/fees/discount' },
+      { title: 'Fees Carry Forward', path: '/fees/carry-forward' },
+    ],
+  },
+  {
+    id: 'institution',
+    title: 'Institution Management',
+    icon: School,
+    children: [
+      { title: 'Schools', path: '/schools' },
+      { title: 'Colleges', path: '/colleges' },
+      { title: 'Domains', path: '/domains' },
+    ],
+  },
+  {
+    id: 'users',
+    title: 'User Management',
+    icon: ShieldCheck,
+    children: [
+      { title: 'Users', path: '/users' },
+      { title: 'Roles', path: '/users/roles' },
+    ],
+  },
+  {
+    id: 'administration',
+    title: 'Administration',
+    icon: Crown,
+    children: [
+      { title: 'Super Admin', path: '/super-admin' },
+      { title: 'Settings', path: '/settings' },
+    ],
+  },
+]
+
+export default sidebarItems
