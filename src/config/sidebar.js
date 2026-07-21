@@ -34,6 +34,15 @@ import {
   ShieldCheck,
   Crown,
   Settings,
+  // HR module icons
+  Briefcase,
+  UsersRound,
+  Star,
+  Wallet,
+  CalendarX,
+  CalendarPlus,
+  Tags,
+  Ban,
 } from 'lucide-react'
 
 export const sidebarItems = [
@@ -113,6 +122,23 @@ export const sidebarItems = [
       { title: 'Fees Type', path: '/fees/type' },
       { title: 'Fees Discount', path: '/fees/discount' },
       { title: 'Fees Carry Forward', path: '/fees/carry-forward' },
+    ],
+  },
+  {
+    id: 'hr',
+    title: 'Human Resources',
+    icon: UsersRound,
+    children: [
+      { title: 'Staff Directory', path: '/hr/staff' },
+      { title: 'Staff Attendance', path: '/hr/attendance' },
+      { title: 'Payroll', path: '/hr/payroll' },
+      { title: 'Approve Leave', path: '/hr/approve-leave' },
+      { title: 'Apply Leave', path: '/hr/apply-leave' },
+      { title: 'Leave Types', path: '/hr/leave-types' },
+      { title: 'Teachers Rating', path: '/hr/teachers-rating' },
+      { title: 'Department', path: '/hr/departments' },
+      { title: 'Designation', path: '/hr/designations' },
+      { title: 'Disabled Staff', path: '/hr/disabled-staff' },
     ],
   },
   {

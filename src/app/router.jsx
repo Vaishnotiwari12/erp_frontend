@@ -53,6 +53,19 @@ const FeesGroupPage = lazy(() => import('@/pages/fees/FeesGroup'))
 const FeesTypePage = lazy(() => import('@/pages/fees/FeesType'))
 const FeesDiscountPage = lazy(() => import('@/pages/fees/FeesDiscount'))
 const FeesCarryForwardPage = lazy(() => import('@/pages/fees/FeesCarryForward'))
+
+// HR module — lazy-loaded so the bundle only downloads when a user visits HR pages
+const StaffDirectoryPage = lazy(() => import('@/pages/hr/StaffDirectoryPage'))
+const StaffAttendancePage = lazy(() => import('@/pages/hr/StaffAttendancePage'))
+const PayrollPage = lazy(() => import('@/pages/hr/PayrollPage'))
+const ApproveLeaveHRPage = lazy(() => import('@/pages/hr/ApproveLeaveHRPage'))
+const ApplyLeavePage = lazy(() => import('@/pages/hr/ApplyLeavePage'))
+const LeaveTypesPage = lazy(() => import('@/pages/hr/LeaveTypesPage'))
+const TeachersRatingPage = lazy(() => import('@/pages/hr/TeachersRatingPage'))
+const DepartmentPage = lazy(() => import('@/pages/hr/DepartmentPage'))
+const DesignationPage = lazy(() => import('@/pages/hr/DesignationPage'))
+const DisabledStaffPage = lazy(() => import('@/pages/hr/DisabledStaffPage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -128,6 +141,18 @@ export default function AppRouter() {
             <Route path="/super-admin" element={<SuperAdminPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+
+            {/* ── Human Resources ── */}
+            <Route path="/hr/staff" element={<StaffDirectoryPage />} />
+            <Route path="/hr/attendance" element={<StaffAttendancePage />} />
+            <Route path="/hr/payroll" element={<PayrollPage />} />
+            <Route path="/hr/approve-leave" element={<ApproveLeaveHRPage />} />
+            <Route path="/hr/apply-leave" element={<ApplyLeavePage />} />
+            <Route path="/hr/leave-types" element={<LeaveTypesPage />} />
+            <Route path="/hr/teachers-rating" element={<TeachersRatingPage />} />
+            <Route path="/hr/departments" element={<DepartmentPage />} />
+            <Route path="/hr/designations" element={<DesignationPage />} />
+            <Route path="/hr/disabled-staff" element={<DisabledStaffPage />} />
           </Route>
 
           {/* Errors */}
