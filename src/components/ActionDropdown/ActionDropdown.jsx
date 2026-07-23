@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // ====================================================================
 // Reusable Component — ActionDropdown
 //
@@ -8,6 +9,9 @@
 // ====================================================================
 
 import { MoreVertical } from 'lucide-react'
+=======
+import { MoreHorizontal } from 'lucide-react'
+>>>>>>> d262216 (Resolve merge conflicts)
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
