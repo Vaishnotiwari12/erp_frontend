@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — PageHeader
+//
+// Used by: All pages.
+// Purpose: Consistent page title, optional icon, description, and
+//          right-aligned action buttons. Keeps the top of every page
+//          visually uniform without repeating layout markup.
+// ====================================================================
+
 import { cn } from '@/lib/utils'
 
 export function PageHeader({ title, description, actions, icon: Icon, className }) {

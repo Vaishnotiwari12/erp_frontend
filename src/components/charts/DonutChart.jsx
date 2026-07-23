@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — DonutChart
+//
+// Used by: Dashboard, all module dashboards.
+// Purpose: Donut chart with legend for part-to-whole comparisons (e.g.
+//          gender distribution, payment status breakdown). `data` is
+//          [{ label, value, color }] where color is a chart-1..5 key.
+//          Renders percentage labels in the legend.
+// ====================================================================
+
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useTheme } from '@/context/ThemeContext'
 

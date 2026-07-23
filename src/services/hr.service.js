@@ -1,8 +1,18 @@
-// ─── HR Service ───────────────────────────────────────────────────────────────
-// Service layer keeps all HR API logic separate from UI components.
-// Currently uses mock data. When backend is ready, only replace the
-// mockResponse() calls with apiClient.get/post/put/delete calls here.
-// UI pages never need to change.
+// ====================================================================
+// Service Layer
+//
+// Purpose:
+// Handles all backend communication for this module.
+//
+// Current State:
+// Uses mock data.
+//
+// TODO(BACKEND):
+// Replace mock implementation with Axios API calls.
+//
+// Expected Response:
+// { success, message, data }
+// ====================================================================
 
 import { mockResponse } from './mockData'
 import {
@@ -23,205 +33,241 @@ export const hrService = {
   // ─── Staff ─────────────────────────────────────────────────────────────────
 
   // Get all active staff
+  // TODO(BACKEND)
+  // Replace with GET /hr/staff
   async getStaff() {
-    // INTEGRATION: return apiClient.get('/hr/staff')
     return mockResponse(staff.filter((s) => s.status !== 'disabled'))
   },
 
   // Get all disabled / inactive staff
+  // TODO(BACKEND)
+  // Replace with GET /hr/staff/disabled
   async getDisabledStaff() {
-    // INTEGRATION: return apiClient.get('/hr/staff/disabled')
     return mockResponse(staff.filter((s) => s.status === 'disabled' || s.status === 'inactive'))
   },
 
   // Create new staff member
+  // TODO(BACKEND)
+  // Replace with POST /hr/staff
   async createStaff(payload) {
-    // INTEGRATION: return apiClient.post('/hr/staff', payload)
     return mockResponse({ _id: `stf-${Date.now()}`, employee_id: `EMP-${Date.now()}`, ...payload, createdAt: new Date().toISOString() })
   },
 
   // Update existing staff
+  // TODO(BACKEND)
+  // Replace with PUT /hr/staff/:id
   async updateStaff(id, payload) {
-    // INTEGRATION: return apiClient.put(`/hr/staff/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
   // Soft delete / disable a staff member
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/staff/:id/disable
   async disableStaff(id) {
-    // INTEGRATION: return apiClient.patch(`/hr/staff/${id}/disable`)
     return mockResponse({ _id: id, status: 'disabled', message: 'Staff disabled successfully' })
   },
 
   // Restore a disabled staff member
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/staff/:id/restore
   async restoreStaff(id) {
-    // INTEGRATION: return apiClient.patch(`/hr/staff/${id}/restore`)
     return mockResponse({ _id: id, status: 'active', message: 'Staff restored successfully' })
   },
 
   // Permanently delete a staff record
+  // TODO(BACKEND)
+  // Replace with DELETE /hr/staff/:id
   async deleteStaff(id) {
-    // INTEGRATION: return apiClient.delete(`/hr/staff/${id}`)
     return mockResponse({ message: 'Staff deleted permanently' })
   },
 
   // ─── Departments ───────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/departments
   async getDepartments() {
-    // INTEGRATION: return apiClient.get('/hr/departments')
     return mockResponse(departments)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/departments
   async createDepartment(payload) {
-    // INTEGRATION: return apiClient.post('/hr/departments', payload)
     return mockResponse({ _id: `dept-${Date.now()}`, staff_count: 0, createdAt: new Date().toISOString(), ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /hr/departments/:id
   async updateDepartment(id, payload) {
-    // INTEGRATION: return apiClient.put(`/hr/departments/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /hr/departments/:id
   async deleteDepartment(id) {
-    // INTEGRATION: return apiClient.delete(`/hr/departments/${id}`)
     return mockResponse({ message: 'Department deleted' })
   },
 
   // ─── Designations ──────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/designations
   async getDesignations() {
-    // INTEGRATION: return apiClient.get('/hr/designations')
     return mockResponse(designations)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/designations
   async createDesignation(payload) {
-    // INTEGRATION: return apiClient.post('/hr/designations', payload)
     return mockResponse({ _id: `desig-${Date.now()}`, staff_count: 0, createdAt: new Date().toISOString(), ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /hr/designations/:id
   async updateDesignation(id, payload) {
-    // INTEGRATION: return apiClient.put(`/hr/designations/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /hr/designations/:id
   async deleteDesignation(id) {
-    // INTEGRATION: return apiClient.delete(`/hr/designations/${id}`)
     return mockResponse({ message: 'Designation deleted' })
   },
 
   // ─── Leave Types ───────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/leave-types
   async getLeaveTypes() {
-    // INTEGRATION: return apiClient.get('/hr/leave-types')
     return mockResponse(leaveTypes)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/leave-types
   async createLeaveType(payload) {
-    // INTEGRATION: return apiClient.post('/hr/leave-types', payload)
     return mockResponse({ _id: `lvt-${Date.now()}`, createdAt: new Date().toISOString(), ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /hr/leave-types/:id
   async updateLeaveType(id, payload) {
-    // INTEGRATION: return apiClient.put(`/hr/leave-types/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /hr/leave-types/:id
   async deleteLeaveType(id) {
-    // INTEGRATION: return apiClient.delete(`/hr/leave-types/${id}`)
     return mockResponse({ message: 'Leave type deleted' })
   },
 
   // ─── Leave Applications ────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/leaves
   async getLeaves() {
-    // INTEGRATION: return apiClient.get('/hr/leaves')
     return mockResponse(staffLeaves)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/leaves
   async applyLeave(payload) {
-    // INTEGRATION: return apiClient.post('/hr/leaves', payload)
     return mockResponse({ _id: `slv-${Date.now()}`, status: 'pending', applied_on: new Date().toISOString(), ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/leaves/:id/approve
   async approveLeave(id) {
-    // INTEGRATION: return apiClient.patch(`/hr/leaves/${id}/approve`)
     return mockResponse({ _id: id, status: 'approved', approved_by: 'Carlos Mendez' })
   },
 
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/leaves/:id/reject
   async rejectLeave(id) {
-    // INTEGRATION: return apiClient.patch(`/hr/leaves/${id}/reject`)
     return mockResponse({ _id: id, status: 'rejected', approved_by: 'Carlos Mendez' })
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/leaves/balance
   async getLeaveBalance() {
-    // INTEGRATION: return apiClient.get('/hr/leaves/balance')
     return mockResponse(leaveBalance)
   },
 
   // ─── Staff Attendance ──────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/attendance
   async getAttendance() {
-    // INTEGRATION: return apiClient.get('/hr/attendance')
     return mockResponse(staffAttendance)
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/attendance?date=:date
   async getAttendanceByDate(date) {
-    // INTEGRATION: return apiClient.get(`/hr/attendance?date=${date}`)
     return mockResponse(getStaffAttendanceByDate(date))
   },
 
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/attendance/:id
   async markAttendance(id, status) {
-    // INTEGRATION: return apiClient.patch(`/hr/attendance/${id}`, { status })
     return mockResponse({ _id: id, status, message: 'Attendance marked' })
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/attendance/bulk-mark
   async bulkMarkAttendance(ids, status) {
-    // INTEGRATION: return apiClient.post('/hr/attendance/bulk-mark', { ids, status })
     return mockResponse({ message: `${ids.length} records marked ${status}` })
   },
 
   // ─── Payroll ───────────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/payroll?month=:month
   async getPayroll(month) {
-    // INTEGRATION: return apiClient.get(`/hr/payroll?month=${month}`)
     return mockResponse(payroll)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/payroll/generate
   async generatePayroll(month) {
-    // INTEGRATION: return apiClient.post('/hr/payroll/generate', { month })
     return mockResponse({ message: `Payroll for ${month} generated successfully` })
   },
 
+  // TODO(BACKEND)
+  // Replace with PATCH /hr/payroll/:id/process
   async processPayment(id) {
-    // INTEGRATION: return apiClient.patch(`/hr/payroll/${id}/process`)
     return mockResponse({ _id: id, status: 'paid', payment_date: new Date().toISOString().slice(0, 10) })
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/payroll/bulk-process
   async bulkProcessPayment(ids) {
-    // INTEGRATION: return apiClient.post('/hr/payroll/bulk-process', { ids })
     return mockResponse({ message: `${ids.length} salaries processed` })
   },
 
   // ─── Teachers Rating ───────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/teachers-rating
   async getTeachersRating() {
-    // INTEGRATION: return apiClient.get('/hr/teachers-rating')
     return mockResponse(teachersRating)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /hr/teachers-rating
   async submitRating(payload) {
-    // INTEGRATION: return apiClient.post('/hr/teachers-rating', payload)
     return mockResponse({ _id: `tr-${Date.now()}`, ...payload, status: 'rated' })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /hr/teachers-rating/:id
   async updateRating(id, payload) {
-    // INTEGRATION: return apiClient.put(`/hr/teachers-rating/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
   // ─── Dashboard stats ────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /hr/stats
   async getHrStats() {
-    // INTEGRATION: return apiClient.get('/hr/stats')
     return mockResponse(hrStats)
   },
 }

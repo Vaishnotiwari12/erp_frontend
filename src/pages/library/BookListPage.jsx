@@ -1,6 +1,17 @@
-// Book List — the library's catalog page. Staff can search, filter by
-// category, filter by availability, sort, export, and print the list.
-// Each row shows a book cover thumbnail, title, author, ISBN, and copies.
+// ====================================================================
+// Module: Library
+// Page: Book List
+//
+// Purpose:
+// Browse, search, and manage the library book catalog.
+//
+// Data Source:
+// library.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { BookPlus, Eye, Pencil, Trash2, Printer, BookOpen, Library as LibraryIcon, CircleCheck as CheckCircle2, CircleX } from 'lucide-react'
@@ -23,8 +34,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { BookStatusBadge } from '@/components/BookStatusBadge'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { libraryService } from '@/services/library.service'
+import { useBooks } from '@/hooks/useLibrary'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -42,48 +52,23 @@ const EXPORT_COLS = [
 
 export default function BookListPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => libraryService.getBooks(), [])
-  const { data: categoriesData } = useAsyncData(() => libraryService.getCategories(), [])
-  const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [availabilityFilter, setAvailabilityFilter] = useState('all')
+  const {
+    rows: filtered, categories, stats, isLoading,
+    search, setSearch, categoryFilter, setCategoryFilter, availabilityFilter, setAvailabilityFilter,
+    saveBook, deleteBook,
+  } = useBooks()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
-  const categories = categoriesData || []
-
-  // Memoize filtered books for better performance — avoids re-filtering on every render.
-  const filtered = useMemo(() => rows.filter((b) => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.isbn.toLowerCase().includes(q)
-    const matchCategory = categoryFilter === 'all' || b.category === categoryFilter
-    const matchAvailability = availabilityFilter === 'all'
-      || (availabilityFilter === 'available' && b.available > 0)
-      || (availabilityFilter === 'issued' && b.available === 0)
-    return matchSearch && matchCategory && matchAvailability
-  }), [rows, search, categoryFilter, availabilityFilter])
-
-  const stats = useMemo(() => ({
-    totalTitles: rows.length,
-    totalCopies: rows.reduce((sum, b) => sum + b.quantity, 0),
-    available: rows.reduce((sum, b) => sum + b.available, 0),
-    issued: rows.reduce((sum, b) => sum + (b.quantity - b.available), 0),
-  }), [rows])
-
   const handleSave = async (payload, id) => {
+    await saveBook(payload, id)
     if (id) {
-      await libraryService.updateBook(id, payload)
-      toast({ title: 'Book updated', description: payload.title })
       setEditRow(null)
     } else {
-      await libraryService.createBook(payload)
-      toast({ title: 'Book added', description: payload.title })
       setAddOpen(false)
     }
-    refetch()
   }
 
   const handlePrint = () => {
@@ -241,10 +226,8 @@ export default function BookListPage() {
         onOpenChange={(o) => !o && setDeleteRow(null)}
         entityName={deleteRow?.title}
         onConfirm={async () => {
-          await libraryService.deleteBook(deleteRow._id)
-          toast({ title: 'Book deleted' })
+          await deleteBook(deleteRow._id)
           setDeleteRow(null)
-          refetch()
         }}
       />
     </div>

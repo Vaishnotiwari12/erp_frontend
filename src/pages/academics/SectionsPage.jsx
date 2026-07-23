@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Academics
+// Page: Sections
+//
+// Purpose:
+// Manage class sections, rooms, and capacities.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, Layers, Pencil, Trash2, Eye, DoorOpen, CheckCircle2 } from 'lucide-react'
+import { Plus, Layers, Pencil, Trash2, Eye, DoorOpen, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

@@ -1,3 +1,14 @@
+// ====================================================================
+// Reusable Component — NoData / NoResults
+//
+// Used by: All list pages.
+// Purpose: Empty-state display.
+//   - NoData: shown when there are zero records at all (offers a CTA).
+//   - NoResults: shown when filters/search return nothing (offers a
+//     "Clear filters" action).
+// Both delegate to the shared EmptyState component for consistent styling.
+// ====================================================================
+
 import { Inbox, SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'

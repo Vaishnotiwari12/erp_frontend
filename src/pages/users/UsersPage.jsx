@@ -1,15 +1,30 @@
+// ====================================================================
+// Module: Users
+// Page: Users
+//
+// Purpose:
+// Manage system users and their access.
+//
+// Data Source:
+// users.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, MoreHorizontal } from 'lucide-react'
+import { Plus, MoveHorizontal as MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
-import SearchInput from '@/components/common/SearchInput'
+import PageHeader from '@/components/PageHeader'
+import SearchBar from '@/components/SearchBar'
 import FilterSelect from '@/components/common/FilterSelect'
-import FilterBar from '@/components/common/FilterBar'
+import FilterBar from '@/components/FilterBar'
 import ListState from '@/components/common/ListState'
-import StatusBadge from '@/components/common/StatusBadge'
+import StatusBadge from '@/components/StatusBadge'
 import RoleBadge from '@/components/common/RoleBadge'
-import DataTable from '@/components/tables/DataTable'
+import DataTable from '@/components/DataTable'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { usersService } from '@/services/users.service'
 import { STATUS_OPTIONS, ROLE_LABELS } from '@/constants/navigation'
@@ -74,7 +89,7 @@ export default function UsersPage() {
         actions={<Button><Plus className="mr-2 h-4 w-4" /> Invite User</Button>}
       />
       <FilterBar>
-        <SearchInput value={search} onChange={setSearch} placeholder="Search users…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search users…" className="max-w-sm" />
         <FilterSelect
           value={role}
           onChange={setRole}

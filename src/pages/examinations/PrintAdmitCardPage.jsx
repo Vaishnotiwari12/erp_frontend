@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Print Admit Card
+//
+// Purpose:
+// Search, preview, and bulk print admit cards.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { IdCard, Printer, Download, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'

@@ -1,6 +1,17 @@
-// Admission Enquiry — front desk staff log and track prospective student
-// enquiries. Each enquiry has a lifecycle (pending → in-progress → converted
-// or dropped) and a follow-up timeline so staff can see every interaction.
+// ====================================================================
+// Module: Front Office
+// Page: Admission Enquiry
+//
+// Purpose:
+// Track prospective student enquiries from first contact to admission.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

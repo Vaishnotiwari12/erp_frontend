@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Students
+// Page: Disabled Students
+//
+// Purpose:
+// View and restore inactive, suspended, or disabled students.
+//
+// Data Source:
+// student.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import {
   Ban, Eye, RotateCcw, Trash2, UserX, Power,

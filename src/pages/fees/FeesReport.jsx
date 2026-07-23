@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Fees
+// Page: Fees Report
+//
+// Purpose:
+// Class-wise fee collection summary and performance.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo } from 'react'
-import { BarChart3, Download, Printer } from 'lucide-react'
+import { ChartBar as BarChart3, Download, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
@@ -9,8 +24,7 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { Progress } from '@/components/ui/progress'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { feesService } from '@/services/fees.service'
+import { useFeesReport } from '@/hooks/useFees'
 import { formatCurrency } from '@/utils/format'
 
 const EXPORT_COLS = [
@@ -24,15 +38,7 @@ const EXPORT_COLS = [
 ]
 
 export default function FeesReportPage() {
-  const { data, isLoading } = useAsyncData(() => feesService.getFeesReport(), [])
-  const rows = data || []
-
-  const stats = useMemo(() => ({
-    totalFees: rows.reduce((a, b) => a + b.total_fees, 0),
-    collected: rows.reduce((a, b) => a + b.collected, 0),
-    due: rows.reduce((a, b) => a + b.due, 0),
-    avgRate: rows.length ? Math.round(rows.reduce((a, b) => a + b.collection_rate, 0) / rows.length) : 0,
-  }), [rows])
+  const { rows, stats, isLoading } = useFeesReport()
 
   const columns = useMemo(
     () => [

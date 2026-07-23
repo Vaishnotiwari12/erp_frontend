@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — LoadingSkeleton
+//
+// Used by: All pages.
+// Purpose: Loading state placeholder that mimics the shape of real content
+//          (table rows, cards, list items) so the layout doesn't jump when
+//          data arrives. The `variant` prop selects the right skeleton shape.
+// ====================================================================
+
 import { cn } from '@/lib/utils'
 
 export function Skeleton({ className }) {

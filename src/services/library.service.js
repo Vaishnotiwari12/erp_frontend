@@ -1,16 +1,18 @@
-// ─── Library Service ──────────────────────────────────────────────────────────
-// Service layer isolates all backend communication for the Library module.
-// Pages never call APIs directly — they call these methods, which return the
-// standard envelope: { success, message, data }.
+// ====================================================================
+// Service Layer
 //
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding apiClient call. The UI does
-// not need to change because the return shape stays the same.
+// Purpose:
+// Handles all backend communication for this module.
 //
-// INTEGRATION example:
-//   async getBooks() {
-//     return apiClient.get('/library/books')
-//   }
+// Current State:
+// Uses mock data.
+//
+// TODO(BACKEND):
+// Replace mock implementation with Axios API calls.
+//
+// Expected Response:
+// { success, message, data }
+// ====================================================================
 
 import { mockResponse } from './mockData'
 import {
@@ -24,13 +26,15 @@ import {
 export const libraryService = {
   // ─── Books ──────────────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /library/books
   async getBooks() {
-    // INTEGRATION: return apiClient.get('/library/books')
     return mockResponse(books)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /library/books
   async createBook(payload) {
-    // INTEGRATION: return apiClient.post('/library/books', payload)
     // New books start fully available — available copies = quantity.
     return mockResponse({
       _id: `bk-${Date.now()}`,
@@ -41,32 +45,37 @@ export const libraryService = {
     })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /library/books/:id
   async updateBook(id, payload) {
-    // INTEGRATION: return apiClient.put(`/library/books/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /library/books/:id
   async deleteBook(id) {
-    // INTEGRATION: return apiClient.delete(`/library/books/${id}`)
     return mockResponse({ message: 'Book deleted successfully' })
   },
 
   // ─── Categories ─────────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /library/categories
   async getCategories() {
-    // INTEGRATION: return apiClient.get('/library/categories')
     return mockResponse(bookCategories)
   },
 
   // ─── Issue / Return ──────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /library/issues
   async getIssueRecords() {
-    // INTEGRATION: return apiClient.get('/library/issues')
     return mockResponse(issueRecords)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /library/issues
   async issueBook(payload) {
-    // INTEGRATION: return apiClient.post('/library/issues', payload)
     return mockResponse({
       _id: `iss-${Date.now()}`,
       return_date: null,
@@ -76,25 +85,29 @@ export const libraryService = {
     })
   },
 
+  // TODO(BACKEND)
+  // Replace with PATCH /library/issues/:id/return
   async returnBook(id, payload) {
-    // INTEGRATION: return apiClient.patch(`/library/issues/${id}/return`, payload)
     return mockResponse({ _id: id, status: 'returned', ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /library/issues/:id
   async deleteIssueRecord(id) {
-    // INTEGRATION: return apiClient.delete(`/library/issues/${id}`)
     return mockResponse({ message: 'Issue record deleted' })
   },
 
   // ─── Library Staff ───────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /library/staff
   async getLibraryStaff() {
-    // INTEGRATION: return apiClient.get('/library/staff')
     return mockResponse(libraryStaff)
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /library/staff
   async addLibraryStaff(payload) {
-    // INTEGRATION: return apiClient.post('/library/staff', payload)
     return mockResponse({
       _id: `lst-${Date.now()}`,
       status: 'active',
@@ -103,20 +116,23 @@ export const libraryService = {
     })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /library/staff/:id
   async updateLibraryStaff(id, payload) {
-    // INTEGRATION: return apiClient.put(`/library/staff/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /library/staff/:id
   async deleteLibraryStaff(id) {
-    // INTEGRATION: return apiClient.delete(`/library/staff/${id}`)
     return mockResponse({ message: 'Library staff removed' })
   },
 
   // ─── Dashboard Stats ─────────────────────────────────────────────────────────
 
+  // TODO(BACKEND)
+  // Replace with GET /library/stats
   async getStats() {
-    // INTEGRATION: return apiClient.get('/library/stats')
     return mockResponse(libraryStats)
   },
 }

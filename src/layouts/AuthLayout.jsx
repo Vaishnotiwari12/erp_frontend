@@ -3,7 +3,20 @@ import { GraduationCap } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
 import { APP_NAME } from '@/constants/navigation'
 
-// Centered split layout for auth screens (login, forgot password).
+// ====================================================================
+// AuthLayout — Centered Authentication Card Layout
+//
+// Purpose:
+// A two-panel split layout for authentication screens (login, forgot
+// password). The left panel renders the form via <Outlet>; the right panel
+// shows branded marketing content to fill the screen on desktop.
+//
+// Responsive behavior:
+//   - Desktop (lg+): 480px form panel + flexible brand panel side by side.
+//   - Mobile: brand panel is hidden; the form panel takes full width and
+//     is vertically centered.
+// ====================================================================
+
 export function AuthLayout() {
   return (
     <div className="flex min-h-screen">

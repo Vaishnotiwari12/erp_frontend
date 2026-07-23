@@ -1,3 +1,20 @@
+// ====================================================================
+// CSV Export Utility
+//
+// Purpose:
+// Generates and downloads a CSV file from tabular data entirely client-side,
+// avoiding the need for a server round-trip on every export action.
+//
+// Used by:
+//   - DataTable (bulk export of visible or selected rows)
+//   - ExportButtons (standalone export on list pages)
+//
+// Why client-side:
+//   The dataset is already in memory (fetched for the table), so building
+//   the CSV in-browser is faster and keeps the backend stateless.
+// ====================================================================
+
+// Escapes a single cell value per RFC 4180 — quotes fields containing commas, quotes, or newlines and doubles embedded quotes.
 function escapeCsv(value) {
   if (value == null) return ''
   const str = String(value)
@@ -7,6 +24,7 @@ function escapeCsv(value) {
   return str
 }
 
+// Builds the CSV string from `rows`/`columns`, creates a Blob, and triggers a browser download.
 export function exportToCsv(rows, columns, filename = 'export') {
   if (!rows || !rows.length) return
   const header = columns.map((c) => escapeCsv(c.label)).join(',')

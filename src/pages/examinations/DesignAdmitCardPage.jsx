@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Design Admit Card
+//
+// Purpose:
+// Visual builder for the admit card template with live preview.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useState } from 'react'
 import { IdCard, Eye, Save, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'

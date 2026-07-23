@@ -1,5 +1,17 @@
-// Staff Attendance — mark and review daily attendance for all staff.
-// Mirrors the student attendance pattern: per-day marking, bulk actions, calendar picker.
+// ====================================================================
+// Module: Human Resources
+// Page: Staff Attendance
+//
+// Purpose:
+// Mark and track daily attendance for all staff members.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { ClipboardCheck, Users, CircleCheck as CheckCircle2, Circle as XCircle, Clock3, CalendarPlus, Check, X, Eye, Pencil, Download, Printer } from 'lucide-react'

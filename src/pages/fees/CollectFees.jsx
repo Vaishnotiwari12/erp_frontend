@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Fees
+// Page: Collect Fees
+//
+// Purpose:
+// Search students, view fee summaries, and collect payments.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { Wallet, Plus, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'

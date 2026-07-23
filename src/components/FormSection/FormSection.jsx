@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — FormSection
+//
+// Used by: All form pages.
+// Purpose: Groups related form fields under an optional title/description.
+//          Renders a responsive CSS grid (1–3 columns) so forms look
+//          correct on both mobile and desktop without manual grid markup
+//          in every form.
+// ====================================================================
+
 import { cn } from '@/lib/utils'
 
 export function FormSection({ title, description, children, className, columns = 2 }) {

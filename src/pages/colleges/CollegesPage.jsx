@@ -1,15 +1,30 @@
+// ====================================================================
+// Module: Colleges
+// Page: Colleges
+//
+// Purpose:
+// Manage college records and their configuration.
+//
+// Data Source:
+// college.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, Building2, MoreHorizontal } from 'lucide-react'
+import { Plus, Building2, MoveHorizontal as MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
-import SearchInput from '@/components/common/SearchInput'
+import PageHeader from '@/components/PageHeader'
+import SearchBar from '@/components/SearchBar'
 import FilterSelect from '@/components/common/FilterSelect'
-import FilterBar from '@/components/common/FilterBar'
+import FilterBar from '@/components/FilterBar'
 import ListState from '@/components/common/ListState'
-import StatusBadge from '@/components/common/StatusBadge'
-import DataTable from '@/components/tables/DataTable'
+import StatusBadge from '@/components/StatusBadge'
+import DataTable from '@/components/DataTable'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { collegeService } from '@/services/college.service'
 import { STATUS_OPTIONS } from '@/constants/navigation'
@@ -76,7 +91,7 @@ export default function CollegesPage() {
         actions={<Button><Plus className="mr-2 h-4 w-4" /> Add College</Button>}
       />
       <FilterBar>
-        <SearchInput value={search} onChange={setSearch} placeholder="Search colleges…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search colleges…" className="max-w-sm" />
         <FilterSelect value={status} onChange={setStatus} options={[{ value: 'all', label: 'All statuses' }, ...STATUS_OPTIONS]} />
       </FilterBar>
       <ListState isLoading={isLoading} isEmpty={!isLoading && filtered.length === 0} emptyTitle="No colleges found">

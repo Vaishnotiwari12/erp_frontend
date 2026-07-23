@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Errors
+// Page: Not Found
+//
+// Purpose:
+// Show a 404 page when a route does not exist.
+//
+// Data Source:
+// N/A
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { Link } from 'react-router-dom'
-import { Home, ArrowLeft } from 'lucide-react'
+import { Hop as Home, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function NotFoundPage() {

@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — BarChartCard
+//
+// Used by: Dashboard, all module dashboards.
+// Purpose: Vertical bar chart for categorical comparisons (e.g. enrollment
+//          by class, revenue by month). `data` is [{ label, value }] and
+//          `color` is a chart-1..5 key. Adapts grid/axis colors to the
+//          active theme via useTheme.
+// ====================================================================
+
 import {
   Bar,
   BarChart,

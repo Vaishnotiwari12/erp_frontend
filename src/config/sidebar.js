@@ -1,3 +1,23 @@
+// ====================================================================
+// Sidebar Menu Configuration
+//
+// Purpose:
+// Single source of truth for the sidebar navigation tree. The Sidebar
+// component renders dynamically from this array — adding a new module is
+// just appending a new section here, with no changes needed in Sidebar.jsx.
+//
+// Structure:
+//   Each item is { id, title, icon, path?, children? }.
+//   - Top-level items with `path` are direct links (no expand/collapse).
+//   - Top-level items with `children` become collapsible dropdowns.
+//   - Icons are lucide-react components referenced by reference (not string names)
+//     so the bundler can tree-shake unused icons.
+//
+// Consumed by:
+//   - Sidebar.jsx (renders the menu)
+//   - Route guards (path matching for active-link highlighting)
+// ====================================================================
+
 // Configuration-based sidebar. The Sidebar component renders dynamically from this file.
 // To add a new module, append a new section here — no changes needed in Sidebar.jsx.
 //
@@ -6,7 +26,7 @@
 // - Top-level items with `path` are direct links (no expand/collapse).
 // - Top-level items with `children` become collapsible dropdowns.
 
-import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog } from 'lucide-react'
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog, Bus, Route as RouteIcon, MapPin, UserPlus, DollarSign, ChartBar as FileBarChart, BedDouble, Building2 as BuildingIcon, DoorOpen as DoorOpenIcon, GraduationCap as GraduationCapIcon, CalendarDays as CalendarDaysIcon, Download as DownloadIcon, Video as VideoIcon, TrendingUp, TrendingDown, ClipboardList as ClipboardListIcon, Package, MonitorPlay } from 'lucide-react'
 
 export const sidebarItems = [
   {
@@ -127,6 +147,125 @@ export const sidebarItems = [
       { title: 'Issue / Return', path: '/library/issue-return' },
       { title: 'Add Book', path: '/library/add-book' },
       { title: 'Library Staff', path: '/library/staff' },
+    ],
+  },
+  {
+    id: 'transport',
+    title: 'Transport',
+    icon: Bus,
+    children: [
+      { title: 'Dashboard', path: '/transport' },
+      { title: 'Routes', path: '/transport/routes' },
+      { title: 'Vehicles', path: '/transport/vehicles' },
+      { title: 'Pickup Points', path: '/transport/pickup-points' },
+      { title: 'Assign Vehicle', path: '/transport/assign-vehicle' },
+      { title: 'Assign Pickup Point', path: '/transport/assign-pickup-point' },
+      { title: 'Transport Fees', path: '/transport/fees' },
+      { title: 'Reports', path: '/transport/reports' },
+    ],
+  },
+  {
+    id: 'hostel',
+    title: 'Hostel',
+    icon: BedDouble,
+    children: [
+      { title: 'Dashboard', path: '/hostel' },
+      { title: 'Hostel Rooms', path: '/hostel/rooms' },
+      { title: 'Room Types', path: '/hostel/room-types' },
+      { title: 'Room Allocation', path: '/hostel/allocation' },
+      { title: 'Student Hostel List', path: '/hostel/students' },
+      { title: 'Hostel Fees', path: '/hostel/fees' },
+      { title: 'Reports', path: '/hostel/reports' },
+    ],
+  },
+  {
+    id: 'income',
+    title: 'Income',
+    icon: TrendingUp,
+    children: [
+      { title: 'Income Head', path: '/income/head' },
+      { title: 'Add Income', path: '/income/add' },
+      { title: 'Search Income', path: '/income/search' },
+    ],
+  },
+  {
+    id: 'expenses',
+    title: 'Expenses',
+    icon: TrendingDown,
+    children: [
+      { title: 'Expense Head', path: '/expenses/head' },
+      { title: 'Add Expense', path: '/expenses/add' },
+      { title: 'Search Expense', path: '/expenses/search' },
+    ],
+  },
+  {
+    id: 'homework',
+    title: 'Homework',
+    icon: ClipboardListIcon,
+    children: [
+      { title: 'Add Homework', path: '/homework/add' },
+      { title: 'Daily Assignment', path: '/homework/daily-assignment' },
+    ],
+  },
+  {
+    id: 'lesson-plan',
+    title: 'Lesson Plan',
+    icon: BookOpen,
+    children: [
+      { title: 'Manage Lesson Plan', path: '/lesson-plan/manage' },
+      { title: 'Copy Old Lesson', path: '/lesson-plan/copy' },
+      { title: 'Lesson', path: '/lesson-plan/lesson' },
+      { title: 'Topic', path: '/lesson-plan/topic' },
+    ],
+  },
+  {
+    id: 'alumni',
+    title: 'Alumni',
+    icon: GraduationCapIcon,
+    children: [
+      { title: 'Manage Alumni', path: '/alumni' },
+      { title: 'Alumni Events', path: '/alumni/events' },
+    ],
+  },
+  {
+    id: 'download-center',
+    title: 'Download Center',
+    icon: DownloadIcon,
+    children: [
+      { title: 'Content Types', path: '/download-center/content-types' },
+      { title: 'Upload / Share Content', path: '/download-center/contents' },
+      { title: 'Content Share List', path: '/download-center/share-list' },
+      { title: 'Video Tutorials', path: '/download-center/video-tutorials' },
+    ],
+  },
+  {
+    id: 'inventory',
+    title: 'Inventory',
+    icon: Package,
+    children: [
+      { title: 'Dashboard', path: '/inventory' },
+      { title: 'Item Category', path: '/inventory/categories' },
+      { title: 'Item Store', path: '/inventory/stores' },
+      { title: 'Item Supplier', path: '/inventory/suppliers' },
+      { title: 'Add Item', path: '/inventory/add-item' },
+      { title: 'Item Stock', path: '/inventory/stock' },
+      { title: 'Issue Item', path: '/inventory/issue' },
+    ],
+  },
+  {
+    id: 'online-exam',
+    title: 'Online Examination',
+    icon: MonitorPlay,
+    children: [
+      { title: 'Online Exams', path: '/online-exam' },
+      { title: 'Question Bank', path: '/online-exam/question-bank' },
+      { title: 'Add Question', path: '/online-exam/add-question' },
+      { title: 'Categories', path: '/online-exam/categories' },
+      { title: 'Exam Schedule', path: '/online-exam/schedule' },
+      { title: 'Assign Questions', path: '/online-exam/assign-questions' },
+      { title: 'Student Attempts', path: '/online-exam/attempts' },
+      { title: 'Results', path: '/online-exam/results' },
+      { title: 'Reports', path: '/online-exam/reports' },
     ],
   },
   {

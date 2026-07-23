@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Dashboard
+// Page: Dashboard
+//
+// Purpose:
+// Central hub showing school-wide stats and quick links.
+//
+// Data Source:
+// mockData.js (mock)
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -14,7 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
+import PageHeader from '@/components/PageHeader'
 import KpiCard from '@/components/cards/KpiCard'
 import KpiSkeleton from '@/components/loaders/KpiSkeleton'
 import ChartCard from '@/components/charts/ChartCard'

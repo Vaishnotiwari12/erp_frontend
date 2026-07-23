@@ -1,32 +1,41 @@
-// Schools service aligned with School_erp-b-main school.routes.js + school.controller.js.
-// Backend endpoints (mounted at /api, require superadmin):
-//   GET    /api/schools            -> { success, count, data: School[] }
-//   GET    /api/schools/:id        -> { success, data: School }
-//   GET    /api/schools/:id/stats  -> { success, data: { school_name, domain, status, total_students, total_staff } }
-//   POST   /api/schools            -> { success, data: School }  (body: school_name, domain[, db_name])
-//   PUT    /api/schools/:id        -> { success, data: School }
-//   DELETE /api/schools/:id        -> { success, message }
-// Model fields: school_name, domain, mongo_uri, status, createdAt, updatedAt.
+// ====================================================================
+// Service Layer
+//
+// Purpose:
+// Handles all backend communication for this module.
+//
+// Current State:
+// Uses mock data.
+//
+// TODO(BACKEND):
+// Replace mock implementation with Axios API calls.
+//
+// Expected Response:
+// { success, message, data }
+// ====================================================================
 
 import apiClient from './api'
 import { mockResponse, schools as mockSchools } from './mockData'
 
 export const schoolService = {
+  // TODO(BACKEND)
+  // Replace with GET /schools
   async list(params = {}) {
-    // INTEGRATION: return apiClient.get('/schools', { params })
     return mockResponse(mockSchools)
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /schools/:id
   async get(id) {
-    // INTEGRATION: return apiClient.get(`/schools/${id}`)
     const found = mockSchools.find((s) => s._id === id)
     return found
       ? mockResponse(found)
       : Promise.reject({ message: 'School not found' })
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /schools/:id/stats
   async getStats(id) {
-    // INTEGRATION: return apiClient.get(`/schools/${id}/stats`)
     const found = mockSchools.find((s) => s._id === id) || mockSchools[0]
     return mockResponse({
       school_name: found.school_name,
@@ -37,18 +46,21 @@ export const schoolService = {
     })
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /schools
   async create(payload) {
-    // INTEGRATION: return apiClient.post('/schools', payload)
     return mockResponse({ _id: `sch-${Date.now()}`, ...payload, status: 'active' })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /schools/:id
   async update(id, payload) {
-    // INTEGRATION: return apiClient.put(`/schools/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /schools/:id
   async remove(id) {
-    // INTEGRATION: return apiClient.delete(`/schools/${id}`)
     return mockResponse({ message: 'School deleted successfully' })
   },
 }

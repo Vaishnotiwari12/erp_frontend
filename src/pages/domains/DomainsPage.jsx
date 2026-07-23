@@ -1,14 +1,29 @@
+// ====================================================================
+// Module: Domains
+// Page: Domains
+//
+// Purpose:
+// Manage tenant domains and their verification status.
+//
+// Data Source:
+// domain.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, Globe, MoreHorizontal, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { Plus, Globe, MoveHorizontal as MoreHorizontal, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
-import SearchInput from '@/components/common/SearchInput'
+import PageHeader from '@/components/PageHeader'
+import SearchBar from '@/components/SearchBar'
 import FilterSelect from '@/components/common/FilterSelect'
-import FilterBar from '@/components/common/FilterBar'
+import FilterBar from '@/components/FilterBar'
 import ListState from '@/components/common/ListState'
-import StatusBadge from '@/components/common/StatusBadge'
-import DataTable from '@/components/tables/DataTable'
+import StatusBadge from '@/components/StatusBadge'
+import DataTable from '@/components/DataTable'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { domainService } from '@/services/domain.service'
 import { STATUS_OPTIONS } from '@/constants/navigation'
@@ -80,7 +95,7 @@ export default function DomainsPage() {
         actions={<Button><Plus className="mr-2 h-4 w-4" /> Register Domain</Button>}
       />
       <FilterBar>
-        <SearchInput value={search} onChange={setSearch} placeholder="Search domains…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search domains…" className="max-w-sm" />
         <FilterSelect value={status} onChange={setStatus} options={[{ value: 'all', label: 'All statuses' }, ...STATUS_OPTIONS]} />
       </FilterBar>
       <ListState isLoading={isLoading} isEmpty={!isLoading && filtered.length === 0} emptyTitle="No domains found">

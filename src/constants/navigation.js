@@ -1,3 +1,26 @@
+// ====================================================================
+// Navigation + Domain Constants
+//
+// Purpose:
+// The canonical source of truth for the app's navigation structure and
+// the domain enums (roles, statuses) shared with the backend.
+//
+// Contents:
+//   - NAV_GROUPS — the sidebar menu tree, grouped by domain. Each item maps
+//     a title + lucide icon to a route path.
+//   - APP_NAME / APP_VERSION — branding constants.
+//   - STORAGE_KEYS — localStorage keys (namespaced to avoid collisions).
+//   - USER_ROLES / ROLE_LABELS — role enum matching the backend's
+//     centralModels.js + users.controller.js.
+//   - STATUS_OPTIONS / STATUS_STYLES — status enum + Tailwind class map
+//     used by StatusBadge.
+//   - LEAVE_STATUS_OPTIONS — leave request workflow states.
+//
+// Why a single file:
+//   Keeping navigation + domain enums together means adding a new module
+//   is a one-file change: add the nav group here, then create the route.
+// ====================================================================
+
 // Navigation + domain constants aligned with School_erp-b-main backend modules.
 
 export const NAV_GROUPS = [
@@ -73,6 +96,31 @@ export const NAV_GROUPS = [
       { title: 'Issue / Return', to: '/library/issue-return', icon: 'ArrowLeftRight' },
       { title: 'Add Book', to: '/library/add-book', icon: 'BookPlus' },
       { title: 'Library Staff', to: '/library/staff', icon: 'UserCog' },
+    ],
+  },
+  {
+    label: 'Transport',
+    items: [
+      { title: 'Dashboard', to: '/transport', icon: 'Bus' },
+      { title: 'Routes', to: '/transport/routes', icon: 'Route' },
+      { title: 'Vehicles', to: '/transport/vehicles', icon: 'Bus' },
+      { title: 'Pickup Points', to: '/transport/pickup-points', icon: 'MapPin' },
+      { title: 'Assign Vehicle', to: '/transport/assign-vehicle', icon: 'UserPlus' },
+      { title: 'Assign Pickup Point', to: '/transport/assign-pickup-point', icon: 'MapPin' },
+      { title: 'Transport Fees', to: '/transport/fees', icon: 'DollarSign' },
+      { title: 'Reports', to: '/transport/reports', icon: 'FileBarChart' },
+    ],
+  },
+  {
+    label: 'Hostel',
+    items: [
+      { title: 'Dashboard', to: '/hostel', icon: 'BedDouble' },
+      { title: 'Hostel Rooms', to: '/hostel/rooms', icon: 'BedDouble' },
+      { title: 'Room Types', to: '/hostel/room-types', icon: 'Building2' },
+      { title: 'Room Allocation', to: '/hostel/allocation', icon: 'DoorOpen' },
+      { title: 'Student Hostel List', to: '/hostel/students', icon: 'Users' },
+      { title: 'Hostel Fees', to: '/hostel/fees', icon: 'DollarSign' },
+      { title: 'Reports', to: '/hostel/reports', icon: 'FileBarChart' },
     ],
   },
 ]

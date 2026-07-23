@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Exam Schedule
+//
+// Purpose:
+// Weekly examination schedule across classes and sections.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { CalendarRange, Eye, Pencil, Printer, Download, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'

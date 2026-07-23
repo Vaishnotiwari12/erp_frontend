@@ -1,7 +1,20 @@
+// ====================================================================
+// Module: Students
+// Page: Online Admissions
+//
+// Purpose:
+// Track and manage online admission applications.
+//
+// Data Source:
+// student.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import {
-  Plus, ClipboardList, Eye, Check, X, Trash2, FileText, Clock, CheckCircle2, XCircle,
-} from 'lucide-react'
+import { Plus, ClipboardList, Eye, Check, X, Trash2, FileText, Clock, CircleCheck as CheckCircle2, Circle as XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
@@ -16,8 +29,7 @@ import { DeleteDialog } from '@/components/DeleteDialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { studentService } from '@/services/student.service'
+import { useAdmissions } from '@/hooks/useStudents'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -46,38 +58,24 @@ const STAGE_ICON = {
 
 export default function AdmissionsPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.admissions(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    status, setStatus,
+    approveAdmission,
+    rejectAdmission,
+    deleteAdmission,
+  } = useAdmissions()
   const [viewApp, setViewApp] = useState(null)
   const [deleteApp, setDeleteApp] = useState(null)
 
-  const rows = data || []
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const name = `${r.first_name} ${r.last_name}`
-        const ms = !search || name.toLowerCase().includes(search.toLowerCase()) || r.email.toLowerCase().includes(search.toLowerCase())
-        const mst = status === 'all' || r.status === status
-        return ms && mst
-      }),
-    [rows, search, status],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    pending: rows.filter((r) => r.status === 'pending').length,
-    approved: rows.filter((r) => r.status === 'approved').length,
-    rejected: rows.filter((r) => r.status === 'rejected').length,
-  }), [rows])
-
   const handleApprove = async (app) => {
-    toast({ title: 'Application approved', description: `${app.first_name} ${app.last_name} has been admitted.` })
-    refetch()
+    await approveAdmission(app)
   }
   const handleReject = async (app) => {
-    toast({ title: 'Application rejected', description: `${app.first_name} ${app.last_name} was rejected.` })
-    refetch()
+    await rejectAdmission(app)
   }
 
   const columns = useMemo(
@@ -162,7 +160,7 @@ export default function AdmissionsPage() {
           enableSelection
           enableExport
           exportFilename="admissions"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Applications deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Applications deleted' }) } }]}
           rowActions={(app) => <ActionDropdown actions={rowActions(app)} />}
         />
       )}
@@ -218,7 +216,7 @@ export default function AdmissionsPage() {
         open={!!deleteApp}
         onOpenChange={(o) => !o && setDeleteApp(null)}
         entityName={deleteApp ? `${deleteApp.first_name} ${deleteApp.last_name}` : ''}
-        onConfirm={() => { toast({ title: 'Application deleted' }); setDeleteApp(null); refetch() }}
+        onConfirm={() => { deleteAdmission(deleteApp._id); setDeleteApp(null) }}
       />
     </div>
   )

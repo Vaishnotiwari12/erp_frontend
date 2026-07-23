@@ -1,4 +1,13 @@
-import { Download, FileJson, FileSpreadsheet } from 'lucide-react'
+// ====================================================================
+// Reusable Component — ExportButtons
+//
+// Used by: All table pages.
+// Purpose: CSV export button that delegates to exportToCsv(). Exports
+//          selected rows when present, otherwise all rows. Disabled when
+//          there's no data to export.
+// ====================================================================
+
+import { Download, File as FileJson, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { exportToCsv } from '@/utils/export'

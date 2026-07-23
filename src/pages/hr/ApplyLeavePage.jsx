@@ -1,6 +1,17 @@
-// Apply Leave — a staff member submits their own leave application.
-// Shows current leave balances up top, a form to apply, and a
-// history table of the logged-in user's past applications.
+// ====================================================================
+// Module: Human Resources
+// Page: Apply Leave
+//
+// Purpose:
+// Allow staff to submit leave applications and track their status.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { CalendarPlus, Paperclip, Send, Eye, Clock, CircleCheck as CheckCircle2, Circle as XCircle, FileText } from 'lucide-react'

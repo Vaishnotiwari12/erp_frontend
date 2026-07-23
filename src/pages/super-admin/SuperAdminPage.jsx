@@ -1,8 +1,23 @@
+// ====================================================================
+// Module: Super Admin
+// Page: Super Admin
+//
+// Purpose:
+// Platform-wide overview of tenants, domains, and system health.
+//
+// Data Source:
+// N/A
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { Building2, Globe, Users, Server, ShieldCheck, Activity } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
+import PageHeader from '@/components/PageHeader'
 import KpiCard from '@/components/cards/KpiCard'
 import ChartCard from '@/components/charts/ChartCard'
 import DonutChart from '@/components/charts/DonutChart'

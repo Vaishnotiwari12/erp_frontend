@@ -1,5 +1,17 @@
-// Phone Call Log — records all incoming and outgoing calls at the front desk.
-// Each call has a type (incoming/outgoing), purpose, and resolution status.
+// ====================================================================
+// Module: Front Office
+// Page: Phone Call Log
+//
+// Purpose:
+// Record incoming and outgoing calls at the front desk.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

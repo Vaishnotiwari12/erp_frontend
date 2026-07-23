@@ -1,26 +1,27 @@
-// Authentication service aligned with School_erp-b-main authController.js.
-// Backend endpoints (mounted at /api/auth):
-//   POST /api/auth/signup  -> { id, name, email, role: 'superadmin', token }
-//   POST /api/auth/login   -> { id, name, email, role: 'superadmin', token }
-//   POST /api/auth/logout  -> { message: 'Logged out' }
-// The backend also sets an httpOnly cookie; the token in the body is a fallback.
-// Users controller (/users) exposes admin/staff/student/parent signup+login.
+// ====================================================================
+// Service Layer
+//
+// Purpose:
+// Handles all backend communication for this module.
+//
+// Current State:
+// Uses mock data.
+//
+// TODO(BACKEND):
+// Replace mock implementation with Axios API calls.
+//
+// Expected Response:
+// { success, message, data }
+// ====================================================================
 
 import apiClient from './api'
 import { mockResponse } from './mockData'
-
-const DEMO_USER = {
-  id: 'usr-001',
-  name: 'Alex Morgan',
-  email: 'alex@scholaria.io',
-  role: 'superadmin',
-  avatar: null,
-  school_name: 'Scholaria Platform',
-}
+import { DEMO_USER } from '@/data/auth.mock'
 
 export const authService = {
   // Dev login accepts any credentials and returns a demo session.
-  // INTEGRATION: return apiClient.post('/auth/login', { email, password })
+  // TODO(BACKEND)
+  // Replace with POST /auth/login
   async login({ email, password }) {
     if (!email || !password) {
       return Promise.reject({ message: 'Email and password are required.' })
@@ -30,7 +31,8 @@ export const authService = {
     return mockResponse({ id: user.id, name: user.name, email: user.email, role: user.role, token })
   },
 
-  // INTEGRATION: return apiClient.post('/auth/signup', { name, email, password })
+  // TODO(BACKEND)
+  // Replace with POST /auth/signup
   async signup({ name, email, password }) {
     if (!name || !email || !password) {
       return Promise.reject({ message: 'Name, email and password are required.' })
@@ -40,7 +42,8 @@ export const authService = {
     return mockResponse({ id: user.id, name: user.name, email: user.email, role: user.role, token })
   },
 
-  // INTEGRATION: return apiClient.post('/auth/logout')
+  // TODO(BACKEND)
+  // Replace with POST /auth/logout
   async logout() {
     return mockResponse({ message: 'Logged out' })
   },

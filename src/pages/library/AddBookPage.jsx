@@ -1,6 +1,17 @@
-// Add Book — a dedicated form page for adding a single book to the catalog.
-// Unlike the quick-add drawer in BookList, this page has room for all fields
-// and shows a live preview of the book entry as the librarian types.
+// ====================================================================
+// Module: Library
+// Page: Add Book
+//
+// Purpose:
+// Form page for adding a single new book to the catalog.
+//
+// Data Source:
+// library.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useState } from 'react'
 import {

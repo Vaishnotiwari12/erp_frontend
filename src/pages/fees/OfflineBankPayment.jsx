@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Fees
+// Page: Offline Bank Payment
+//
+// Purpose:
+// Review and approve offline bank transfer submissions.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { Landmark, Plus, Pencil, Trash2, Eye, Check, X, Paperclip } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,11 +32,9 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { feesService } from '@/services/fees.service'
+import { useOfflinePayments } from '@/hooks/useFees'
 import { BANK_PAYMENT_STATUSES } from '@/data/fees.mock'
 import { formatCurrency, formatDate } from '@/utils/format'
-import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'student_name', label: 'Student' },
@@ -34,38 +47,11 @@ const EXPORT_COLS = [
 ]
 
 export default function OfflineBankPaymentPage() {
-  const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => feesService.getOfflinePayments(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const { rows, stats, isLoading, search, setSearch, status: statusFilter, setStatus: setStatusFilter, createOfflinePayment, approvePayment, rejectPayment } = useOfflinePayments()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const ms =
-          !search ||
-          r.student_name.toLowerCase().includes(search.toLowerCase()) ||
-          r.transaction_no.toLowerCase().includes(search.toLowerCase())
-        const mst = statusFilter === 'all' || r.status === statusFilter
-        return ms && mst
-      }),
-    [rows, search, statusFilter],
-  )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      pending: rows.filter((r) => r.status === 'Pending').length,
-      approved: rows.filter((r) => r.status === 'Approved').length,
-      rejected: rows.filter((r) => r.status === 'Rejected').length,
-    }),
-    [rows],
-  )
 
   const columns = useMemo(
     () => [
@@ -93,8 +79,8 @@ export default function OfflineBankPaymentPage() {
     ...(r.status === 'Pending'
       ? [
           { separator: true },
-          { label: 'Approve', icon: Check, onClick: async () => { await feesService.approveOfflinePayment(r._id); toast({ title: 'Payment approved' }); refetch() } },
-          { label: 'Reject', icon: X, variant: 'destructive', onClick: async () => { await feesService.rejectOfflinePayment(r._id); toast({ title: 'Payment rejected' }); refetch() } },
+          { label: 'Approve', icon: Check, onClick: () => approvePayment(r._id) },
+          { label: 'Reject', icon: X, variant: 'destructive', onClick: () => rejectPayment(r._id) },
         ]
       : []),
     { separator: true },
@@ -121,7 +107,7 @@ export default function OfflineBankPaymentPage() {
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search student or transaction no…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="offline-payments" />
+          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="offline-payments" />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All statuses</option>
             {BANK_PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -131,14 +117,14 @@ export default function OfflineBankPaymentPage() {
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={6} cols={6} />
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 ? (
         <NoData title="No payments found" actionLabel="Add Payment" onAction={() => setAddOpen(true)} />
       ) : (
-        <DataTable columns={columns} data={filtered} enableExport exportFilename="offline-payments" rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />
+        <DataTable columns={columns} data={rows} enableExport exportFilename="offline-payments" rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />
       )}
 
-      <PaymentFormDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Offline Payment" onSubmit={async (p) => { await feesService.createOfflinePayment(p); toast({ title: 'Payment added' }); setAddOpen(false); refetch() }} />
-      <PaymentFormDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Payment" initial={editRow} onSubmit={async (p) => { await feesService.update(editRow._id, p); toast({ title: 'Payment updated' }); setEditRow(null); refetch() }} />
+      <PaymentFormDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Offline Payment" onSubmit={async (p) => { await createOfflinePayment(p); setAddOpen(false) }} />
+      <PaymentFormDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Payment" initial={editRow} onSubmit={async (p) => { await createOfflinePayment(p); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Payment Details" description={viewRow?.transaction_no} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
@@ -166,7 +152,7 @@ export default function OfflineBankPaymentPage() {
       </Drawer>
 
       <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.transaction_no}
-        onConfirm={() => { toast({ title: 'Payment deleted' }); setDeleteRow(null); refetch() }} />
+        onConfirm={() => setDeleteRow(null)} />
     </div>
   )
 }

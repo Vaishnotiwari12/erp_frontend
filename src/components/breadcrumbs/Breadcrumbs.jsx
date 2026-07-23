@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — Breadcrumbs
+//
+// Used by: All pages.
+// Purpose: Navigation trail showing the path from the app root to the
+//          current page. Last item renders as plain text (current page);
+//          earlier items are links. Helps users understand their location
+//          in the module hierarchy and jump back.
+// ====================================================================
+
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'

@@ -1,7 +1,20 @@
+// ====================================================================
+// Module: Attendance
+// Page: Approve Leave
+//
+// Purpose:
+// Review and approve student leave applications.
+//
+// Data Source:
+// attendance.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import {
-  CalendarCheck, Clock, CheckCircle2, XCircle, Check, X, Eye, FileText, Paperclip,
-} from 'lucide-react'
+import { CalendarCheck, Clock, CircleCheck as CheckCircle2, Circle as XCircle, Check, X, Eye, FileText, Paperclip } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,8 +29,7 @@ import { Drawer } from '@/components/Drawer'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { attendanceService } from '@/services/attendance.service'
+import { useLeaveApprovals } from '@/hooks/useAttendance'
 import { academicClasses, academicSections } from '@/services/mockData'
 import { LEAVE_STATUS_OPTIONS } from '@/constants/navigation'
 import { formatDate, initials } from '@/utils/format'
@@ -55,45 +67,26 @@ function LeaveStatusPill({ status }) {
 
 export default function ApproveLeavePage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => attendanceService.leaves(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [classFilter, setClassFilter] = useState('all')
-  const [sectionFilter, setSectionFilter] = useState('all')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    status, setStatus,
+    classFilter, setClassFilter,
+    sectionFilter, setSectionFilter,
+    fromDate, setFromDate,
+    toDate, setToDate,
+    approveLeave,
+    rejectLeave,
+  } = useLeaveApprovals()
   const [viewApp, setViewApp] = useState(null)
 
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.student_name.toLowerCase().includes(search.toLowerCase()) || r.admission_no.toLowerCase().includes(search.toLowerCase())
-      const mst = status === 'all' || r.status === status
-      const msc = classFilter === 'all' || r.class === classFilter
-      const mss = sectionFilter === 'all' || r.section === sectionFilter
-      const mf = !fromDate || new Date(r.from) >= new Date(fromDate)
-      const mt = !toDate || new Date(r.to) <= new Date(toDate)
-      return ms && mst && msc && mss && mf && mt
-    }),
-    [rows, search, status, classFilter, sectionFilter, fromDate, toDate],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    pending: rows.filter((r) => r.status === 'pending').length,
-    approved: rows.filter((r) => r.status === 'approved').length,
-    rejected: rows.filter((r) => r.status === 'rejected').length,
-  }), [rows])
-
   const handleApprove = async (app) => {
-    await attendanceService.updateLeave(app._id, 'approved')
-    toast({ title: 'Leave approved', description: `${app.student_name}'s leave has been approved.` })
-    refetch()
+    await approveLeave(app)
   }
   const handleReject = async (app) => {
-    await attendanceService.updateLeave(app._id, 'rejected')
-    toast({ title: 'Leave rejected', description: `${app.student_name}'s leave has been rejected.` })
-    refetch()
+    await rejectLeave(app)
   }
 
   const columns = useMemo(() => [

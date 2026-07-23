@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Marks Division
+//
+// Purpose:
+// Define division bands based on percentage ranges.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { ScrollText, Plus, Pencil, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'

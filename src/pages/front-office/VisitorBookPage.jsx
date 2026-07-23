@@ -1,6 +1,17 @@
-// Visitor Book — logs every visitor entering the campus for security and audit.
-// Visitors check in on arrival and check out when they leave. The front desk
-// can see who is currently on campus at a glance.
+// ====================================================================
+// Module: Front Office
+// Page: Visitor Book
+//
+// Purpose:
+// Log and track all visitors entering the campus.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

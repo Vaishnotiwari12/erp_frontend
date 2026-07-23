@@ -4,7 +4,21 @@ import Navbar from '@/components/navbar/Navbar'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { cn } from '@/lib/utils'
 
-// Main authenticated shell: collapsible sidebar + sticky header + content.
+// ====================================================================
+// AppLayout — Authenticated Application Shell
+//
+// Purpose:
+// The persistent shell that wraps every protected page. Renders:
+//   - A collapsible sidebar (desktop) for module navigation.
+//   - A sticky navbar with the sidebar toggle, search, and user menu.
+//   - A scrollable <main> region where the active route's <Outlet> renders.
+//
+// Layout structure:
+//   [Sidebar | (Navbar / Main content)]
+// The sidebar is hidden below `lg` breakpoint (mobile uses a drawer instead).
+// The `collapsed` state lives here so the navbar toggle and sidebar stay in sync.
+// ====================================================================
+
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   return (

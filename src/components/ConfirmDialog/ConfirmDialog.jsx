@@ -1,4 +1,14 @@
-import { AlertTriangle } from 'lucide-react'
+// ====================================================================
+// Reusable Component — ConfirmDialog
+//
+// Used by: All modules.
+// Purpose: Generic confirmation dialog built on Radix AlertDialog.
+//          Supports a `variant` prop ('default' | 'destructive') to switch
+//          icon color and button styling. A `loading` prop disables both
+//          buttons during async operations to prevent double-submits.
+// ====================================================================
+
+import { TriangleAlert as AlertTriangle } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,

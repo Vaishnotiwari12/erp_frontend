@@ -1,71 +1,84 @@
-// Students service aligned with School_erp-b-main student.routes.js + studentInformationRoutes.
-// Backend endpoints (mounted at /api, tenant-resolved):
-//   GET    /api/student/details          -> { success, data: Student[] }  (studentInformationRoutes/studentRoutes)
-//   GET    /api/student/details/:id      -> { success, data: Student }
-//   POST   /api/student/details          -> { success, data: Student }
-//   PUT    /api/student/details/:id      -> { success, data: Student }
-//   DELETE /api/student/details/:id      -> { success, message }
-//   POST   /api/student/bulk-delete      -> bulk delete
-//   GET    /api/student/disabled         -> disabled students
-//   GET    /api/student/online-admission -> online admission applications
-//   GET    /api/student/category        -> student categories
-//   GET    /api/student/house           -> student houses
-// Model fields (studentInformationModels): name { first, last }, email, mobile, admission_no, class, section, status, guardian_name, admission_date.
+// ====================================================================
+// Service Layer
+//
+// Purpose:
+// Handles all backend communication for this module.
+//
+// Current State:
+// Uses mock data.
+//
+// TODO(BACKEND):
+// Replace mock implementation with Axios API calls.
+//
+// Expected Response:
+// { success, message, data }
+// ====================================================================
 
 import apiClient from './api'
-import { mockResponse, students as mockStudents, admissions as mockAdmissions, studentCategories, studentHouses } from './mockData'
+import { mockResponse } from './mockData'
+import { students as mockStudents, admissions as mockAdmissions, studentCategories, studentHouses } from '@/data/students.mock'
 
 export const studentService = {
+  // TODO(BACKEND)
+  // Replace with GET /student/details
   async list(params = {}) {
-    // INTEGRATION: return apiClient.get('/student/details', { params })
     return mockResponse(mockStudents)
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /student/details/:id
   async get(id) {
-    // INTEGRATION: return apiClient.get(`/student/details/${id}`)
     const found = mockStudents.find((s) => s._id === id)
     return found
       ? mockResponse(found)
       : Promise.reject({ message: 'Student not found' })
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /student/details
   async create(payload) {
-    // INTEGRATION: return apiClient.post('/student/details', payload)
     return mockResponse({ _id: `stu-${Date.now()}`, ...payload, status: 'active' })
   },
 
+  // TODO(BACKEND)
+  // Replace with PUT /student/details/:id
   async update(id, payload) {
-    // INTEGRATION: return apiClient.put(`/student/details/${id}`, payload)
     return mockResponse({ _id: id, ...payload })
   },
 
+  // TODO(BACKEND)
+  // Replace with DELETE /student/details/:id
   async remove(id) {
-    // INTEGRATION: return apiClient.delete(`/student/details/${id}`)
     return mockResponse({ message: 'Student deleted successfully' })
   },
 
+  // TODO(BACKEND)
+  // Replace with POST /student/bulk-delete
   async bulkDelete(ids) {
-    // INTEGRATION: return apiClient.post('/student/bulk-delete', { ids })
     return mockResponse({ message: `${ids.length} students deleted` })
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /student/disabled
   async disabled(params = {}) {
-    // INTEGRATION: return apiClient.get('/student/disabled', { params })
     return mockResponse(mockStudents.filter((s) => s.status === 'disabled' || s.status === 'inactive'))
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /student/online-admission
   async admissions(params = {}) {
-    // INTEGRATION: return apiClient.get('/student/online-admission', { params })
     return mockResponse(mockAdmissions)
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /student/category
   async categories(params = {}) {
-    // INTEGRATION: return apiClient.get('/student/category', { params })
     return mockResponse(studentCategories)
   },
 
+  // TODO(BACKEND)
+  // Replace with GET /student/house
   async houses(params = {}) {
-    // INTEGRATION: return apiClient.get('/student/house', { params })
     return mockResponse(studentHouses)
   },
 }

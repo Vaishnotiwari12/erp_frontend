@@ -1,11 +1,26 @@
-import { Mail, Phone, MapPin, Calendar, Shield, Edit, Camera } from 'lucide-react'
+// ====================================================================
+// Module: Profile
+// Page: Profile
+//
+// Purpose:
+// View and edit the current user's profile information.
+//
+// Data Source:
+// N/A
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
+import { Mail, Phone, MapPin, Calendar, Shield, CreditCard as Edit, Camera } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
+import PageHeader from '@/components/PageHeader'
 import RoleBadge from '@/components/common/RoleBadge'
 import { useAuth } from '@/context/AuthContext'
 import { initials } from '@/utils/format'

@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Academics
+// Page: Classes
+//
+// Purpose:
+// Manage academic classes and grade levels.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, BookOpen, Pencil, Trash2, Eye, Layers, CheckCircle2 } from 'lucide-react'
+import { Plus, BookOpen, Pencil, Trash2, Eye, Layers, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,8 +33,7 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { academicsService } from '@/services/academics.service'
+import { useClasses } from '@/hooks/useAcademics'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -32,30 +46,20 @@ const EXPORT_COLS = [
 
 export default function ClassesPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => academicsService.classes(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    status, setStatus,
+    saveClass,
+    deleteClass,
+    bulkDelete,
+  } = useClasses()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.name.toLowerCase().includes(search.toLowerCase())
-      const mst = status === 'all' || r.status === status
-      return ms && mst
-    }),
-    [rows, search, status],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    sections: rows.reduce((s, r) => s + (r.sections_count || 0), 0),
-    inactive: rows.filter((r) => r.status !== 'active').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -131,13 +135,13 @@ export default function ClassesPage() {
           enableSelection
           enableExport
           exportFilename="classes"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Classes deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Classes deleted' }) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <ClassDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Class" onSubmit={async (p) => { await academicsService.createClass(p); toast({ title: 'Class added', description: p.name }); setAddOpen(false); refetch() }} />
-      <ClassDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Class" initial={editRow} onSubmit={async (p) => { await academicsService.update(editRow._id, p); toast({ title: 'Class updated', description: p.name }); setEditRow(null); refetch() }} />
+      <ClassDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Class" onSubmit={async (p) => { await saveClass(p); setAddOpen(false) }} />
+      <ClassDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Class" initial={editRow} onSubmit={async (p) => { await saveClass(p, editRow._id); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Class Details" description={viewRow?.name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
@@ -160,7 +164,7 @@ export default function ClassesPage() {
       </Drawer>
 
       <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={() => { toast({ title: 'Class deleted' }); setDeleteRow(null); refetch() }} />
+        onConfirm={() => { deleteClass(deleteRow._id); setDeleteRow(null) }} />
     </div>
   )
 }

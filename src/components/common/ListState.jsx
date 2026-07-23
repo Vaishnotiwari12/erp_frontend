@@ -1,4 +1,4 @@
-import EmptyState from '@/components/empty-state/EmptyState'
+import EmptyState from '@/components/EmptyState'
 import TableSkeleton from '@/components/loaders/TableSkeleton'
 import { SearchX } from 'lucide-react'
 

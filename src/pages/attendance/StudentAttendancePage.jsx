@@ -1,8 +1,20 @@
+// ====================================================================
+// Module: Attendance
+// Page: Student Attendance
+//
+// Purpose:
+// Mark and track daily student attendance across classes.
+//
+// Data Source:
+// attendance.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import {
-  ClipboardCheck, Users, CheckCircle2, XCircle, Clock3, CalendarClock,
-  Check, X, CalendarPlus, Eye, Pencil, Download,
-} from 'lucide-react'
+import { ClipboardCheck, Users, CircleCheck as CheckCircle2, Circle as XCircle, Clock3, CalendarClock, Check, X, CalendarPlus, Eye, Pencil, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,8 +31,7 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { attendanceService } from '@/services/attendance.service'
+import { useStudentAttendance } from '@/hooks/useAttendance'
 import { academicClasses, academicSections, ATTENDANCE_STATUS } from '@/services/mockData'
 import { fullName, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
@@ -52,48 +63,21 @@ function StatusPill({ status }) {
 
 export default function StudentAttendancePage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => attendanceService.list(), [])
-  const [search, setSearch] = useState('')
-  const [classFilter, setClassFilter] = useState('all')
-  const [sectionFilter, setSectionFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    classFilter, setClassFilter,
+    sectionFilter, setSectionFilter,
+    statusFilter, setStatusFilter,
+    dateFilter, setDateFilter,
+    markStatus,
+    bulkMark,
+    updateAttendance,
+  } = useStudentAttendance()
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const name = fullName(r.name)
-      const ms = !search || name.toLowerCase().includes(search.toLowerCase()) || r.admission_no.toLowerCase().includes(search.toLowerCase())
-      const msc = classFilter === 'all' || r.class === classFilter
-      const mss = sectionFilter === 'all' || r.section === sectionFilter
-      const mst = statusFilter === 'all' || r.status === statusFilter
-      const md = !dateFilter || r.date === dateFilter
-      return ms && msc && mss && mst && md
-    }),
-    [rows, search, classFilter, sectionFilter, statusFilter, dateFilter],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    present: rows.filter((r) => r.status === 'present').length,
-    absent: rows.filter((r) => r.status === 'absent').length,
-    leave: rows.filter((r) => r.status === 'leave').length,
-    late: rows.filter((r) => r.status === 'late').length,
-  }), [rows])
-
-  const markStatus = async (row, status) => {
-    await attendanceService.markAttendance(row._id, status)
-    toast({ title: 'Attendance marked', description: `${fullName(row.name)} marked ${status}.` })
-    refetch()
-  }
-
-  const bulkMark = async (selected, status) => {
-    await attendanceService.bulkMark(selected.map((r) => r._id), status)
-    toast({ title: `${selected.length} students marked ${status}` })
-    refetch()
-  }
 
   const columns = useMemo(() => [
     {
@@ -186,7 +170,7 @@ export default function StudentAttendancePage() {
         />
       )}
 
-      <EditDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} initial={editRow} onSubmit={async (p) => { await attendanceService.markAttendance(editRow._id, p.status); toast({ title: 'Attendance updated' }); setEditRow(null); refetch() }} />
+      <EditDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} initial={editRow} onSubmit={async (p) => { await updateAttendance(editRow._id, p); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Attendance Details" description={viewRow ? fullName(viewRow.name) : ''} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>

@@ -1,5 +1,17 @@
-// Departments — manage organisational units (e.g. Mathematics, Science, Admin).
-// Each department has a head, a staff count, and an active/inactive status.
+// ====================================================================
+// Module: Human Resources
+// Page: Department
+//
+// Purpose:
+// Manage academic and administrative departments.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { Plus, Building2, Pencil, Trash2, Eye, Users, CircleCheck as CheckCircle2 } from 'lucide-react'
@@ -22,8 +34,7 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { hrService } from '@/services/hr.service'
+import { useDepartments } from '@/hooks/useHR'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -37,28 +48,15 @@ const EXPORT_COLS = [
 
 export default function DepartmentPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getDepartments(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const {
+    rows: filtered, stats, isLoading,
+    search, setSearch, statusFilter, setStatusFilter,
+    saveDepartment, deleteDepartment,
+  } = useDepartments()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-
-  const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.code.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    totalStaff: rows.reduce((s, r) => s + (r.staff_count || 0), 0),
-    inactive: rows.filter((r) => r.status !== 'active').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -99,16 +97,12 @@ export default function DepartmentPage() {
   ]
 
   const handleSave = async (payload, id) => {
+    await saveDepartment(payload, id)
     if (id) {
-      await hrService.updateDepartment(id, payload)
-      toast({ title: 'Department updated', description: payload.name })
       setEditRow(null)
     } else {
-      await hrService.createDepartment(payload)
-      toast({ title: 'Department created', description: payload.name })
       setAddOpen(false)
     }
-    refetch()
   }
 
   return (
@@ -157,7 +151,7 @@ export default function DepartmentPage() {
           enableSelection
           enableExport
           exportFilename="departments"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Departments deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Departments deleted' }) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
@@ -213,10 +207,8 @@ export default function DepartmentPage() {
         onOpenChange={(o) => !o && setDeleteRow(null)}
         entityName={deleteRow?.name}
         onConfirm={async () => {
-          await hrService.deleteDepartment(deleteRow._id)
-          toast({ title: 'Department deleted' })
+          await deleteDepartment(deleteRow._id)
           setDeleteRow(null)
-          refetch()
         }}
       />
     </div>

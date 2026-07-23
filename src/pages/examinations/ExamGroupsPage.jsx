@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Examinations
+// Page: Exam Groups
+//
+// Purpose:
+// Create and manage examination groups across academic sessions.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, FileText, CalendarRange, Users, CheckCircle2, Eye, Pencil, Trash2, CalendarDays } from 'lucide-react'
+import { Plus, FileText, CalendarRange, Users, CircleCheck as CheckCircle2, Eye, Pencil, Trash2, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,10 +34,9 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { examinationService } from '@/services/examination.service'
-import { formatDate } from '@/utils/format'
+import { useExamGroups } from '@/hooks/useExaminations'
 import { useToast } from '@/hooks/use-toast'
+import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
   { key: 'name', label: 'Exam Name' },
@@ -39,32 +53,11 @@ const STATUSES = ['scheduled', 'active', 'completed']
 
 export default function ExamGroupsPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => examinationService.getExamGroups(), [])
-  const [search, setSearch] = useState('')
-  const [session, setSession] = useState('all')
-  const [status, setStatus] = useState('all')
+  const { rows, stats, isLoading, search, setSearch, session, setSession, status, setStatus, sessions, statuses, saveExamGroup, deleteExamGroup, bulkDelete } = useExamGroups()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.name.toLowerCase().includes(search.toLowerCase())
-      const mss = session === 'all' || r.session === session
-      const mst = status === 'all' || r.status === status
-      return ms && mss && mst
-    }),
-    [rows, search, session, status],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    scheduled: rows.filter((r) => r.status === 'scheduled').length,
-    completed: rows.filter((r) => r.status === 'completed').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -97,9 +90,7 @@ export default function ExamGroupsPage() {
   ]
 
   const handleBulkDelete = async (selected) => {
-    await examinationService.bulkDeleteExamGroups(selected.map((s) => s._id))
-    toast({ title: `${selected.length} exam groups deleted` })
-    refetch()
+    await bulkDelete(selected)
   }
 
   return (
@@ -127,7 +118,7 @@ export default function ExamGroupsPage() {
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search exam groups…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="exam-groups" />
+          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="exam-groups" />
           <select value={session} onChange={(e) => setSession(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All sessions</option>
             {SESSIONS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -141,12 +132,12 @@ export default function ExamGroupsPage() {
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={6} cols={7} />
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 ? (
         <NoData title="No exam groups found" actionLabel="Add Exam Group" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={filtered}
+          data={rows}
           enableSelection
           enableExport
           exportFilename="exam-groups"
@@ -155,8 +146,8 @@ export default function ExamGroupsPage() {
         />
       )}
 
-      <ExamGroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Exam Group" onSubmit={async (p) => { await examinationService.createExamGroup(p); toast({ title: 'Exam group added', description: p.name }); setAddOpen(false); refetch() }} />
-      <ExamGroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Exam Group" initial={editRow} onSubmit={async (p) => { await examinationService.updateExamGroup(editRow._id, p); toast({ title: 'Exam group updated', description: p.name }); setEditRow(null); refetch() }} />
+      <ExamGroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Exam Group" onSubmit={async (p) => { await saveExamGroup(p); setAddOpen(false) }} />
+      <ExamGroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Exam Group" initial={editRow} onSubmit={async (p) => { await saveExamGroup(p, editRow._id); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Exam Group Details" description={viewRow?.name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
@@ -186,7 +177,7 @@ export default function ExamGroupsPage() {
       </Drawer>
 
       <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={async () => { await examinationService.removeExamGroup(deleteRow._id); toast({ title: 'Exam group deleted' }); setDeleteRow(null); refetch() }} />
+        onConfirm={() => { deleteExamGroup(deleteRow._id); setDeleteRow(null) }} />
     </div>
   )
 }

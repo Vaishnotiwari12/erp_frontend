@@ -1,6 +1,17 @@
-// Issue / Return — tracks book lending transactions. Staff can issue a book
-// to a student or staff member, set a due date, and later mark it returned.
-// Overdue books are flagged automatically, and fines are calculated in the UI.
+// ====================================================================
+// Module: Library
+// Page: Issue / Return
+//
+// Purpose:
+// Manage book lending, returns, and overdue fines.
+//
+// Data Source:
+// library.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { ArrowLeftRight, Eye, Trash2, Printer, BookOpen, CircleCheck as CheckCircle2, CircleAlert, Clock, RotateCcw, Search } from 'lucide-react'
@@ -21,9 +32,8 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { FineSummary, calculateFine } from '@/components/FineSummary'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { libraryService } from '@/services/library.service'
+import { FineSummary } from '@/components/FineSummary'
+import { useIssueRecords } from '@/hooks/useLibrary'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -59,53 +69,25 @@ function IssueStatusPill({ status }) {
 
 export default function IssueReturnPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => libraryService.getIssueRecords(), [])
-  const { data: booksData } = useAsyncData(() => libraryService.getBooks(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [memberTypeFilter, setMemberTypeFilter] = useState('all')
+  const {
+    rows: filtered, books, stats, isLoading,
+    search, setSearch, statusFilter, setStatusFilter, memberTypeFilter, setMemberTypeFilter,
+    issueBook, returnBook, deleteRecord,
+  } = useIssueRecords()
   const [issueOpen, setIssueOpen] = useState(false)
   const [viewRow, setViewRow] = useState(null)
   const [returnRow, setReturnRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
-  const books = booksData || []
-
-  // Memoize filtered records — avoids re-filtering on every render.
-  const filtered = useMemo(() => rows.filter((r) => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || r.book_title.toLowerCase().includes(q) || r.member_name.toLowerCase().includes(q) || r.book_isbn.toLowerCase().includes(q)
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    const matchMemberType = memberTypeFilter === 'all' || r.member_type === memberTypeFilter
-    return matchSearch && matchStatus && matchMemberType
-  }), [rows, search, statusFilter, memberTypeFilter])
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    issued: rows.filter((r) => r.status === 'issued').length,
-    overdue: rows.filter((r) => r.status === 'overdue').length,
-    returned: rows.filter((r) => r.status === 'returned').length,
-  }), [rows])
-
   const handleIssue = async (payload) => {
-    await libraryService.issueBook(payload)
-    toast({ title: 'Book issued', description: payload.book_title })
+    await issueBook(payload)
     setIssueOpen(false)
-    refetch()
   }
 
   // Return a book — marks the issue record as returned and calculates the fine.
   const handleReturn = async (record) => {
-    const fine = calculateFine(record.due_date, new Date().toISOString().slice(0, 10))
-    await libraryService.returnBook(record._id, {
-      return_date: new Date().toISOString().slice(0, 10),
-      fine,
-      status: 'returned',
-    })
-    toast({ title: 'Book returned', description: fine > 0 ? `Fine: $${fine.toFixed(2)}` : 'No fine' })
+    await returnBook(record)
     setReturnRow(null)
-    refetch()
   }
 
   const handlePrint = () => {
@@ -303,10 +285,8 @@ export default function IssueReturnPage() {
         onOpenChange={(o) => !o && setDeleteRow(null)}
         entityName={deleteRow?.book_title}
         onConfirm={async () => {
-          await libraryService.deleteIssueRecord(deleteRow._id)
-          toast({ title: 'Issue record deleted' })
+          await deleteRecord(deleteRow._id)
           setDeleteRow(null)
-          refetch()
         }}
       />
     </div>

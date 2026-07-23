@@ -1,9 +1,24 @@
-import { Mail, Phone, MapPin, GraduationCap, Calendar, User, ArrowLeft, Edit } from 'lucide-react'
+// ====================================================================
+// Module: Students
+// Page: Student Profile
+//
+// Purpose:
+// View an individual student's profile, grades, and attendance trend.
+//
+// Data Source:
+// student.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
+import { Mail, Phone, MapPin, GraduationCap, Calendar, User, ArrowLeft, CreditCard as Edit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import StatusBadge from '@/components/common/StatusBadge'
+import StatusBadge from '@/components/StatusBadge'
 import ChartCard from '@/components/charts/ChartCard'
 import TrendAreaChart from '@/components/charts/TrendAreaChart'
 import { useAsyncData } from '@/hooks/useAsyncData'

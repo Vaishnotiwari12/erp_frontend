@@ -1,5 +1,17 @@
-// Staff Directory — the central list of all active/inactive staff.
-// From here admins can search, filter, add, edit, view details, and export.
+// ====================================================================
+// Module: Human Resources
+// Page: Staff Directory
+//
+// Purpose:
+// Manage all teaching and non-teaching staff across departments.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {
@@ -23,8 +35,7 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { hrService } from '@/services/hr.service'
+import { useStaff } from '@/hooks/useHR'
 import { formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 import { Input } from '@/components/ui/input'
@@ -51,46 +62,23 @@ const BLOOD_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 export default function StaffDirectoryPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getStaff(), [])
+  const {
+    rows: filtered, stats, deptOptions, isLoading,
+    search, setSearch, deptFilter, setDeptFilter, statusFilter, setStatusFilter,
+    saveStaff, deleteStaff: removeStaff,
+  } = useStaff()
 
-  const [search, setSearch] = useState('')
-  const [deptFilter, setDeptFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
   const [editStaff, setEditStaff] = useState(null)
   const [viewStaff, setViewStaff] = useState(null)
   const [deleteStaff, setDeleteStaff] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
-  const rows = data || []
-
-  // Filter rows based on search query, department and status
-  const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email.toLowerCase().includes(search.toLowerCase()) ||
-      r.employee_id.toLowerCase().includes(search.toLowerCase())
-    const matchDept = deptFilter === 'all' || r.department === deptFilter
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchDept && matchStatus
-  }), [rows, search, deptFilter, statusFilter])
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    inactive: rows.filter((r) => r.status === 'inactive').length,
-    departments: new Set(rows.map((r) => r.department)).size,
-  }), [rows])
-
-  const deptOptions = useMemo(() => [...new Set(rows.map((r) => r.department))], [rows])
-
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await hrService.deleteStaff(deleteStaff._id)
-      toast({ title: 'Staff deleted', description: `${deleteStaff.name} has been removed.` })
+      await removeStaff(deleteStaff._id, deleteStaff.name)
       setDeleteStaff(null)
-      refetch()
     } finally {
       setDeleting(false)
     }
@@ -180,10 +168,8 @@ export default function StaffDirectoryPage() {
         onOpenChange={setAddOpen}
         title="Add Staff Member"
         onSubmit={async (p) => {
-          await hrService.createStaff(p)
-          toast({ title: 'Staff added', description: p.name })
+          await saveStaff(p)
           setAddOpen(false)
-          refetch()
         }}
       />
 
@@ -194,10 +180,8 @@ export default function StaffDirectoryPage() {
         title="Edit Staff Member"
         initial={editStaff}
         onSubmit={async (p) => {
-          await hrService.updateStaff(editStaff._id, p)
-          toast({ title: 'Staff updated', description: p.name })
+          await saveStaff(p, editStaff._id)
           setEditStaff(null)
-          refetch()
         }}
       />
 

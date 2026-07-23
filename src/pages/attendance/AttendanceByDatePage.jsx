@@ -1,8 +1,20 @@
+// ====================================================================
+// Module: Attendance
+// Page: Attendance By Date
+//
+// Purpose:
+// View attendance for any date with a calendar picker and class filters.
+//
+// Data Source:
+// attendance.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import {
-  CalendarDays, Printer, FileDown, Download, CheckCircle2, XCircle, CalendarPlus, Clock3,
-  ChevronLeft, ChevronRight, Users,
-} from 'lucide-react'
+import { CalendarDays, Printer, FileDown, Download, CircleCheck as CheckCircle2, Circle as XCircle, CalendarPlus, Clock3, ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

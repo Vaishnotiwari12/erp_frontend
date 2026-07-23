@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Academics
+// Page: Assign Class Teacher
+//
+// Purpose:
+// Assign teachers to classes and sections for the academic year.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, UserCog, Pencil, Trash2, Eye, CheckCircle2, GraduationCap } from 'lucide-react'
+import { Plus, UserCog, Pencil, Trash2, Eye, CircleCheck as CheckCircle2, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'

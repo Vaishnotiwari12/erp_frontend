@@ -1,10 +1,25 @@
+// ====================================================================
+// Module: Users
+// Page: Roles
+//
+// Purpose:
+// Manage roles and permissions for system users.
+//
+// Data Source:
+// users.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo } from 'react'
 import { Plus, ShieldCheck, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
+import PageHeader from '@/components/PageHeader'
 import ListState from '@/components/common/ListState'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { usersService } from '@/services/users.service'

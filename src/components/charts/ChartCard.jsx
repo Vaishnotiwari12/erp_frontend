@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — ChartCard
+//
+// Used by: Dashboard, all module dashboards.
+// Purpose: Consistent shell for chart blocks — optional title/description
+//          header with an action slot, and a flexible content area that
+//          renders any chart child. Keeps all charts visually uniform.
+// ====================================================================
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 

@@ -1,7 +1,17 @@
-// Complaint — tracks complaints raised by parents, students, or staff.
-// Each complaint has a priority (high/medium/low), a status lifecycle
-// (open → in-progress → resolved), and a follow-up timeline so the assigned
-// staff member can log progress notes until resolution.
+// ====================================================================
+// Module: Front Office
+// Page: Complaint
+//
+// Purpose:
+// Register, assign, and track complaints to resolution.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { MessageSquarePlus, Eye, Pencil, Trash2, Send, MessageSquare, CircleAlert, Clock, CircleCheck as CheckCircle2, Paperclip, TriangleAlert as AlertTriangle } from 'lucide-react'

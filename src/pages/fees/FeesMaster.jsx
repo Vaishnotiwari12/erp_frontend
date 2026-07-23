@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Fees
+// Page: Fees Master
+//
+// Purpose:
+// Define fee structures with amount, frequency, and scope.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Wallet, Plus, Pencil, Trash2, Eye, DollarSign, Repeat, CheckCircle2 } from 'lucide-react'
+import { Wallet, Plus, Pencil, Trash2, Eye, DollarSign, Repeat, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

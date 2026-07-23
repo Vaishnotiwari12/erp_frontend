@@ -1,5 +1,17 @@
-// Approve Leave — admins review and act on pending staff leave applications.
-// Shows a filterable table of all applications; admins can approve or reject inline.
+// ====================================================================
+// Module: Human Resources
+// Page: Approve Leave
+//
+// Purpose:
+// Review and approve or reject staff leave applications.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { CalendarCheck, Clock, CircleCheck as CheckCircle2, Circle as XCircle, Check, X, Eye, FileText, Paperclip } from 'lucide-react'
@@ -16,8 +28,7 @@ import { Drawer } from '@/components/Drawer'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { hrService } from '@/services/hr.service'
+import { useStaffLeaves } from '@/hooks/useHR'
 import { formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -51,41 +62,24 @@ function LeaveStatusPill({ status }) {
 
 export default function ApproveLeaveHRPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getLeaves(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [deptFilter, setDeptFilter] = useState('all')
+  const {
+    rows: filtered, allLeaves: rows, stats, isLoading,
+    search, setSearch, status: statusFilter, setStatus: setStatusFilter,
+    deptFilter, setDeptFilter,
+    approveLeave, rejectLeave,
+  } = useStaffLeaves()
   const [viewApp, setViewApp] = useState(null)
 
-  const rows = data || []
   const deptOptions = useMemo(() => [...new Set(rows.map((r) => r.department).filter(Boolean))], [rows])
 
-  const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search ||
-      r.staff_name.toLowerCase().includes(search.toLowerCase()) ||
-      r.employee_id.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    const matchDept = deptFilter === 'all' || r.department === deptFilter
-    return matchSearch && matchStatus && matchDept
-  }), [rows, search, statusFilter, deptFilter])
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    pending: rows.filter((r) => r.status === 'pending').length,
-    approved: rows.filter((r) => r.status === 'approved').length,
-    rejected: rows.filter((r) => r.status === 'rejected').length,
-  }), [rows])
-
   const handleApprove = async (app) => {
-    await hrService.approveLeave(app._id)
+    await approveLeave(app._id)
     toast({ title: 'Leave approved', description: `${app.staff_name}'s leave has been approved.` })
-    refetch()
   }
 
   const handleReject = async (app) => {
-    await hrService.rejectLeave(app._id)
+    await rejectLeave(app._id)
     toast({ title: 'Leave rejected', description: `${app.staff_name}'s leave has been rejected.` })
-    refetch()
   }
 
   const columns = useMemo(() => [

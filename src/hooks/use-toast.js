@@ -1,3 +1,20 @@
+// ====================================================================
+// Custom Hook — useToast / toast
+//
+// Purpose:
+// App-wide toast notification system. Provides a `useToast()` hook for
+// components that need to render the <Toaster />, and a standalone `toast()`
+// function callable from anywhere (including non-component code).
+//
+// Responsibilities:
+// - Manages toast state in a module-level store (not React state) so the
+//   imperative `toast()` API works outside the React tree.
+// - Limits visible toasts to TOAST_LIMIT and queues removal after a delay.
+// - Notifies subscribed components (the <Toaster />) via a listener array.
+//
+// Used by: every module's CRUD pages for success/error feedback.
+// ====================================================================
+
 import * as React from 'react';
 
 const TOAST_LIMIT = 1;

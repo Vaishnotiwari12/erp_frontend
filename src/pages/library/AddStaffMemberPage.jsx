@@ -1,7 +1,17 @@
-// Add Staff Member — assign library permissions to existing staff members.
-// Staff are sourced from the HR module; this page lets the librarian search
-// for staff, assign permissions (issue, return, manage books, manage staff),
-// and toggle active/inactive status.
+// ====================================================================
+// Module: Library
+// Page: Add Staff Member
+//
+// Purpose:
+// Assign library permissions to staff members.
+//
+// Data Source:
+// library.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {
@@ -34,8 +44,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { StatusBadge } from '@/components/StatusBadge'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { libraryService } from '@/services/library.service'
+import { useLibraryStaff } from '@/hooks/useLibrary'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -59,40 +68,23 @@ const EXPORT_COLS = [
 
 export default function AddStaffMemberPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => libraryService.getLibraryStaff(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const {
+    rows: filtered, allStaff: rows, stats, isLoading,
+    search, setSearch, statusFilter, setStatusFilter,
+    saveStaff, deleteStaff,
+  } = useLibraryStaff()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
-
-  const filtered = useMemo(() => rows.filter((r) => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q) || r.department.toLowerCase().includes(q)
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    inactive: rows.filter((r) => r.status === 'inactive').length,
-  }), [rows])
-
   const handleSave = async (payload, id) => {
+    await saveStaff(payload, id)
     if (id) {
-      await libraryService.updateLibraryStaff(id, payload)
-      toast({ title: 'Staff member updated', description: payload.name })
       setEditRow(null)
     } else {
-      await libraryService.addLibraryStaff(payload)
-      toast({ title: 'Staff member added', description: payload.name })
       setAddOpen(false)
     }
-    refetch()
   }
 
   const columns = useMemo(() => [
@@ -246,10 +238,8 @@ export default function AddStaffMemberPage() {
         onOpenChange={(o) => !o && setDeleteRow(null)}
         entityName={deleteRow?.name}
         onConfirm={async () => {
-          await libraryService.deleteLibraryStaff(deleteRow._id)
-          toast({ title: 'Staff member removed' })
+          await deleteStaff(deleteRow._id)
           setDeleteRow(null)
-          refetch()
         }}
       />
     </div>

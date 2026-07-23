@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Academics
+// Page: Class Timetable
+//
+// Purpose:
+// View and manage weekly class schedules with color-coded subjects.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import {
   CalendarClock, Printer, FileDown, BookOpen, Clock,

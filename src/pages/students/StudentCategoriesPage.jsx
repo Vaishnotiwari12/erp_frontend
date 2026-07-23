@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Students
+// Page: Student Categories
+//
+// Purpose:
+// Manage reservation and admission categories for students.
+//
+// Data Source:
+// student.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import {
   Plus, Tags, Pencil, Trash2, Eye, Users,

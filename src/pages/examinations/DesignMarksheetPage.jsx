@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Design Marksheet
+//
+// Purpose:
+// Visual builder for the marksheet template with live preview.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useState } from 'react'
 import { FileBadge, Eye, Save, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'

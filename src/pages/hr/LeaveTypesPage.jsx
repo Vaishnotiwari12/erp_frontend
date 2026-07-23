@@ -1,5 +1,17 @@
-// Leave Types — admin configures the types of leave available (Sick, Casual, etc.)
-// and sets annual limits, carryover rules, and active/inactive status.
+// ====================================================================
+// Module: Human Resources
+// Page: Leave Types
+//
+// Purpose:
+// Configure leave categories, annual limits, and approval settings.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { Plus, Tags, Pencil, Trash2, Eye, CircleCheck as CheckCircle2, CalendarDays } from 'lucide-react'
@@ -22,8 +34,7 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { hrService } from '@/services/hr.service'
+import { useLeaveTypes } from '@/hooks/useHR'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -38,21 +49,16 @@ const EXPORT_COLS = [
 
 export default function LeaveTypesPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getLeaveTypes(), [])
-  const [search, setSearch] = useState('')
+  const {
+    rows: filtered, allLeaveTypes: rows, isLoading,
+    search, setSearch,
+    saveLeaveType, deleteLeaveType,
+  } = useLeaveTypes()
   const [statusFilter, setStatusFilter] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-
-  const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
 
   const stats = useMemo(() => ({
     total: rows.length,
@@ -102,16 +108,12 @@ export default function LeaveTypesPage() {
   ]
 
   const handleSave = async (payload, id) => {
+    await saveLeaveType(payload, id)
     if (id) {
-      await hrService.updateLeaveType(id, payload)
-      toast({ title: 'Leave type updated', description: payload.name })
       setEditRow(null)
     } else {
-      await hrService.createLeaveType(payload)
-      toast({ title: 'Leave type created', description: payload.name })
       setAddOpen(false)
     }
-    refetch()
   }
 
   return (
@@ -155,7 +157,7 @@ export default function LeaveTypesPage() {
           enableSelection
           enableExport
           exportFilename="leave-types"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Leave types deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Leave types deleted' }) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
@@ -203,10 +205,8 @@ export default function LeaveTypesPage() {
         onOpenChange={(o) => !o && setDeleteRow(null)}
         entityName={deleteRow?.name}
         onConfirm={async () => {
-          await hrService.deleteLeaveType(deleteRow._id)
-          toast({ title: 'Leave type deleted' })
+          await deleteLeaveType(deleteRow._id)
           setDeleteRow(null)
-          refetch()
         }}
       />
     </div>

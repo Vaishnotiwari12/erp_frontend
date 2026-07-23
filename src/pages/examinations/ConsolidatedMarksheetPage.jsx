@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Consolidated Marksheet
+//
+// Purpose:
+// Overall GPA, percentage, grade, rank, and performance per student.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { ScrollText, Award, TrendingUp, Trophy, Percent } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'

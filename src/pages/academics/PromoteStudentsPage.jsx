@@ -1,8 +1,20 @@
+// ====================================================================
+// Module: Academics
+// Page: Promote Students
+//
+// Purpose:
+// Promote students to the next class for a new academic session.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import {
-  ArrowRight, ArrowLeft, Check, CalendarDays, BookOpen, Layers, Target,
-  Eye, Rocket, CheckCircle2, GraduationCap, Users,
-} from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, CalendarDays, BookOpen, Layers, Target, Eye, Rocket, CircleCheck as CheckCircle2, GraduationCap, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'

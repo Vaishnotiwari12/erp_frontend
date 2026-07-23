@@ -1,10 +1,17 @@
-// Setup Front Office — admins configure the dropdown options used across the
-// Front Office module: visit purposes, complaint types, enquiry sources, call
-// purposes, and postal types. Each category is a small CRUD list.
+// ====================================================================
+// Module: Front Office
+// Page: Setup Front Office
 //
-// Rather than building five separate pages, we render all categories in a
-// tabbed interface. Each tab reuses the same SetupList component, so adding
-// a new category later is just adding a new tab config.
+// Purpose:
+// Configure dropdown options used across the Front Office module.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

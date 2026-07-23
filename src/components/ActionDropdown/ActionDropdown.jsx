@@ -1,4 +1,13 @@
-import { MoreHorizontal } from 'lucide-react'
+// ====================================================================
+// Reusable Component — ActionDropdown
+//
+// Used by: All table pages.
+// Purpose: Row-level action menu (ellipsis trigger) that renders a
+//          configurable list of actions. Supports separators and a
+//          destructive variant (red text) for delete actions.
+// ====================================================================
+
+import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,7 +24,7 @@ export function ActionDropdown({ actions = [], trigger, align = 'end', className
       <DropdownMenuTrigger asChild>
         {trigger || (
           <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open actions">
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4" />
           </Button>
         )}
       </DropdownMenuTrigger>

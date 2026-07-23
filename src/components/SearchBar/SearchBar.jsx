@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — SearchBar
+//
+// Used by: All list pages.
+// Purpose: Search input with a leading icon and a clear button that
+//          appears only when there's text. Delegates debouncing to the
+//          parent via onChange so each page controls its own delay.
+// ====================================================================
+
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'

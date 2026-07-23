@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Exam Results
+//
+// Purpose:
+// Subject-wise marks, totals, grades, divisions, and ranks.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { Award, Eye, Printer, Download, TrendingUp, Percent, Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,8 +27,7 @@ import { DataTable } from '@/components/DataTable'
 import { Drawer } from '@/components/Drawer'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { examinationService } from '@/services/examination.service'
+import { useExamResults } from '@/hooks/useExaminations'
 import { useToast } from '@/hooks/use-toast'
 
 const EXAMS = ['Annual Examination', 'Pre-Board Examination', 'Half Yearly Examination', 'First Term Examination']
@@ -26,31 +40,8 @@ function gradeColor(grade) {
 
 export default function ExamResultsPage() {
   const { toast } = useToast()
-  const { data, isLoading } = useAsyncData(() => examinationService.getExamResults(), [])
-  const [search, setSearch] = useState('')
-  const [exam, setExam] = useState('all')
-  const [classFilter, setClassFilter] = useState('all')
-  const [section, setSection] = useState('all')
+  const { rows, stats, isLoading, search, setSearch, exam, setExam, classFilter, setClassFilter, section, setSection } = useExamResults()
   const [viewRow, setViewRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.student.toLowerCase().includes(search.toLowerCase()) || r.admission_no.toLowerCase().includes(search.toLowerCase())
-      const me = exam === 'all' || r.exam === exam
-      const mc = classFilter === 'all' || r.class === classFilter
-      const msc = section === 'all' || r.section === section
-      return ms && me && mc && msc
-    }),
-    [rows, search, exam, classFilter, section],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    avg: rows.length ? (rows.reduce((a, r) => a + r.percentage, 0) / rows.length).toFixed(1) : 0,
-    topRank: rows.length ? Math.min(...rows.map((r) => r.rank)) : 0,
-    distinctions: rows.filter((r) => r.grade === 'A+').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -116,10 +107,10 @@ export default function ExamResultsPage() {
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={8} cols={9} />
-      ) : filtered.length === 0 ? (
+      ) : rows.length === 0 ? (
         <NoData title="No results found" />
       ) : (
-        <DataTable columns={columns} data={filtered} rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />
+        <DataTable columns={columns} data={rows} rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />
       )}
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Result Details" description={viewRow?.student} width="sm:max-w-lg"

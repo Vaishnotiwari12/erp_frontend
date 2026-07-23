@@ -1,6 +1,17 @@
-// Payroll — generate and manage monthly payroll for all staff.
-// Shows gross salary, allowances, deductions, and net pay.
-// Admins can generate payroll for a month and mark individual payments as paid.
+// ====================================================================
+// Module: Human Resources
+// Page: Payroll
+//
+// Purpose:
+// Generate, review, and process monthly staff payroll.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { DollarSign, TrendingUp, TrendingDown, Wallet, Printer, Eye, CircleCheck as CheckCircle2, Download, Clock, BadgeCheck } from 'lucide-react'
@@ -19,8 +30,7 @@ import { Drawer } from '@/components/Drawer'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { hrService } from '@/services/hr.service'
+import { usePayroll } from '@/hooks/useHR'
 import { payrollMonths } from '@/data/hr.mock'
 import { formatCurrency, formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
@@ -39,53 +49,24 @@ const EXPORT_COLS = [
 export default function PayrollPage() {
   const { toast } = useToast()
   const [month, setMonth] = useState(payrollMonths[0])
-  const [search, setSearch] = useState('')
-  const [deptFilter, setDeptFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [viewRow, setViewRow] = useState(null)
 
-  const { data, isLoading, refetch } = useAsyncData(
-    () => hrService.getPayroll(month),
-    [month],
-  )
-
-  const rows = data || []
-  const deptOptions = useMemo(() => [...new Set(rows.map((r) => r.department))], [rows])
-
-  const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.employee_id.toLowerCase().includes(search.toLowerCase())
-    const matchDept = deptFilter === 'all' || r.department === deptFilter
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchDept && matchStatus
-  }), [rows, search, deptFilter, statusFilter])
-
-  // Aggregate salary totals for the summary cards
-  const summary = useMemo(() => ({
-    totalGross: rows.reduce((a, b) => a + b.basic_salary + b.total_allowances, 0),
-    totalNet: rows.reduce((a, b) => a + b.net_salary, 0),
-    totalDeductions: rows.reduce((a, b) => a + b.total_deductions, 0),
-    paid: rows.filter((r) => r.status === 'paid').length,
-    pending: rows.filter((r) => r.status === 'pending').length,
-  }), [rows])
+  const {
+    rows: filtered, summary, deptOptions, isLoading,
+    search, setSearch, deptFilter, setDeptFilter, statusFilter, setStatusFilter,
+    processPayment, bulkProcess, generate,
+  } = usePayroll(month)
 
   const handleProcessPayment = async (row) => {
-    await hrService.processPayment(row._id)
-    toast({ title: 'Payment processed', description: `${row.name} — ${formatCurrency(row.net_salary)}` })
-    refetch()
+    await processPayment(row)
   }
 
   const handleBulkProcess = async (selected) => {
-    await hrService.bulkProcessPayment(selected.map((r) => r._id))
-    toast({ title: `${selected.length} payments processed` })
-    refetch()
+    await bulkProcess(selected)
   }
 
   const handleGenerate = async () => {
-    await hrService.generatePayroll(month)
-    toast({ title: `Payroll generated for ${month}` })
-    refetch()
+    await generate()
   }
 
   const columns = useMemo(() => [

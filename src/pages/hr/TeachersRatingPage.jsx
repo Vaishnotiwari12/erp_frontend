@@ -1,5 +1,17 @@
-// Teachers Rating — view and manage performance evaluations for teaching staff.
-// Ratings cover teaching skills, punctuality, student engagement, and more.
+// ====================================================================
+// Module: Human Resources
+// Page: Teachers Rating
+//
+// Purpose:
+// View and manage performance evaluations for teaching staff.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { Star, TrendingUp, Award, Users, Eye, Pencil } from 'lucide-react'

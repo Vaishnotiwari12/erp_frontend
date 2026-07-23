@@ -1,8 +1,21 @@
+// ====================================================================
+// Custom Hook — useAsyncData
+//
+// Purpose:
+// Generic async data fetcher for service calls. Wraps any function
+// returning a promise and exposes { data, isLoading, error, refetch }.
+//
+// Responsibilities:
+// - Drives loading / empty / error states for list and detail pages.
+// - Unwraps the { success, data, message } envelope returned by services.
+// - Guards against state updates after unmount via an `active` flag.
+// - Accepts a `deps` array so callers control when refetch occurs.
+//
+// INTEGRATION: replace with TanStack Query when a query client is added.
+// ====================================================================
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// Generic async data fetcher for service calls.
-// Returns { data, isLoading, error, refetch } — drives loading/empty/error states.
-// INTEGRATION: replace with TanStack Query when a query client is added.
 export function useAsyncData(fetcher, deps = []) {
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)

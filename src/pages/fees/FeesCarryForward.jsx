@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Fees
+// Page: Fees Carry Forward
+//
+// Purpose:
+// Carry forward fee credits and debits across sessions.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { ArrowLeftRight, Plus, Pencil, Trash2, Eye, CheckCircle2 } from 'lucide-react'
+import { ArrowLeftRight, Plus, Pencil, Trash2, Eye, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'

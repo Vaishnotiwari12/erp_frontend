@@ -1,9 +1,21 @@
+// ====================================================================
+// Module: Students
+// Page: Students
+//
+// Purpose:
+// Browse and manage all students across tenant institutions.
+//
+// Data Source:
+// student.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Plus, GraduationCap, Users, UserCheck, UserX, Eye, Pencil, Trash2,
-  Download, Upload, Ban, MoreHorizontal,
-} from 'lucide-react'
+import { Plus, GraduationCap, Users, UserCheck, UserX, Eye, Pencil, Trash2, Download, Upload, Ban, MoveHorizontal as MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
@@ -21,8 +33,7 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { StudentForm } from '@/components/StudentForm'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { studentService } from '@/services/student.service'
+import { useStudents } from '@/hooks/useStudents'
 import { STATUS_OPTIONS } from '@/constants/navigation'
 import { formatDate, fullName, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
@@ -41,10 +52,18 @@ const FILTER_COLUMNS = [
 export default function StudentsPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.list(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [classFilter, setClassFilter] = useState('all')
+  const {
+    rows: filtered,
+    classOptions,
+    stats,
+    isLoading,
+    search, setSearch,
+    status, setStatus,
+    classFilter, setClassFilter,
+    saveStudent,
+    deleteStudent: removeStudent,
+    bulkDelete,
+  } = useStudents()
 
   const [addOpen, setAddOpen] = useState(false)
   const [editStudent, setEditStudent] = useState(null)
@@ -52,50 +71,18 @@ export default function StudentsPage() {
   const [deleteStudent, setDeleteStudent] = useState(null)
   const [deleting, setDeleting] = useState(false)
 
-  const rows = data || []
-  const classOptions = useMemo(
-    () => [{ value: 'all', label: 'All classes' }, ...Array.from(new Set(rows.map((r) => r.class))).map((c) => ({ value: c, label: c }))],
-    [rows],
-  )
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const name = fullName(r.name)
-        const ms = !search ||
-          name.toLowerCase().includes(search.toLowerCase()) ||
-          r.email.toLowerCase().includes(search.toLowerCase()) ||
-          (r.admission_no || '').toLowerCase().includes(search.toLowerCase())
-        const mst = status === 'all' || r.status === status
-        const msc = classFilter === 'all' || r.class === classFilter
-        return ms && mst && msc
-      }),
-    [rows, search, status, classFilter],
-  )
-
-  const stats = useMemo(() => {
-    const active = rows.filter((r) => r.status === 'active').length
-    const inactive = rows.filter((r) => r.status === 'inactive').length
-    const suspended = rows.filter((r) => r.status === 'suspended' || r.status === 'disabled').length
-    return { total: rows.length, active, inactive, suspended }
-  }, [rows])
-
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await studentService.remove(deleteStudent._id)
-      toast({ title: 'Student deleted', description: `${fullName(deleteStudent.name)} has been removed.` })
+      await removeStudent(deleteStudent._id, deleteStudent.name)
       setDeleteStudent(null)
-      refetch()
     } finally {
       setDeleting(false)
     }
   }
 
   const handleBulkDelete = async (selected) => {
-    await studentService.bulkDelete(selected.map((s) => s._id))
-    toast({ title: `${selected.length} students deleted` })
-    refetch()
+    await bulkDelete(selected)
   }
 
   const columns = useMemo(
@@ -207,10 +194,8 @@ export default function StudentsPage() {
       >
         <StudentForm
           onSubmit={async (payload) => {
-            await studentService.create(payload)
-            toast({ title: 'Student added', description: `${fullName(payload.name)} has been enrolled.` })
+            await saveStudent(payload)
             setAddOpen(false)
-            refetch()
           }}
           submitLabel="Create Student"
         />
@@ -229,10 +214,8 @@ export default function StudentsPage() {
           <StudentForm
             initial={editStudent}
             onSubmit={async (payload) => {
-              await studentService.update(editStudent._id, payload)
-              toast({ title: 'Student updated', description: `${fullName(payload.name)} has been updated.` })
+              await saveStudent(payload, editStudent._id)
               setEditStudent(null)
-              refetch()
             }}
             submitLabel="Save Changes"
           />

@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Fees
+// Page: Fees Group
+//
+// Purpose:
+// Organize fee types into logical groups.
+//
+// Data Source:
+// fees.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Layers, Plus, Pencil, Trash2, Eye, CheckCircle2 } from 'lucide-react'
+import { Layers, Plus, Pencil, Trash2, Eye, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,26 +33,19 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { feesService } from '@/services/fees.service'
-import { formatDate } from '@/utils/format'
+import { useFeesGroups } from '@/hooks/useFees'
 import { useToast } from '@/hooks/use-toast'
+import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [{ key: 'name', label: 'Group' }, { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'status', label: 'Status' }]
 
 export default function FeesGroupPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => feesService.getFeesGroups(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const { rows, stats, isLoading, search, setSearch, status, setStatus, saveGroup, deleteGroup } = useFeesGroups()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(() => rows.filter((r) => [!search || r.name.toLowerCase().includes(search.toLowerCase()) || r.code.toLowerCase().includes(search.toLowerCase()), status === 'all' || r.status === status].every(Boolean)), [rows, search, status])
-  const stats = useMemo(() => ({ total: rows.length, active: rows.filter((r) => r.status === 'active').length }), [rows])
 
   const columns = useMemo(() => [
     { accessorKey: 'name', header: 'Group', cell: ({ row }) => <button className="text-left font-medium hover:underline" onClick={() => setViewRow(row.original)}>{row.original.name}</button> },
@@ -61,15 +69,15 @@ export default function FeesGroupPage() {
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search group or code…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="fees-groups" />
+          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="fees-groups" />
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
         </div>
       </FilterBar>
 
-      {isLoading ? <LoadingSkeleton variant="table" rows={6} cols={4} /> : filtered.length === 0 ? <NoData title="No groups found" actionLabel="Add Group" onAction={() => setAddOpen(true)} /> : <DataTable columns={columns} data={filtered} enableExport exportFilename="fees-groups" rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />}
+      {isLoading ? <LoadingSkeleton variant="table" rows={6} cols={4} /> : rows.length === 0 ? <NoData title="No groups found" actionLabel="Add Group" onAction={() => setAddOpen(true)} /> : <DataTable columns={columns} data={rows} enableExport exportFilename="fees-groups" rowActions={(r) => <ActionDropdown actions={rowActions(r)} />} />}
 
-      <GroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Group" onSubmit={async (p) => { await feesService.createFeesGroup(p); toast({ title: 'Group added', description: p.name }); setAddOpen(false); refetch() }} />
-      <GroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Group" initial={editRow} onSubmit={async (p) => { await feesService.update(editRow._id, p); toast({ title: 'Group updated' }); setEditRow(null); refetch() }} />
+      <GroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Group" onSubmit={async (p) => { await saveGroup(p); setAddOpen(false) }} />
+      <GroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Group" initial={editRow} onSubmit={async (p) => { await saveGroup(p, editRow._id); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Group Details" description={viewRow?.name} width="sm:max-w-md" footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow ? (
@@ -81,7 +89,7 @@ export default function FeesGroupPage() {
         ) : null}
       </Drawer>
 
-      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name} onConfirm={() => { toast({ title: 'Group deleted' }); setDeleteRow(null); refetch() }} />
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name} onConfirm={() => { deleteGroup(deleteRow._id); setDeleteRow(null) }} />
     </div>
   )
 }

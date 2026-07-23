@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Settings
+// Page: Settings
+//
+// Purpose:
+// Configure school-wide system and preference settings.
+//
+// Data Source:
+// N/A
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useState } from 'react'
 import { Save, Building, Bell, Shield, Palette } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -8,7 +23,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/common/PageHeader'
+import PageHeader from '@/components/PageHeader'
 import { useTheme } from '@/context/ThemeContext'
 
 export default function SettingsPage() {

@@ -1,6 +1,17 @@
-// Disabled Staff — shows all staff with status 'disabled' or 'inactive'.
-// Admins can restore a staff member (set status back to active) or permanently delete them.
-// This mirrors the DisabledStudentsPage pattern used in the Student module.
+// ====================================================================
+// Module: Human Resources
+// Page: Disabled Staff
+//
+// Purpose:
+// View, restore, or permanently delete disabled staff members.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { Ban, Eye, RotateCcw, Trash2, UserX, Power } from 'lucide-react'

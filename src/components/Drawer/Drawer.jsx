@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — Drawer
+//
+// Used by: All modules with create/edit forms (Students, Staff, Fees,
+//          Library, Hostel, Transport, Front Office, etc.).
+// Purpose: Slide-out panel (right-side Sheet) for create/edit forms.
+//          Wraps Radix Sheet with a consistent header, scrollable body,
+//          and footer slot for action buttons.
+// ====================================================================
+
 import {
   Sheet,
   SheetClose,

@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — Pagination
+//
+// Used by: DataTable.
+// Purpose: Page navigation control. Reads pagination state directly from
+//          the TanStack Table instance (no prop-drilling) and renders
+//          first/prev/next/last buttons plus a page-size selector.
+//          Shows "Showing X–Y of Z" for context on large datasets.
+// ====================================================================
+
 import {
   ChevronLeft,
   ChevronRight,

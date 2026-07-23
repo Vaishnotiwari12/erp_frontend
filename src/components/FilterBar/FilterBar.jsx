@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — FilterBar
+//
+// Used by: All list pages.
+// Purpose: Horizontal toolbar layout for search + filter controls.
+//          Provides consistent responsive spacing (stacks on mobile,
+//          row on desktop) without dictating what filters live inside.
+// ====================================================================
+
 import { cn } from '@/lib/utils'
 
 export function FilterBar({ children, className }) {

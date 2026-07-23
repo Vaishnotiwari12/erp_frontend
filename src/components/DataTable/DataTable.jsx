@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — DataTable
+//
+// Used by: All modules with tables (Students, Staff, Fees, Library, Hostel,
+//          Transport, Front Office, etc.).
+// Purpose: Generic sortable, paginated table built on TanStack Table.
+//          Supports row selection, bulk actions, CSV export, and a render
+//          prop toolbar for module-specific filters.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import {
   flexRender,
@@ -9,14 +19,7 @@ import {
   getFacetedUniqueValues,
   useReactTable,
 } from '@tanstack/react-table'
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronsUpDown,
-  Download,
-  MoreHorizontal,
-  X,
-} from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download, MoveHorizontal as MoreHorizontal, X } from 'lucide-react'
 import {
   Table,
   TableBody,

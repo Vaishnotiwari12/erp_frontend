@@ -1,3 +1,17 @@
+// ====================================================================
+// App-Wide Constants
+//
+// Purpose:
+// Centralizes non-navigation constants used across multiple modules so
+// that page sizes, query keys, and latency values are defined once and
+// referenced everywhere by name.
+//
+// Contents:
+//   - DEFAULT_PAGE_SIZE / PAGE_SIZE_OPTIONS — shared by DataTable and Pagination.
+//   - QUERY_KEYS — stable cache keys for TanStack Query (avoids string-literal drift).
+//   - SIMULATED_LATENCY — dev-only delay to surface loading states in placeholder pages.
+// ====================================================================
+
 // Misc app-wide constants
 
 export const DEFAULT_PAGE_SIZE = 10

@@ -1,3 +1,18 @@
+// ====================================================================
+// Module: Examinations
+// Page: Print Marksheet
+//
+// Purpose:
+// Bulk print, individual print, and export marksheets to PDF.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
 import { Printer, Download, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'

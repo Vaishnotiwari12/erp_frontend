@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — StatCard
+//
+// Used by: Dashboard, all module dashboards.
+// Purpose: KPI display card showing a label, large value, icon, and
+//          optional trend indicator (up/down arrow + percentage).
+//          Uses formatCompact() to keep large numbers readable.
+// ====================================================================
+
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'

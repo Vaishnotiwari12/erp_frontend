@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Academics
+// Page: Subjects
+//
+// Purpose:
+// Manage subjects, marks distribution, and groups.
+//
+// Data Source:
+// academics.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { Plus, Library, Pencil, Trash2, Eye, FlaskConical, BookText, CheckCircle2 } from 'lucide-react'
+import { Plus, Library, Pencil, Trash2, Eye, FlaskConical, BookText, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,8 +34,7 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { academicsService } from '@/services/academics.service'
+import { useSubjects } from '@/hooks/useAcademics'
 import { subjectGroups, SUBJECT_COLORS } from '@/services/mockData'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
@@ -40,32 +54,21 @@ const TYPE_OPTIONS = ['Core', 'Elective']
 
 export default function SubjectsPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => academicsService.subjects(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
+  const {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    status, setStatus,
+    typeFilter, setTypeFilter,
+    saveSubject,
+    deleteSubject,
+    bulkDelete,
+  } = useSubjects()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.code.toLowerCase().includes(search.toLowerCase())
-      const mst = status === 'all' || r.status === status
-      const mty = typeFilter === 'all' || r.type === typeFilter
-      return ms && mst && mty
-    }),
-    [rows, search, status, typeFilter],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    core: rows.filter((r) => r.type === 'Core').length,
-    elective: rows.filter((r) => r.type === 'Elective').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -162,13 +165,13 @@ export default function SubjectsPage() {
           enableSelection
           enableExport
           exportFilename="subjects"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Subjects deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Subjects deleted' }) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <SubjectDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Subject" onSubmit={async (p) => { await academicsService.createSubject(p); toast({ title: 'Subject added', description: p.name }); setAddOpen(false); refetch() }} />
-      <SubjectDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Subject" initial={editRow} onSubmit={async (p) => { await academicsService.update(editRow._id, p); toast({ title: 'Subject updated', description: p.name }); setEditRow(null); refetch() }} />
+      <SubjectDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Subject" onSubmit={async (p) => { await saveSubject(p); setAddOpen(false) }} />
+      <SubjectDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Subject" initial={editRow} onSubmit={async (p) => { await saveSubject(p, editRow._id); setEditRow(null) }} />
 
       <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Subject Details" description={viewRow?.name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
@@ -195,7 +198,7 @@ export default function SubjectsPage() {
       </Drawer>
 
       <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={() => { toast({ title: 'Subject deleted' }); setDeleteRow(null); refetch() }} />
+        onConfirm={() => { deleteSubject(deleteRow._id); setDeleteRow(null) }} />
     </div>
   )
 }

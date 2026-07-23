@@ -1,6 +1,17 @@
-// Postal Dispatch — tracks letters and parcels sent out from the institution.
-// Each dispatch has a reference number, recipient, courier, and an optional
-// attachment (e.g. delivery receipt or invoice).
+// ====================================================================
+// Module: Front Office
+// Page: Postal Dispatch
+//
+// Purpose:
+// Track letters and parcels sent out from the institution.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

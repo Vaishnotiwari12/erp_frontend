@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — StatusBadge
+//
+// Used by: All modules.
+// Purpose: Status indicator pill or dot. Maps a status string to a
+//          color-coded badge via STATUS_STYLES from constants. Supports
+//          a `variant` prop ('pill' | 'dot') for different display contexts.
+//          Falls back to the 'inactive' style for unknown statuses.
+// ====================================================================
+
 import { cn } from '@/lib/utils'
 import { STATUS_STYLES } from '@/constants/navigation'
 

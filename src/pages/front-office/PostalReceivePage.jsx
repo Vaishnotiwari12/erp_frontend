@@ -1,6 +1,17 @@
-// Postal Receive — tracks letters and parcels received by the institution.
-// Each received item has a sender, reference number, who received it, and who
-// it was internally delivered to.
+// ====================================================================
+// Module: Front Office
+// Page: Postal Receive
+//
+// Purpose:
+// Track letters and parcels received by the institution.
+//
+// Data Source:
+// frontOffice.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import {

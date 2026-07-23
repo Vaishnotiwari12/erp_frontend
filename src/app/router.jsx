@@ -1,3 +1,28 @@
+// ====================================================================
+// App Router — Route Configuration
+//
+// Purpose:
+// Central declaration of every route in the application and the guards
+// that protect them.
+//
+// Route groups:
+//   1. Public routes — /login (wrapped in PublicRoute + AuthLayout).
+//      Authenticated users are redirected away from these.
+//   2. Protected routes — all module pages (wrapped in ProtectedRoute +
+//      AppLayout). Unauthenticated users are redirected to /login.
+//   3. Error routes — /403, /404, and the catch-all "*" fallback.
+//
+// Authentication flow:
+//   ProtectedRoute checks `isAuthenticated` from AuthContext; if false it
+//   redirects to /login preserving the intended location for post-login
+//   redirect. PublicRoute does the inverse for auth pages.
+//
+// Lazy loading strategy:
+//   Every page component is lazy()-imported so Vite splits each route into
+//   its own chunk. The <Suspense> wrapper shows <PageLoader /> while the
+//   chunk downloads, keeping the initial bundle small.
+// ====================================================================
+
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from '@/layouts/AppLayout'
@@ -81,6 +106,75 @@ const IssueReturnPage = lazy(() => import('@/pages/library/IssueReturnPage'))
 const AddBookPage = lazy(() => import('@/pages/library/AddBookPage'))
 const AddStaffMemberPage = lazy(() => import('@/pages/library/AddStaffMemberPage'))
 
+// Transport module — lazy-loaded so the bundle only downloads when a user visits Transport pages
+const TransportDashboardPage = lazy(() => import('@/pages/transport/TransportDashboardPage'))
+const RoutesPage = lazy(() => import('@/pages/transport/RoutesPage'))
+const VehiclesPage = lazy(() => import('@/pages/transport/VehiclesPage'))
+const PickupPointsPage = lazy(() => import('@/pages/transport/PickupPointsPage'))
+const AssignVehiclePage = lazy(() => import('@/pages/transport/AssignVehiclePage'))
+const AssignPickupPointPage = lazy(() => import('@/pages/transport/AssignPickupPointPage'))
+const StudentTransportFeesPage = lazy(() => import('@/pages/transport/StudentTransportFeesPage'))
+const TransportReportsPage = lazy(() => import('@/pages/transport/TransportReportsPage'))
+
+// Hostel module — lazy-loaded so the bundle only downloads when a user visits Hostel pages
+const HostelDashboardPage = lazy(() => import('@/pages/hostel/HostelDashboardPage'))
+const HostelRoomsPage = lazy(() => import('@/pages/hostel/HostelRoomsPage'))
+const RoomTypesPage = lazy(() => import('@/pages/hostel/RoomTypesPage'))
+const RoomAllocationPage = lazy(() => import('@/pages/hostel/RoomAllocationPage'))
+const StudentHostelListPage = lazy(() => import('@/pages/hostel/StudentHostelListPage'))
+const HostelFeesPage = lazy(() => import('@/pages/hostel/HostelFeesPage'))
+const HostelReportsPage = lazy(() => import('@/pages/hostel/HostelReportsPage'))
+
+// Income module — lazy-loaded so the bundle only downloads when a user visits Income pages
+const IncomeHeadPage = lazy(() => import('@/pages/income/IncomeHeadPage'))
+const AddIncomePage = lazy(() => import('@/pages/income/AddIncomePage'))
+const SearchIncomePage = lazy(() => import('@/pages/income/SearchIncomePage'))
+
+// Expenses module — lazy-loaded so the bundle only downloads when a user visits Expenses pages
+const ExpenseHeadPage = lazy(() => import('@/pages/expenses/ExpenseHeadPage'))
+const AddExpensePage = lazy(() => import('@/pages/expenses/AddExpensePage'))
+const SearchExpensePage = lazy(() => import('@/pages/expenses/SearchExpensePage'))
+
+// Homework module — lazy-loaded so the bundle only downloads when a user visits Homework pages
+const AddHomeworkPage = lazy(() => import('@/pages/homework/AddHomeworkPage'))
+const DailyAssignmentPage = lazy(() => import('@/pages/homework/DailyAssignmentPage'))
+
+// Lesson Plan module — lazy-loaded so the bundle only downloads when a user visits Lesson Plan pages
+const ManageLessonPlanPage = lazy(() => import('@/pages/lesson-plan/ManageLessonPlanPage'))
+const CopyOldLessonPage = lazy(() => import('@/pages/lesson-plan/CopyOldLessonPage'))
+const LessonPage = lazy(() => import('@/pages/lesson-plan/LessonPage'))
+const TopicPage = lazy(() => import('@/pages/lesson-plan/TopicPage'))
+
+// Alumni module — lazy-loaded so the bundle only downloads when a user visits Alumni pages
+const ManageAlumniPage = lazy(() => import('@/pages/alumni/ManageAlumniPage'))
+const AlumniEventsPage = lazy(() => import('@/pages/alumni/AlumniEventsPage'))
+
+// Download Center module — lazy-loaded so the bundle only downloads when a user visits Download Center pages
+const ContentTypePage = lazy(() => import('@/pages/download-center/ContentTypePage'))
+const ContentShareListPage = lazy(() => import('@/pages/download-center/ContentShareListPage'))
+const UploadShareContentPage = lazy(() => import('@/pages/download-center/UploadShareContentPage'))
+const VideoTutorialsPage = lazy(() => import('@/pages/download-center/VideoTutorialsPage'))
+
+// Inventory module — lazy-loaded so the bundle only downloads when a user visits Inventory pages
+const InventoryDashboardPage = lazy(() => import('@/pages/inventory/InventoryDashboardPage'))
+const ItemCategoryPage = lazy(() => import('@/pages/inventory/ItemCategoryPage'))
+const ItemStorePage = lazy(() => import('@/pages/inventory/ItemStorePage'))
+const ItemSupplierPage = lazy(() => import('@/pages/inventory/ItemSupplierPage'))
+const AddItemPage = lazy(() => import('@/pages/inventory/AddItemPage'))
+const ItemStockPage = lazy(() => import('@/pages/inventory/ItemStockPage'))
+const IssueItemPage = lazy(() => import('@/pages/inventory/IssueItemPage'))
+
+// Online Exam module — lazy-loaded so the bundle only downloads when a user visits Online Exam pages
+const OnlineExamsPage = lazy(() => import('@/pages/online-exam/OnlineExamsPage'))
+const QuestionBankPage = lazy(() => import('@/pages/online-exam/QuestionBankPage'))
+const AddQuestionPage = lazy(() => import('@/pages/online-exam/AddQuestionPage'))
+const ExamCategoriesPage = lazy(() => import('@/pages/online-exam/CategoriesPage'))
+const OnlineExamSchedulePage = lazy(() => import('@/pages/online-exam/ExamSchedulePage'))
+const AssignQuestionsPage = lazy(() => import('@/pages/online-exam/AssignQuestionsPage'))
+const StudentAttemptsPage = lazy(() => import('@/pages/online-exam/StudentAttemptsPage'))
+const ExamResultsOnlinePage = lazy(() => import('@/pages/online-exam/ResultsPage'))
+const ExamReportsPage = lazy(() => import('@/pages/online-exam/ReportsPage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -109,6 +203,7 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           >
+          {/* ── Core modules ── */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/schools" element={<SchoolsPage />} />
             <Route path="/colleges" element={<CollegesPage />} />
@@ -183,9 +278,79 @@ export default function AppRouter() {
             <Route path="/library/issue-return" element={<IssueReturnPage />} />
             <Route path="/library/add-book" element={<AddBookPage />} />
             <Route path="/library/staff" element={<AddStaffMemberPage />} />
+
+            {/* ── Transport ── */}
+            <Route path="/transport" element={<TransportDashboardPage />} />
+            <Route path="/transport/routes" element={<RoutesPage />} />
+            <Route path="/transport/vehicles" element={<VehiclesPage />} />
+            <Route path="/transport/pickup-points" element={<PickupPointsPage />} />
+            <Route path="/transport/assign-vehicle" element={<AssignVehiclePage />} />
+            <Route path="/transport/assign-pickup-point" element={<AssignPickupPointPage />} />
+            <Route path="/transport/fees" element={<StudentTransportFeesPage />} />
+            <Route path="/transport/reports" element={<TransportReportsPage />} />
+
+            {/* ── Hostel ── */}
+            <Route path="/hostel" element={<HostelDashboardPage />} />
+            <Route path="/hostel/rooms" element={<HostelRoomsPage />} />
+            <Route path="/hostel/room-types" element={<RoomTypesPage />} />
+            <Route path="/hostel/allocation" element={<RoomAllocationPage />} />
+            <Route path="/hostel/students" element={<StudentHostelListPage />} />
+            <Route path="/hostel/fees" element={<HostelFeesPage />} />
+            <Route path="/hostel/reports" element={<HostelReportsPage />} />
+
+            {/* ── Income ── */}
+            <Route path="/income/head" element={<IncomeHeadPage />} />
+            <Route path="/income/add" element={<AddIncomePage />} />
+            <Route path="/income/search" element={<SearchIncomePage />} />
+
+            {/* ── Expenses ── */}
+            <Route path="/expenses/head" element={<ExpenseHeadPage />} />
+            <Route path="/expenses/add" element={<AddExpensePage />} />
+            <Route path="/expenses/search" element={<SearchExpensePage />} />
+
+            {/* ── Homework ── */}
+            <Route path="/homework/add" element={<AddHomeworkPage />} />
+            <Route path="/homework/daily-assignment" element={<DailyAssignmentPage />} />
+
+            {/* ── Lesson Plan ── */}
+            <Route path="/lesson-plan/manage" element={<ManageLessonPlanPage />} />
+            <Route path="/lesson-plan/copy" element={<CopyOldLessonPage />} />
+            <Route path="/lesson-plan/lesson" element={<LessonPage />} />
+            <Route path="/lesson-plan/topic" element={<TopicPage />} />
+
+            {/* ── Alumni ── */}
+            <Route path="/alumni" element={<ManageAlumniPage />} />
+            <Route path="/alumni/events" element={<AlumniEventsPage />} />
+
+            {/* ── Download Center ── */}
+            <Route path="/download-center/content-types" element={<ContentTypePage />} />
+            <Route path="/download-center/share-list" element={<ContentShareListPage />} />
+            <Route path="/download-center/contents" element={<UploadShareContentPage />} />
+            <Route path="/download-center/video-tutorials" element={<VideoTutorialsPage />} />
+
+            {/* ── Inventory ── */}
+            <Route path="/inventory" element={<InventoryDashboardPage />} />
+            <Route path="/inventory/categories" element={<ItemCategoryPage />} />
+            <Route path="/inventory/stores" element={<ItemStorePage />} />
+            <Route path="/inventory/suppliers" element={<ItemSupplierPage />} />
+            <Route path="/inventory/add-item" element={<AddItemPage />} />
+            <Route path="/inventory/stock" element={<ItemStockPage />} />
+            <Route path="/inventory/issue" element={<IssueItemPage />} />
+
+            {/* ── Online Exam ── */}
+            <Route path="/online-exam" element={<OnlineExamsPage />} />
+            <Route path="/online-exam/question-bank" element={<QuestionBankPage />} />
+            <Route path="/online-exam/add-question" element={<AddQuestionPage />} />
+            <Route path="/online-exam/categories" element={<ExamCategoriesPage />} />
+            <Route path="/online-exam/schedule" element={<OnlineExamSchedulePage />} />
+            <Route path="/online-exam/assign-questions" element={<AssignQuestionsPage />} />
+            <Route path="/online-exam/attempts" element={<StudentAttemptsPage />} />
+            <Route path="/online-exam/results" element={<ExamResultsOnlinePage />} />
+            <Route path="/online-exam/reports" element={<ExamReportsPage />} />
           </Route>
 
           {/* Errors */}
+          {/* ── Error / fallback routes ── */}
           <Route path="/403" element={<ForbiddenPage />} />
           <Route path="/404" element={<NotFoundPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

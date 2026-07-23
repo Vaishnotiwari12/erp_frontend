@@ -1,3 +1,13 @@
+// ====================================================================
+// Reusable Component — DeleteDialog
+//
+// Used by: All modules with delete.
+// Purpose: Delete confirmation dialog. Thin wrapper around ConfirmDialog
+//          with destructive styling, a Trash2 icon, and optional
+//          `entityName` interpolation in the description so users see
+//          exactly what they're about to delete.
+// ====================================================================
+
 import { Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 

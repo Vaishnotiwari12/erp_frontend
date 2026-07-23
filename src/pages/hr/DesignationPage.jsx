@@ -1,5 +1,17 @@
-// Designations — manage job titles and seniority levels within departments.
-// Examples: Principal, HOD, Senior Teacher, Lab Assistant, Accountant.
+// ====================================================================
+// Module: Human Resources
+// Page: Designation
+//
+// Purpose:
+// Manage job titles and seniority levels for all staff.
+//
+// Data Source:
+// hr.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
 
 import { useMemo, useState } from 'react'
 import { Plus, Briefcase, Pencil, Trash2, Eye, CircleCheck as CheckCircle2, Layers } from 'lucide-react'

@@ -1,6 +1,12 @@
-// Timeline — a vertical list of follow-up / progress notes.
-// Used inside drawers to show the history of an enquiry or complaint.
-// Each entry shows a dot, the note text, the author, and a relative timestamp.
+// ====================================================================
+// Reusable Component — Timeline
+//
+// Used by: Front Office.
+// Purpose: Follow-up timeline — a vertical list of follow-up / progress notes.
+//          Each entry shows a dot, the note text, the author, and a relative
+//          timestamp. Used inside drawers to show the history of an enquiry
+//          or complaint.
+// ====================================================================
 
 import { formatDate, formatRelativeTime } from '@/utils/format'
 import { cn } from '@/lib/utils'

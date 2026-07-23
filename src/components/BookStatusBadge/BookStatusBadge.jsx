@@ -1,3 +1,12 @@
+// ====================================================================
+// Reusable Component — BookStatusBadge
+//
+// Used by: Library.
+// Purpose: Book status — shows a book's availability state.
+//          Available (green) = copies ready to borrow; Out (red) = all copies issued.
+//          Displays "X / Y Available" when copies remain, "All Issued" when none do.
+// ====================================================================
+
 // BookStatusBadge — shows a book's availability state.
 // Available (green) = copies ready to borrow; Out (red) = all copies issued.
 

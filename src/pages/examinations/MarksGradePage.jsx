@@ -1,5 +1,20 @@
+// ====================================================================
+// Module: Examinations
+// Page: Marks Grade
+//
+// Purpose:
+// Define grade bands, grade points, and remarks.
+//
+// Data Source:
+// examination.service.js
+//
+// Backend:
+// APIs should always be called through the service layer.
+// Never call Axios directly from this page.
+// ====================================================================
+
 import { useMemo, useState } from 'react'
-import { BarChart3, Plus, Pencil, Trash2, Eye } from 'lucide-react'
+import { ChartBar as BarChart3, Plus, Pencil, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
