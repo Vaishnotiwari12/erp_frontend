@@ -1,12 +1,9 @@
-
-// ====================================================================
 // Reusable Component — ActionDropdown
-//
 // Used by: All table pages.
 // Purpose: Row-level action menu (ellipsis trigger) that renders a
 //          configurable list of actions. Supports separators and a
 //          destructive variant (red text) for delete actions.
-// ====================================================================
+
 
 import { MoreVertical } from 'lucide-react'
 import { MoreHorizontal } from 'lucide-react'
