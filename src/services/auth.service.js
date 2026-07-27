@@ -1,51 +1,36 @@
 // ====================================================================
-// Service Layer
+// Auth Service
 //
-// Purpose:
-// Handles all backend communication for this module.
+// Handles all backend communication for authentication.
 //
-// Current State:
-// Uses mock data.
+// Backend routes (mounted under /api/auth):
+//   POST /api/auth/signup  — Superadmin registration
+//   POST /api/auth/login   — Superadmin login (returns JWT + user)
+//   POST /api/auth/logout  — Invalidates session (requires auth)
 //
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
+// Response: { success, data: { id, name, email, role, token }, message }
+// The apiClient interceptor unwraps `.data` so methods receive it directly.
 // ====================================================================
 
 import apiClient from './api'
-import { mockResponse } from './mockData'
-import { DEMO_USER } from '@/data/auth.mock'
 
 export const authService = {
-  // Dev login accepts any credentials and returns a demo session.
-  // TODO(BACKEND)
-  // Replace with POST /auth/login
   async login({ email, password }) {
     if (!email || !password) {
       return Promise.reject({ message: 'Email and password are required.' })
     }
-    const user = { ...DEMO_USER, email: email || DEMO_USER.email }
-    const token = `dev.${btoa(user.email)}.${Date.now()}`
-    return mockResponse({ id: user.id, name: user.name, email: user.email, role: user.role, token })
+    return apiClient.post('/auth/login', { email, password })
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /auth/signup
   async signup({ name, email, password }) {
     if (!name || !email || !password) {
       return Promise.reject({ message: 'Name, email and password are required.' })
     }
-    const user = { ...DEMO_USER, name, email }
-    const token = `dev.${btoa(user.email)}.${Date.now()}`
-    return mockResponse({ id: user.id, name: user.name, email: user.email, role: user.role, token })
+    return apiClient.post('/auth/signup', { name, email, password })
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /auth/logout
   async logout() {
-    return mockResponse({ message: 'Logged out' })
+    return apiClient.post('/auth/logout')
   },
 }
 

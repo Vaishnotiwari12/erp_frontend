@@ -3,21 +3,18 @@
 // Page: Modules
 //
 // Purpose:
-// Enable or disable system modules and set display order.
+// Enable or disable system modules via a card grid with toggle switches.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: module_name, module_type, status (active|inactive), icon
 // ====================================================================
 
 import { Boxes } from 'lucide-react'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { useModules } from '@/hooks/useSettings'
 
@@ -29,38 +26,42 @@ export default function ModulesPage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'Modules' }]} />
       <PageHeader
         title="Modules"
-        description="Enable or disable system modules and configure display order."
+        description="Enable or disable system modules."
         icon={Boxes}
       />
 
       {isLoading ? (
         <LoadingSkeleton variant="cards" />
+      ) : modules.length === 0 ? (
+        <NoData title="No modules found" description="Modules will appear here once configured." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {modules
-            .slice()
-            .sort((a, b) => a.display_order - b.display_order)
-            .map((mod) => (
-              <Card key={mod._id} className={mod.is_enabled ? '' : 'opacity-60'}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Boxes className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm">{mod.display_name}</CardTitle>
-                        <CardDescription className="text-xs">Order: {mod.display_order}</CardDescription>
-                      </div>
+          {modules.map((mod) => (
+            <Card key={mod._id} className={mod.status === 'active' ? '' : 'opacity-60'}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Boxes className="h-5 w-5" />
                     </div>
-                    <Switch checked={mod.is_enabled} onCheckedChange={() => toggleModule(mod)} />
+                    <div>
+                      <CardTitle className="text-sm">{mod.module_name}</CardTitle>
+                      <CardDescription className="text-xs">{mod.module_type || '—'}</CardDescription>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">{mod.description || '—'}</p>
-                </CardContent>
-              </Card>
-            ))}
+                  <Switch checked={mod.status === 'active'} onCheckedChange={() => toggleModule(mod)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Badge variant={mod.status === 'active' ? 'default' : 'secondary'}>
+                    {mod.status === 'active' ? 'Enabled' : 'Disabled'}
+                  </Badge>
+                  {mod.icon && <span className="text-xs text-muted-foreground">{mod.icon}</span>}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

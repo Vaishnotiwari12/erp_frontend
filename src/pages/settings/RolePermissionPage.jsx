@@ -5,12 +5,7 @@
 // Purpose:
 // Manage roles and their module-level permissions.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: role_name, role_type, permissions (Mixed)
 // ====================================================================
 
 import { useMemo, useState } from 'react'
@@ -19,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -31,17 +25,14 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { useRolePermissions } from '@/hooks/useSettings'
 import { formatDate } from '@/utils/format'
 
-const MODULE_KEYS = ['Students', 'Academics', 'Attendance', 'Fees', 'HR', 'Library', 'Transport', 'Hostel', 'Inventory', 'Settings']
-
 const EXPORT_COLS = [
   { key: 'role_name', label: 'Role' },
-  { key: 'description', label: 'Description' },
-  { key: 'status', label: 'Status' },
+  { key: 'role_type', label: 'Type' },
+  { key: 'createdAt', label: 'Created' },
 ]
 
 export default function RolePermissionPage() {
@@ -60,8 +51,8 @@ export default function RolePermissionPage() {
 
   const columns = useMemo(() => [
     { accessorKey: 'role_name', header: 'Role' },
-    { accessorKey: 'description', header: 'Description', cell: ({ row }) => <span className="text-muted-foreground">{row.original.description || '—'}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: 'role_type', header: 'Type', cell: ({ row }) => <span className="text-muted-foreground">{row.original.role_type || '—'}</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
   const rowActions = (r) => [
@@ -118,32 +109,18 @@ export default function RolePermissionPage() {
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
         {viewRow && (
-          <div className="space-y-4">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {[
-                { label: 'Role', value: viewRow.role_name },
-                { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-                { label: 'Created', value: formatDate(viewRow.createdAt) },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <p className="text-sm">{viewRow.description || '—'}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Permissions</p>
-              <div className="flex flex-wrap gap-2">
-                {MODULE_KEYS.filter((m) => viewRow.permissions?.[m]).map((m) => (
-                  <span key={m} className="rounded-full border bg-primary/5 px-2.5 py-0.5 text-xs font-medium">{m}</span>
-                ))}
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {[
+              { label: 'Role', value: viewRow.role_name },
+              { label: 'Type', value: viewRow.role_type || '—' },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value || '—'}</dd>
               </div>
-            </div>
-          </div>
+            ))}
+          </dl>
         )}
       </Drawer>
 
@@ -160,13 +137,19 @@ export default function RolePermissionPage() {
 function RoleFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
     role_name: initial?.role_name || '',
-    description: initial?.description || '',
-    permissions: { ...(initial?.permissions || {}) },
-    status: initial?.status || 'active',
+    role_type: initial?.role_type || '',
+    permissions: initial?.permissions ? (typeof initial.permissions === 'string' ? initial.permissions : JSON.stringify(initial.permissions, null, 2)) : '{}',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-  const togglePermission = (mod) => setForm((f) => ({ ...f, permissions: { ...f.permissions, [mod]: !f.permissions[mod] } }))
+
+  const handleSubmit = () => {
+    let parsed = form.permissions
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed) } catch { parsed = {} }
+    }
+    onSubmit({ ...form, permissions: parsed })
+  }
 
   return (
     <Drawer
@@ -180,40 +163,25 @@ function RoleFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add Role'}
           submitDisabled={!form.role_name.trim()}
-          onSubmit={() => onSubmit(form)}
+          onSubmit={handleSubmit}
         />
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }} className="space-y-4">
+        <FormSection columns={2}>
           <div className="space-y-1.5">
             <Label className="text-xs">Role Name <span className="text-destructive">*</span></Label>
             <Input value={form.role_name} onChange={(e) => set('role_name', e.target.value)} placeholder="e.g. Admin" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Description</Label>
-            <Textarea value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Role description" rows={2} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Label className="text-xs">Role Type</Label>
+            <Input value={form.role_type} onChange={(e) => set('role_type', e.target.value)} placeholder="e.g. admin, staff" />
           </div>
         </FormSection>
-
-        <div className="space-y-2">
-          <Label className="text-xs">Module Permissions</Label>
-          <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-            {MODULE_KEYS.map((mod) => (
-              <label key={mod} className="flex items-center gap-2 cursor-pointer">
-                <Checkbox checked={!!form.permissions[mod]} onCheckedChange={() => togglePermission(mod)} />
-                <span className="text-sm">{mod}</span>
-              </label>
-            ))}
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Permissions (JSON)</Label>
+          <Textarea value={form.permissions} onChange={(e) => set('permissions', e.target.value)} placeholder='{"students": true, "fees": true}' rows={6} className="font-mono text-xs" />
+          <p className="text-xs text-muted-foreground">Enter a JSON object mapping module names to boolean access flags.</p>
         </div>
         <button type="submit" className="hidden" />
       </form>

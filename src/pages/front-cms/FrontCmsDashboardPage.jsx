@@ -4,10 +4,10 @@
 //
 // Purpose:
 // Overview of all front CMS content — banners, news, events, gallery,
-// pages, and media — with quick stats and recent items.
+// pages, media, and menus — with quick stats.
 //
 // Data Source:
-// frontCms.service.js
+// frontCms.service.js (via useFrontCmsStats hook)
 //
 // Backend:
 // APIs should always be called through the service layer.
@@ -23,6 +23,7 @@ import {
   Images,
   FileText,
   FolderOpen,
+  Menu,
   Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,18 +34,18 @@ import { StatCard } from '@/components/StatCard'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { useFrontCmsStats } from '@/hooks/useFrontCms'
-import { formatRelativeTime } from '@/utils/format'
 
 export default function FrontCmsDashboardPage() {
   const { stats, isLoading } = useFrontCmsStats()
 
   const recentItems = useMemo(() => [
-    { label: 'Banners', count: stats.total_banners, published: stats.published_banners, icon: Image, color: 'primary' },
-    { label: 'News', count: stats.total_news, published: stats.published_news, icon: Newspaper, color: 'chart2' },
-    { label: 'Events', count: stats.total_events, published: stats.published_events, icon: CalendarDays, color: 'chart3' },
-    { label: 'Gallery', count: stats.total_gallery, published: 0, icon: Images, color: 'chart4' },
-    { label: 'Pages', count: stats.total_pages, published: stats.published_pages, icon: FileText, color: 'primary' },
-    { label: 'Media', count: stats.total_media, published: 0, icon: FolderOpen, color: 'chart2' },
+    { label: 'Banners', count: stats.total_banners, icon: Image, color: 'primary' },
+    { label: 'News', count: stats.total_news, icon: Newspaper, color: 'chart2' },
+    { label: 'Events', count: stats.total_events, icon: CalendarDays, color: 'chart3' },
+    { label: 'Gallery', count: stats.total_gallery, icon: Images, color: 'chart4' },
+    { label: 'Pages', count: stats.total_pages, icon: FileText, color: 'primary' },
+    { label: 'Media', count: stats.total_media, icon: FolderOpen, color: 'chart2' },
+    { label: 'Menus', count: stats.total_menus, icon: Menu, color: 'chart3' },
   ], [stats])
 
   return (
@@ -58,15 +59,16 @@ export default function FrontCmsDashboardPage() {
       />
 
       {isLoading ? (
-        <LoadingSkeleton variant="card" rows={6} />
+        <LoadingSkeleton variant="card" rows={7} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard label="Banners" value={stats.total_banners || 0} icon={Image} accent="primary" hint={`${stats.published_banners || 0} published`} />
-          <StatCard label="News" value={stats.total_news || 0} icon={Newspaper} accent="chart2" hint={`${stats.published_news || 0} published`} />
-          <StatCard label="Events" value={stats.total_events || 0} icon={CalendarDays} accent="chart3" hint={`${stats.published_events || 0} published`} />
+          <StatCard label="Banners" value={stats.total_banners || 0} icon={Image} accent="primary" />
+          <StatCard label="News" value={stats.total_news || 0} icon={Newspaper} accent="chart2" />
+          <StatCard label="Events" value={stats.total_events || 0} icon={CalendarDays} accent="chart3" />
           <StatCard label="Gallery" value={stats.total_gallery || 0} icon={Images} accent="chart4" />
-          <StatCard label="Pages" value={stats.total_pages || 0} icon={FileText} accent="primary" hint={`${stats.published_pages || 0} published`} />
+          <StatCard label="Pages" value={stats.total_pages || 0} icon={FileText} accent="primary" />
           <StatCard label="Media" value={stats.total_media || 0} icon={FolderOpen} accent="chart2" />
+          <StatCard label="Menus" value={stats.total_menus || 0} icon={Menu} accent="chart3" />
         </div>
       )}
 
@@ -86,9 +88,7 @@ export default function FrontCmsDashboardPage() {
                   </div>
                   <div>
                     <p className="font-medium">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.published > 0 ? `${item.published} published` : 'No published items'}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Total items</p>
                   </div>
                 </div>
                 <Badge variant="secondary">{item.count} total</Badge>

@@ -2,356 +2,165 @@
 // Front CMS Service
 //
 // Service layer isolates all backend communication for the Front CMS module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
+// Pages never call APIs directly — they call these methods.
 //
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
+// Backend routes (all mounted under /api/front-cms):
+//   banner-images  — CRUD for homepage banners (multipart: image)
+//   news           — CRUD for news articles (multipart: image)
+//   event          — CRUD for events (multipart: image)
+//   gallery        — CRUD for gallery items (multipart: image)
+//   media-manager  — CRUD for media files (multipart: file)
+//   pages          — CRUD for CMS pages (JSON body)
+//   menus          — CRUD for navigation menus (JSON body)
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  banners,
-  newsItems,
-  events,
-  galleryItems,
-  mediaItems,
-  cmsPages,
-  menus,
-  frontCmsStats,
-} from '@/data/frontCms.mock'
+import apiClient from './api'
+
+// Helper: builds FormData from a payload + optional file field.
+function buildFormData(payload, file, fileField) {
+  const formData = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value))
+    }
+  })
+  if (file) formData.append(fileField, file)
+  return formData
+}
 
 export const frontCmsService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
-
-  // Fetch Front CMS Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /api/front-cms/stats (derived)
-    // ====================================================================
-    return mockResponse(frontCmsStats)
-  },
-
   // ─── Banners ──────────────────────────────────────────────────────────────────
-
-  // Fetch Banners
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/banner-images
   async getBanners() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/banner-images
-    // ====================================================================
-    return mockResponse(banners)
+    return apiClient.get('/front-cms/banner-images')
   },
-
-  // Create Banner
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/banner-images
-  async createBanner(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/banner-images
-    // ====================================================================
-    return mockResponse({ _id: `bn-${Date.now()}`, status: 'draft', published_at: null, createdAt: new Date().toISOString(), ...payload })
+  async getBannerById(id) {
+    return apiClient.get(`/front-cms/banner-images/${id}`)
   },
-
-  // Update Banner
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/banner-images/:id
+  async createBanner(payload, file) {
+    const formData = buildFormData(payload, file, 'image')
+    return apiClient.post('/front-cms/banner-images', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
   async updateBanner(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/banner-images/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/banner-images/${id}`, payload)
   },
-
-  // Delete Banner
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/banner-images/:id
   async deleteBanner(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/banner-images/:id
-    // ====================================================================
-    return mockResponse({ message: 'Banner deleted successfully' })
+    return apiClient.delete(`/front-cms/banner-images/${id}`)
   },
 
   // ─── News ──────────────────────────────────────────────────────────────────────
-
-  // Fetch News
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/news
   async getNews() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/news
-    // ====================================================================
-    return mockResponse(newsItems)
+    return apiClient.get('/front-cms/news')
   },
-
-  // Create News
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/news
-  async createNews(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/news
-    // ====================================================================
-    return mockResponse({ _id: `nw-${Date.now()}`, status: 'draft', published_at: null, createdAt: new Date().toISOString(), ...payload })
+  async getNewsById(id) {
+    return apiClient.get(`/front-cms/news/${id}`)
   },
-
-  // Update News
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/news/:id
+  async createNews(payload, file) {
+    const formData = buildFormData(payload, file, 'image')
+    return apiClient.post('/front-cms/news', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
   async updateNews(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/news/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/news/${id}`, payload)
   },
-
-  // Delete News
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/news/:id
   async deleteNews(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/news/:id
-    // ====================================================================
-    return mockResponse({ message: 'News item deleted successfully' })
+    return apiClient.delete(`/front-cms/news/${id}`)
   },
 
   // ─── Events ────────────────────────────────────────────────────────────────────
-
-  // Fetch Events
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/event
   async getEvents() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/event
-    // ====================================================================
-    return mockResponse(events)
+    return apiClient.get('/front-cms/event')
   },
-
-  // Create Event
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/event
-  async createEvent(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/event
-    // ====================================================================
-    return mockResponse({ _id: `ev-${Date.now()}`, status: 'draft', published_at: null, createdAt: new Date().toISOString(), ...payload })
+  async getEventById(id) {
+    return apiClient.get(`/front-cms/event/${id}`)
   },
-
-  // Update Event
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/event/:id
+  async createEvent(payload, file) {
+    const formData = buildFormData(payload, file, 'image')
+    return apiClient.post('/front-cms/event', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
   async updateEvent(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/event/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/event/${id}`, payload)
   },
-
-  // Delete Event
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/event/:id
   async deleteEvent(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/event/:id
-    // ====================================================================
-    return mockResponse({ message: 'Event deleted successfully' })
+    return apiClient.delete(`/front-cms/event/${id}`)
   },
 
   // ─── Gallery ────────────────────────────────────────────────────────────────────
-
-  // Fetch Gallery
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/gallery
   async getGallery() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/gallery
-    // ====================================================================
-    return mockResponse(galleryItems)
+    return apiClient.get('/front-cms/gallery')
   },
-
-  // Create Gallery Item
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/gallery
-  async createGallery(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/gallery
-    // ====================================================================
-    return mockResponse({ _id: `gl-${Date.now()}`, status: 'draft', createdAt: new Date().toISOString(), ...payload })
+  async getGalleryById(id) {
+    return apiClient.get(`/front-cms/gallery/${id}`)
   },
-
-  // Update Gallery Item
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/gallery/:id
+  async createGallery(payload, file) {
+    const formData = buildFormData(payload, file, 'image')
+    return apiClient.post('/front-cms/gallery', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
   async updateGallery(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/gallery/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/gallery/${id}`, payload)
   },
-
-  // Delete Gallery Item
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/gallery/:id
   async deleteGallery(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/gallery/:id
-    // ====================================================================
-    return mockResponse({ message: 'Gallery item deleted successfully' })
+    return apiClient.delete(`/front-cms/gallery/${id}`)
   },
 
   // ─── Media Manager ──────────────────────────────────────────────────────────────
-
-  // Fetch Media
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/media-manager
   async getMedia() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/media-manager
-    // ====================================================================
-    return mockResponse(mediaItems)
+    return apiClient.get('/front-cms/media-manager')
   },
-
-  // Create Media
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/media-manager
-  async createMedia(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/media-manager
-    // ====================================================================
-    return mockResponse({ _id: `md-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  async getMediaById(id) {
+    return apiClient.get(`/front-cms/media-manager/${id}`)
   },
-
-  // Delete Media
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/media-manager/:id
+  async createMedia(payload, file) {
+    const formData = buildFormData(payload, file, 'file')
+    return apiClient.post('/front-cms/media-manager', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  async updateMedia(id, payload) {
+    return apiClient.put(`/front-cms/media-manager/${id}`, payload)
+  },
   async deleteMedia(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/media-manager/:id
-    // ====================================================================
-    return mockResponse({ message: 'Media deleted successfully' })
+    return apiClient.delete(`/front-cms/media-manager/${id}`)
   },
 
   // ─── Pages ────────────────────────────────────────────────────────────────────────
-
-  // Fetch CMS Pages
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/pages
   async getPages() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/pages
-    // ====================================================================
-    return mockResponse(cmsPages)
+    return apiClient.get('/front-cms/pages')
   },
-
-  // Create CMS Page
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/pages
+  async getPageById(id) {
+    return apiClient.get(`/front-cms/pages/${id}`)
+  },
   async createPage(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/pages
-    // ====================================================================
-    return mockResponse({ _id: `pg-${Date.now()}`, status: 'draft', published_at: null, createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/front-cms/pages', payload)
   },
-
-  // Update CMS Page
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/pages/:id
   async updatePage(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/pages/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/pages/${id}`, payload)
   },
-
-  // Delete CMS Page
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/pages/:id
   async deletePage(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/pages/:id
-    // ====================================================================
-    return mockResponse({ message: 'Page deleted successfully' })
+    return apiClient.delete(`/front-cms/pages/${id}`)
   },
 
   // ─── Menus ────────────────────────────────────────────────────────────────────────
-
-  // Fetch Menus
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms/menus
   async getMenus() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms/menus
-    // ====================================================================
-    return mockResponse(menus)
+    return apiClient.get('/front-cms/menus')
   },
-
-  // Create Menu
-  // TODO(BACKEND):
-  // Replace with POST /api/front-cms/menus
+  async getMenuById(id) {
+    return apiClient.get(`/front-cms/menus/${id}`)
+  },
   async createMenu(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/front-cms/menus
-    // ====================================================================
-    return mockResponse({ _id: `mn-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/front-cms/menus', payload)
   },
-
-  // Update Menu
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms/menus/:id
   async updateMenu(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms/menus/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/front-cms/menus/${id}`, payload)
   },
-
-  // Delete Menu
-  // TODO(BACKEND):
-  // Replace with DELETE /api/front-cms/menus/:id
   async deleteMenu(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/front-cms/menus/:id
-    // ====================================================================
-    return mockResponse({ message: 'Menu deleted successfully' })
+    return apiClient.delete(`/front-cms/menus/${id}`)
   },
 }
 

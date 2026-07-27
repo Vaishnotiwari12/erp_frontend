@@ -2,10 +2,24 @@
 //
 // Keeps business logic separate from UI.
 //
-// Later backend APIs will automatically work without changing pages.
-//
-// This hook wraps settingsService calls and provides memoized filtering,
+// Wraps settingsService calls and provides memoized filtering,
 // statistics, and CRUD handlers so pages stay UI-only.
+//
+// Backend models use these field names:
+//   settings:        school_name, logo, theme, timezone, date_format, currency, language, config
+//   session:         session_name, start_date, end_date, status (Active|Inactive)
+//   rolePermission:  role_name, role_type, permissions
+//   module:          module_name, module_type, status (active|inactive), icon
+//   notification:    notification_type, template, enabled
+//   smsSettings:     provider, api_key, sender_id, status (Active|Inactive)
+//   paymentSettings: provider, api_key, secret_key, mode (sandbox|live), status (Active|Inactive)
+//   currency:        currency_name, symbol, code, exchange_rate, is_base, status (active|inactive)
+//   language:        language_name, code, is_rtl, status (active|inactive), is_active
+//   captcha:         provider, site_key, secret_key, status (active|inactive)
+//   fileType:        allowed_extensions ([String]), max_size (Number)
+//   customField:     field_name, field_type, module, options ([String]), required
+//   systemField:     field_name, field_type, module, status (active|inactive)
+//   user:            name, email, password, role_id, user_type, status (active|inactive)
 
 import { useMemo, useState, useCallback } from 'react'
 import { settingsService } from '@/services/settings.service'
@@ -13,21 +27,49 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { useToast } from '@/hooks/use-toast'
 
 // ─── useSettingsStats ──────────────────────────────────────────────────────────
-// Dashboard stats for the settings module.
+// Dashboard stats derived from parallel list fetches (no getStats endpoint).
 export function useSettingsStats() {
-  const { data, isLoading } = useAsyncData(() => settingsService.getStats(), [])
-  return { stats: data || {}, isLoading }
+  const sessions = useAsyncData(() => settingsService.getSessions(), [])
+  const rolePermissions = useAsyncData(() => settingsService.getRolePermissions(), [])
+  const users = useAsyncData(() => settingsService.getUsers(), [])
+  const currencies = useAsyncData(() => settingsService.getCurrencies(), [])
+  const languages = useAsyncData(() => settingsService.getLanguages(), [])
+  const modules = useAsyncData(() => settingsService.getModules(), [])
+
+  const isLoading =
+    sessions.isLoading ||
+    rolePermissions.isLoading ||
+    users.isLoading ||
+    currencies.isLoading ||
+    languages.isLoading ||
+    modules.isLoading
+
+  const stats = useMemo(() => {
+    const sessionRows = sessions.data || []
+    const moduleRows = modules.data || []
+    return {
+      total_sessions: sessionRows.length,
+      active_sessions: sessionRows.filter((s) => s.status === 'Active').length,
+      total_roles: (rolePermissions.data || []).length,
+      total_users: (users.data || []).length,
+      total_currencies: (currencies.data || []).length,
+      total_languages: (languages.data || []).length,
+      enabled_modules: moduleRows.filter((m) => m.status === 'active').length,
+    }
+  }, [sessions.data, rolePermissions.data, users.data, currencies.data, languages.data, modules.data])
+
+  return { stats, isLoading }
 }
 
 // ─── useGeneralSettings ────────────────────────────────────────────────────────
-// General school info form (single object, no list).
+// General school info form (singleton object).
 export function useGeneralSettings() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getGeneralSettings(), [])
 
   const updateSettings = useCallback(async (payload) => {
-    await settingsService.updateGeneralSettings(payload)
-    toast({ title: 'Settings saved', description: 'General settings updated successfully' })
+    await settingsService.saveGeneralSettings(payload)
+    toast({ title: 'Settings saved' })
     refetch()
   }, [refetch, toast])
 
@@ -35,7 +77,7 @@ export function useGeneralSettings() {
 }
 
 // ─── useSessions ────────────────────────────────────────────────────────────────
-// Session CRUD with search + status filter.
+// Session CRUD with search + status filter. Status values: 'Active'/'Inactive'.
 export function useSessions() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getSessions(), [])
@@ -45,8 +87,6 @@ export function useSessions() {
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered sessions
-  // unless session list or filters change.
   const filtered = useMemo(() => rows.filter((s) => {
     const q = search.toLowerCase()
     const matchSearch = !q || s.session_name.toLowerCase().includes(q)
@@ -71,6 +111,12 @@ export function useSessions() {
     refetch()
   }, [refetch, toast])
 
+  const activateSession = useCallback(async (id) => {
+    await settingsService.activateSession(id)
+    toast({ title: 'Session activated' })
+    refetch()
+  }, [refetch, toast])
+
   return {
     rows: filtered,
     isLoading,
@@ -78,11 +124,12 @@ export function useSessions() {
     statusFilter, setStatusFilter,
     saveSession,
     deleteSession,
+    activateSession,
   }
 }
 
 // ─── useRolePermissions ────────────────────────────────────────────────────────
-// Role permission CRUD with search.
+// Role permission CRUD with search by role_name and role_type.
 export function useRolePermissions() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getRolePermissions(), [])
@@ -93,7 +140,7 @@ export function useRolePermissions() {
 
   const filtered = useMemo(() => rows.filter((r) => {
     const q = search.toLowerCase()
-    return !q || r.role_name.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q)
+    return !q || r.role_name.toLowerCase().includes(q) || (r.role_type || '').toLowerCase().includes(q)
   }), [rows, search])
 
   const saveRolePermission = useCallback(async (payload, id) => {
@@ -123,7 +170,7 @@ export function useRolePermissions() {
 }
 
 // ─── useUsers ──────────────────────────────────────────────────────────────────
-// User CRUD with search + status filter.
+// User CRUD with search + status filter. Status values: 'active'/'inactive'.
 export function useUsers() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getUsers(), [])
@@ -135,7 +182,7 @@ export function useUsers() {
 
   const filtered = useMemo(() => rows.filter((u) => {
     const q = search.toLowerCase()
-    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q)
+    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.user_type || '').toLowerCase().includes(q)
     const matchStatus = statusFilter === 'all' || u.status === statusFilter
     return matchSearch && matchStatus
   }), [rows, search, statusFilter])
@@ -157,6 +204,12 @@ export function useUsers() {
     refetch()
   }, [refetch, toast])
 
+  const updateUserStatus = useCallback(async (id, status) => {
+    await settingsService.updateUserStatus(id, status)
+    toast({ title: 'User status updated' })
+    refetch()
+  }, [refetch, toast])
+
   return {
     rows: filtered,
     isLoading,
@@ -164,56 +217,149 @@ export function useUsers() {
     statusFilter, setStatusFilter,
     saveUser,
     deleteUser,
+    updateUserStatus,
   }
 }
 
-// ─── useNotificationSettings ───────────────────────────────────────────────────
-// Notification settings form (single object).
-export function useNotificationSettings() {
+// ─── useNotifications ───────────────────────────────────────────────────────────
+// Notification CRUD (NOT singleton). Fields: notification_type, template, enabled.
+export function useNotifications() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => settingsService.getNotificationSettings(), [])
+  const { data, isLoading, refetch } = useAsyncData(() => settingsService.getNotifications(), [])
 
-  const updateSettings = useCallback(async (payload) => {
-    await settingsService.updateNotificationSettings(payload)
-    toast({ title: 'Settings saved', description: 'Notification preferences updated' })
+  const [search, setSearch] = useState('')
+
+  const rows = data || []
+
+  const filtered = useMemo(() => rows.filter((n) => {
+    const q = search.toLowerCase()
+    return !q || (n.notification_type || '').toLowerCase().includes(q) || (n.template || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const saveNotification = useCallback(async (payload, id) => {
+    if (id) {
+      await settingsService.updateNotification(id, payload)
+      toast({ title: 'Notification updated', description: payload.notification_type })
+    } else {
+      await settingsService.createNotification(payload)
+      toast({ title: 'Notification added', description: payload.notification_type })
+    }
     refetch()
   }, [refetch, toast])
 
-  return { settings: data || {}, isLoading, updateSettings }
+  const deleteNotification = useCallback(async (id) => {
+    await settingsService.deleteNotification(id)
+    toast({ title: 'Notification deleted' })
+    refetch()
+  }, [refetch, toast])
+
+  return {
+    rows: filtered,
+    isLoading,
+    search, setSearch,
+    saveNotification,
+    deleteNotification,
+  }
 }
 
 // ─── useSmsSettings ────────────────────────────────────────────────────────────
-// SMS settings form (single object).
+// SMS settings CRUD (NOT singleton). Fields: provider, api_key, sender_id, status.
 export function useSmsSettings() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getSmsSettings(), [])
 
-  const updateSettings = useCallback(async (payload) => {
-    await settingsService.updateSmsSettings(payload)
-    toast({ title: 'Settings saved', description: 'SMS settings updated' })
+  const [search, setSearch] = useState('')
+
+  const rows = data || []
+
+  const filtered = useMemo(() => rows.filter((s) => {
+    const q = search.toLowerCase()
+    return !q || (s.provider || '').toLowerCase().includes(q) || (s.sender_id || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const saveSms = useCallback(async (payload, id) => {
+    if (id) {
+      await settingsService.updateSmsSettings(id, payload)
+      toast({ title: 'SMS settings updated', description: payload.provider })
+    } else {
+      await settingsService.createSmsSettings(payload)
+      toast({ title: 'SMS settings added', description: payload.provider })
+    }
     refetch()
   }, [refetch, toast])
 
-  return { settings: data || {}, isLoading, updateSettings }
+  const deleteSms = useCallback(async (id) => {
+    await settingsService.deleteSmsSettings(id)
+    toast({ title: 'SMS settings deleted' })
+    refetch()
+  }, [refetch, toast])
+
+  const activateSms = useCallback(async (id) => {
+    await settingsService.activateSms(id)
+    toast({ title: 'SMS settings activated' })
+    refetch()
+  }, [refetch, toast])
+
+  return {
+    rows: filtered,
+    isLoading,
+    search, setSearch,
+    saveSms,
+    deleteSms,
+    activateSms,
+  }
 }
 
 // ─── usePaymentSettings ─────────────────────────────────────────────────────────
-// Payment settings form (single object).
+// Payment settings CRUD. Fields: provider, api_key, secret_key, mode, status.
 export function usePaymentSettings() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getPaymentSettings(), [])
 
-  const updateSettings = useCallback(async (payload) => {
-    await settingsService.updatePaymentSettings(payload)
-    toast({ title: 'Settings saved', description: 'Payment settings updated' })
+  const [search, setSearch] = useState('')
+
+  const rows = data || []
+
+  const filtered = useMemo(() => rows.filter((p) => {
+    const q = search.toLowerCase()
+    return !q || (p.provider || '').toLowerCase().includes(q) || (p.mode || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const savePayment = useCallback(async (payload, id) => {
+    if (id) {
+      await settingsService.updatePaymentSettings(id, payload)
+      toast({ title: 'Payment settings updated', description: payload.provider })
+    } else {
+      await settingsService.createPaymentSettings(payload)
+      toast({ title: 'Payment settings added', description: payload.provider })
+    }
     refetch()
   }, [refetch, toast])
 
-  return { settings: data || {}, isLoading, updateSettings }
+  const deletePayment = useCallback(async (id) => {
+    await settingsService.deletePaymentSettings(id)
+    toast({ title: 'Payment settings deleted' })
+    refetch()
+  }, [refetch, toast])
+
+  const activatePayment = useCallback(async (id) => {
+    await settingsService.activatePayment(id)
+    toast({ title: 'Payment settings activated' })
+    refetch()
+  }, [refetch, toast])
+
+  return {
+    rows: filtered,
+    isLoading,
+    search, setSearch,
+    savePayment,
+    deletePayment,
+    activatePayment,
+  }
 }
 
 // ─── useCurrencies ──────────────────────────────────────────────────────────────
-// Currency CRUD with search.
+// Currency CRUD with search by code and currency_name.
 export function useCurrencies() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getCurrencies(), [])
@@ -224,16 +370,16 @@ export function useCurrencies() {
 
   const filtered = useMemo(() => rows.filter((c) => {
     const q = search.toLowerCase()
-    return !q || c.currency_code.toLowerCase().includes(q) || c.currency_name.toLowerCase().includes(q)
+    return !q || (c.code || '').toLowerCase().includes(q) || (c.currency_name || '').toLowerCase().includes(q)
   }), [rows, search])
 
   const saveCurrency = useCallback(async (payload, id) => {
     if (id) {
       await settingsService.updateCurrency(id, payload)
-      toast({ title: 'Currency updated', description: payload.currency_code })
+      toast({ title: 'Currency updated', description: payload.code })
     } else {
       await settingsService.createCurrency(payload)
-      toast({ title: 'Currency added', description: payload.currency_code })
+      toast({ title: 'Currency added', description: payload.code })
     }
     refetch()
   }, [refetch, toast])
@@ -244,17 +390,31 @@ export function useCurrencies() {
     refetch()
   }, [refetch, toast])
 
+  const setBaseCurrency = useCallback(async (id) => {
+    await settingsService.setBaseCurrency(id)
+    toast({ title: 'Base currency set' })
+    refetch()
+  }, [refetch, toast])
+
+  const updateCurrencyStatus = useCallback(async (id, status) => {
+    await settingsService.updateCurrencyStatus(id, status)
+    toast({ title: 'Currency status updated' })
+    refetch()
+  }, [refetch, toast])
+
   return {
     rows: filtered,
     isLoading,
     search, setSearch,
     saveCurrency,
     deleteCurrency,
+    setBaseCurrency,
+    updateCurrencyStatus,
   }
 }
 
 // ─── useLanguages ──────────────────────────────────────────────────────────────
-// Language CRUD with search.
+// Language CRUD with search by language_name and code.
 export function useLanguages() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getLanguages(), [])
@@ -265,7 +425,7 @@ export function useLanguages() {
 
   const filtered = useMemo(() => rows.filter((l) => {
     const q = search.toLowerCase()
-    return !q || l.language_name.toLowerCase().includes(q) || l.language_code.toLowerCase().includes(q)
+    return !q || (l.language_name || '').toLowerCase().includes(q) || (l.code || '').toLowerCase().includes(q)
   }), [rows, search])
 
   const saveLanguage = useCallback(async (payload, id) => {
@@ -285,39 +445,93 @@ export function useLanguages() {
     refetch()
   }, [refetch, toast])
 
+  const setActiveLanguage = useCallback(async (id) => {
+    await settingsService.setActiveLanguage(id)
+    toast({ title: 'Active language set' })
+    refetch()
+  }, [refetch, toast])
+
+  const toggleLanguageRtl = useCallback(async (id) => {
+    await settingsService.toggleLanguageRtl(id)
+    toast({ title: 'RTL toggled' })
+    refetch()
+  }, [refetch, toast])
+
+  const updateLanguageStatus = useCallback(async (id, status) => {
+    await settingsService.updateLanguageStatus(id, status)
+    toast({ title: 'Language status updated' })
+    refetch()
+  }, [refetch, toast])
+
   return {
     rows: filtered,
     isLoading,
     search, setSearch,
     saveLanguage,
     deleteLanguage,
+    setActiveLanguage,
+    toggleLanguageRtl,
+    updateLanguageStatus,
   }
 }
 
 // ─── useCaptchaSettings ─────────────────────────────────────────────────────────
-// Captcha settings form (single object).
+// Captcha settings CRUD. Fields: provider, site_key, secret_key, status.
 export function useCaptchaSettings() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getCaptchaSettings(), [])
 
-  const updateSettings = useCallback(async (payload) => {
-    await settingsService.updateCaptchaSettings(payload)
-    toast({ title: 'Settings saved', description: 'Captcha settings updated' })
+  const [search, setSearch] = useState('')
+
+  const rows = data || []
+
+  const filtered = useMemo(() => rows.filter((c) => {
+    const q = search.toLowerCase()
+    return !q || (c.provider || '').toLowerCase().includes(q) || (c.site_key || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const saveCaptcha = useCallback(async (payload, id) => {
+    if (id) {
+      await settingsService.updateCaptchaSettings(id, payload)
+      toast({ title: 'Captcha settings updated', description: payload.provider })
+    } else {
+      await settingsService.createCaptchaSettings(payload)
+      toast({ title: 'Captcha settings added', description: payload.provider })
+    }
     refetch()
   }, [refetch, toast])
 
-  return { settings: data || {}, isLoading, updateSettings }
+  const deleteCaptcha = useCallback(async (id) => {
+    await settingsService.deleteCaptchaSettings(id)
+    toast({ title: 'Captcha settings deleted' })
+    refetch()
+  }, [refetch, toast])
+
+  const updateCaptchaStatus = useCallback(async (id, status) => {
+    await settingsService.updateCaptchaStatus(id, status)
+    toast({ title: 'Captcha status updated' })
+    refetch()
+  }, [refetch, toast])
+
+  return {
+    rows: filtered,
+    isLoading,
+    search, setSearch,
+    saveCaptcha,
+    deleteCaptcha,
+    updateCaptchaStatus,
+  }
 }
 
 // ─── useModules ─────────────────────────────────────────────────────────────────
-// Module list with enable/disable toggle.
+// Module list with status toggle (active/inactive) via updateModuleStatus.
 export function useModules() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getModules(), [])
 
   const toggleModule = useCallback(async (mod) => {
-    await settingsService.updateModule(mod._id, { is_enabled: !mod.is_enabled })
-    toast({ title: mod.is_enabled ? 'Module disabled' : 'Module enabled', description: mod.display_name })
+    await settingsService.updateModuleStatus(mod._id, mod.status === 'active' ? 'inactive' : 'active')
+    toast({ title: mod.status === 'active' ? 'Module disabled' : 'Module enabled', description: mod.module_name })
     refetch()
   }, [refetch, toast])
 
@@ -325,14 +539,14 @@ export function useModules() {
 }
 
 // ─── useFrontCmsSettings ────────────────────────────────────────────────────────
-// Front CMS settings form (single object).
+// Front CMS settings form (singleton object).
 export function useFrontCmsSettings() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getFrontCmsSettings(), [])
 
   const updateSettings = useCallback(async (payload) => {
-    await settingsService.updateFrontCmsSettings(payload)
-    toast({ title: 'Settings saved', description: 'Front CMS settings updated' })
+    await settingsService.saveFrontCmsSettings(payload)
+    toast({ title: 'Settings saved' })
     refetch()
   }, [refetch, toast])
 
@@ -341,6 +555,7 @@ export function useFrontCmsSettings() {
 
 // ─── useCustomFields ─────────────────────────────────────────────────────────────
 // Custom field CRUD with search + module filter.
+// Fields: field_name, field_type, module, options, required.
 export function useCustomFields() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getCustomFields(), [])
@@ -352,7 +567,7 @@ export function useCustomFields() {
 
   const filtered = useMemo(() => rows.filter((f) => {
     const q = search.toLowerCase()
-    const matchSearch = !q || f.field_name.toLowerCase().includes(q) || f.field_label.toLowerCase().includes(q)
+    const matchSearch = !q || (f.field_name || '').toLowerCase().includes(q) || (f.module || '').toLowerCase().includes(q)
     const matchModule = moduleFilter === 'all' || f.module === moduleFilter
     return matchSearch && matchModule
   }), [rows, search, moduleFilter])
@@ -360,10 +575,10 @@ export function useCustomFields() {
   const saveCustomField = useCallback(async (payload, id) => {
     if (id) {
       await settingsService.updateCustomField(id, payload)
-      toast({ title: 'Field updated', description: payload.field_label })
+      toast({ title: 'Field updated', description: payload.field_name })
     } else {
       await settingsService.createCustomField(payload)
-      toast({ title: 'Field added', description: payload.field_label })
+      toast({ title: 'Field added', description: payload.field_name })
     }
     refetch()
   }, [refetch, toast])
@@ -385,7 +600,8 @@ export function useCustomFields() {
 }
 
 // ─── useSystemFields ────────────────────────────────────────────────────────────
-// System field list with search + update.
+// System field list with search + status update via updateSystemFieldStatus.
+// Fields: field_name, field_type, module, status.
 export function useSystemFields() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getSystemFields(), [])
@@ -396,12 +612,18 @@ export function useSystemFields() {
 
   const filtered = useMemo(() => rows.filter((f) => {
     const q = search.toLowerCase()
-    return !q || f.field_name.toLowerCase().includes(q) || f.field_label.toLowerCase().includes(q) || f.module.toLowerCase().includes(q)
+    return !q || (f.field_name || '').toLowerCase().includes(q) || (f.module || '').toLowerCase().includes(q)
   }), [rows, search])
 
-  const updateSystemField = useCallback(async (id, payload) => {
-    await settingsService.updateSystemField(id, payload)
-    toast({ title: 'Field updated' })
+  const updateSystemFieldStatus = useCallback(async (id, status) => {
+    await settingsService.updateSystemFieldStatus(id, status)
+    toast({ title: 'Field status updated' })
+    refetch()
+  }, [refetch, toast])
+
+  const deleteSystemField = useCallback(async (id) => {
+    await settingsService.deleteSystemField(id)
+    toast({ title: 'Field deleted' })
     refetch()
   }, [refetch, toast])
 
@@ -409,12 +631,14 @@ export function useSystemFields() {
     rows: filtered,
     isLoading,
     search, setSearch,
-    updateSystemField,
+    updateSystemFieldStatus,
+    deleteSystemField,
   }
 }
 
 // ─── useFileTypes ───────────────────────────────────────────────────────────────
-// File type CRUD with search.
+// File type settings. Fields: allowed_extensions ([String]), max_size (Number).
+// No delete endpoint; updateFileType takes payload (no id).
 export function useFileTypes() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => settingsService.getFileTypes(), [])
@@ -425,31 +649,26 @@ export function useFileTypes() {
 
   const filtered = useMemo(() => rows.filter((f) => {
     const q = search.toLowerCase()
-    return !q || f.extension.toLowerCase().includes(q) || f.mime_type.toLowerCase().includes(q) || f.category.toLowerCase().includes(q)
+    const exts = Array.isArray(f.allowed_extensions) ? f.allowed_extensions.join(', ') : ''
+    return !q || exts.toLowerCase().includes(q)
   }), [rows, search])
 
-  const saveFileType = useCallback(async (payload, id) => {
-    if (id) {
-      await settingsService.updateFileType(id, payload)
-      toast({ title: 'File type updated', description: payload.extension })
+  const saveFileType = useCallback(async (payload) => {
+    // If a record already exists, update it (no id); otherwise create.
+    if (rows.length > 0) {
+      await settingsService.updateFileType(payload)
+      toast({ title: 'File type settings updated' })
     } else {
       await settingsService.createFileType(payload)
-      toast({ title: 'File type added', description: payload.extension })
+      toast({ title: 'File type settings added' })
     }
     refetch()
-  }, [refetch, toast])
-
-  const deleteFileType = useCallback(async (id) => {
-    await settingsService.deleteFileType(id)
-    toast({ title: 'File type deleted' })
-    refetch()
-  }, [refetch, toast])
+  }, [refetch, toast, rows.length])
 
   return {
     rows: filtered,
     isLoading,
     search, setSearch,
     saveFileType,
-    deleteFileType,
   }
 }

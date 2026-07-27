@@ -28,7 +28,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -40,19 +39,17 @@ import { DeleteDialog } from '@/components/DeleteDialog'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useGeneratedCertificates, useStudentCertificates } from '@/hooks/useCertificate'
-import { useAsyncData } from '@/hooks/useAsyncData'
+import { useGeneratedCertificates } from '@/hooks/useCertificate'
 import { useToast } from '@/hooks/use-toast'
 import { formatDate } from '@/utils/format'
 
 export default function GenerateCertificatePage() {
   const {
     rows, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
+    search, setSearch,
     createGeneratedCertificate, deleteGeneratedCertificate,
   } = useGeneratedCertificates()
   const { toast } = useToast()
-  const { data: studentCerts } = useAsyncData(() => import('@/services/certificate.service').then((m) => m.certificateService.getStudentCertificates()), [])
 
   const [addOpen, setAddOpen] = useState(false)
   const [viewRow, setViewRow] = useState(null)
@@ -60,31 +57,30 @@ export default function GenerateCertificatePage() {
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'certificate_name',
-      header: 'Certificate',
+      accessorKey: 'student_id',
+      header: 'Student',
       cell: ({ row }) => (
         <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <ScrollText className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.certificate_name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.student_name} · {row.original.admission_no}</span>
+            <span className="font-medium hover:underline">{row.original.student_id}</span>
+            <span className="text-xs text-muted-foreground">{row.original.issued_by}</span>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'certificate_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.certificate_type}</Badge> },
-    { accessorKey: 'class_name', header: 'Class' },
-    { accessorKey: 'template_name', header: 'Template' },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant="outline" className="capitalize">{row.original.status}</Badge> },
-    { accessorKey: 'generated_at', header: 'Generated At', cell: ({ row }) => formatDate(row.original.generated_at) },
+    { accessorKey: 'certificate_id', header: 'Certificate' },
+    { accessorKey: 'generated_date', header: 'Generated Date', cell: ({ row }) => formatDate(row.original.generated_date) },
+    { accessorKey: 'issued_by', header: 'Issued By' },
+    { accessorKey: 'createdAt', header: 'Created At', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
-    { label: 'Print', icon: Printer, onClick: () => toast({ title: 'Printing…', description: r.certificate_name }) },
-    { label: 'Download', icon: Download, onClick: () => toast({ title: 'Downloading…', description: r.certificate_name }) },
+    { label: 'Print', icon: Printer, onClick: () => toast({ title: 'Printing…', description: r.issued_by }) },
+    { label: 'Download', icon: Download, onClick: () => toast({ title: 'Downloading…', description: r.issued_by }) },
     { separator: true },
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
@@ -100,20 +96,11 @@ export default function GenerateCertificatePage() {
       />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by name, student, or admission no…" className="max-w-sm" />
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="generated">Generated</option>
-            <option value="printed">Printed</option>
-            <option value="downloaded">Downloaded</option>
-          </select>
-        </div>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by issued by or generated date…" className="max-w-sm" />
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={6} />
+        <LoadingSkeleton variant="table" rows={5} cols={5} />
       ) : rows.length === 0 ? (
         <NoData title="No generated certificates" description="Generate a new certificate to get started." actionLabel="Generate Certificate" onAction={() => setAddOpen(true)} />
       ) : (
@@ -128,7 +115,6 @@ export default function GenerateCertificatePage() {
       <GenerateCertificateFormDrawer
         open={addOpen}
         onOpenChange={(o) => setAddOpen(o)}
-        studentCerts={studentCerts || []}
         onSubmit={async (payload) => {
           await createGeneratedCertificate(payload)
           setAddOpen(false)
@@ -140,14 +126,14 @@ export default function GenerateCertificatePage() {
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Generated Certificate"
-        description={viewRow?.certificate_name}
+        description={viewRow?.issued_by}
         width="sm:max-w-md"
         footer={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => toast({ title: 'Printing…', description: viewRow.certificate_name })}>
+            <Button variant="outline" onClick={() => toast({ title: 'Printing…', description: viewRow.issued_by })}>
               <Printer className="mr-2 h-4 w-4" /> Print
             </Button>
-            <Button variant="outline" onClick={() => toast({ title: 'Downloading…', description: viewRow.certificate_name })}>
+            <Button variant="outline" onClick={() => toast({ title: 'Downloading…', description: viewRow.issued_by })}>
               <Download className="mr-2 h-4 w-4" /> Download
             </Button>
             <Button onClick={() => setViewRow(null)}>Close</Button>
@@ -161,19 +147,17 @@ export default function GenerateCertificatePage() {
                 <ScrollText className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold">{viewRow.certificate_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.certificate_type}</p>
+                <p className="font-semibold">{viewRow.issued_by}</p>
+                <p className="text-xs text-muted-foreground">{viewRow.student_id}</p>
               </div>
-              <Badge variant="outline" className="capitalize">{viewRow.status}</Badge>
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Student', value: viewRow.student_name },
-                { label: 'Admission No', value: viewRow.admission_no },
-                { label: 'Class', value: viewRow.class_name },
-                { label: 'Template', value: viewRow.template_name },
-                { label: 'Generated At', value: formatDate(viewRow.generated_at) },
+                { label: 'Student ID', value: viewRow.student_id },
+                { label: 'Certificate ID', value: viewRow.certificate_id },
+                { label: 'Generated Date', value: formatDate(viewRow.generated_date) },
+                { label: 'Issued By', value: viewRow.issued_by },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
@@ -189,7 +173,7 @@ export default function GenerateCertificatePage() {
       <DeleteDialog
         open={!!deleteRow}
         onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.certificate_name}
+        entityName={deleteRow?.issued_by}
         onConfirm={() => deleteGeneratedCertificate(deleteRow._id)}
       />
     </div>
@@ -197,46 +181,28 @@ export default function GenerateCertificatePage() {
 }
 
 // ─── Generate Certificate Form Drawer ────────────────────────────────────────
-function GenerateCertificateFormDrawer({ open, onOpenChange, studentCerts, onSubmit }) {
+function GenerateCertificateFormDrawer({ open, onOpenChange, onSubmit }) {
   const [form, setForm] = useState({
+    student_id: '',
     certificate_id: '',
-    certificate_name: '',
-    certificate_type: '',
-    student_name: '',
-    admission_no: '',
-    class_name: '',
-    template_name: 'Standard Character Template',
+    generated_date: '',
+    issued_by: '',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-
-  const handleSelectCert = (id) => {
-    const cert = studentCerts.find((c) => c._id === id)
-    if (cert) {
-      setForm((f) => ({
-        ...f,
-        certificate_id: id,
-        certificate_name: cert.certificate_name,
-        certificate_type: cert.certificate_type,
-        student_name: cert.student_name,
-        admission_no: cert.admission_no,
-        class_name: cert.class_name,
-      }))
-    }
-  }
 
   return (
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
       title="Generate Certificate"
-      description="Select a student certificate to generate"
+      description="Enter student and certificate details to generate"
       width="sm:max-w-md"
       footer={
         <DrawerFooter
           onCancel={() => onOpenChange(false)}
           submitLabel="Generate"
-          submitDisabled={!form.certificate_id}
+          submitDisabled={!form.student_id.trim() || !form.certificate_id.trim()}
           onSubmit={() => onSubmit(form)}
         />
       }
@@ -244,16 +210,20 @@ function GenerateCertificateFormDrawer({ open, onOpenChange, studentCerts, onSub
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
         <FormSection columns={1}>
           <div className="space-y-1.5">
-            <Label className="text-xs">Student Certificate <span className="text-destructive">*</span></Label>
-            <select value={form.certificate_id} onChange={(e) => handleSelectCert(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="">Select certificate</option>
-              {studentCerts.map((c) => <option key={c._id} value={c._id}>{c.certificate_name} — {c.student_name}</option>)}
-            </select>
+            <Label className="text-xs">Student ID <span className="text-destructive">*</span></Label>
+            <Input value={form.student_id} onChange={(e) => set('student_id', e.target.value)} placeholder="Student ObjectId" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Template</Label>
-            <Input value={form.template_name} onChange={(e) => set('template_name', e.target.value)} placeholder="Template name" />
+            <Label className="text-xs">Certificate ID <span className="text-destructive">*</span></Label>
+            <Input value={form.certificate_id} onChange={(e) => set('certificate_id', e.target.value)} placeholder="Certificate ObjectId" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Generated Date</Label>
+            <Input type="date" value={form.generated_date ? form.generated_date.split('T')[0] : ''} onChange={(e) => set('generated_date', e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Issued By</Label>
+            <Input value={form.issued_by} onChange={(e) => set('issued_by', e.target.value)} placeholder="e.g. Principal" />
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

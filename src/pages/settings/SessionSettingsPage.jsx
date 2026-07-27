@@ -3,14 +3,9 @@
 // Page: Session Settings
 //
 // Purpose:
-// Manage academic sessions (years) and mark the current session.
+// Manage academic sessions (years) and activate the current session.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: session_name, start_date, end_date, status (Active|Inactive)
 // ====================================================================
 
 import { useMemo, useState } from 'react'
@@ -39,7 +34,6 @@ const EXPORT_COLS = [
   { key: 'session_name', label: 'Session' },
   { key: 'start_date', label: 'Start Date' },
   { key: 'end_date', label: 'End Date' },
-  { key: 'is_current', label: 'Current' },
   { key: 'status', label: 'Status' },
 ]
 
@@ -47,7 +41,7 @@ export default function SessionSettingsPage() {
   const {
     rows, isLoading,
     search, setSearch, statusFilter, setStatusFilter,
-    saveSession, deleteSession,
+    saveSession, deleteSession, activateSession,
   } = useSessions()
 
   const [addOpen, setAddOpen] = useState(false)
@@ -65,17 +59,13 @@ export default function SessionSettingsPage() {
     { accessorKey: 'session_name', header: 'Session' },
     { accessorKey: 'start_date', header: 'Start Date', cell: ({ row }) => formatDate(row.original.start_date) },
     { accessorKey: 'end_date', header: 'End Date', cell: ({ row }) => formatDate(row.original.end_date) },
-    {
-      accessorKey: 'is_current',
-      header: 'Current',
-      cell: ({ row }) => row.original.is_current ? <Badge>Current</Badge> : <span className="text-muted-foreground">—</span>,
-    },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   ], [])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
     { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: 'Activate', icon: CalendarClock, onClick: () => activateSession(r._id) },
     { separator: true },
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
@@ -97,14 +87,14 @@ export default function SessionSettingsPage() {
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
           </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={5} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : rows.length === 0 ? (
         <NoData title="No sessions found" description="Add a new academic session to get started." actionLabel="Add Session" onAction={() => setAddOpen(true)} />
       ) : (
@@ -140,7 +130,7 @@ export default function SessionSettingsPage() {
               { label: 'Session', value: viewRow.session_name },
               { label: 'Start Date', value: formatDate(viewRow.start_date) },
               { label: 'End Date', value: formatDate(viewRow.end_date) },
-              { label: 'Current', value: viewRow.is_current ? 'Yes' : 'No' },
+              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
             ].map((f) => (
               <div key={f.label} className="space-y-0.5">
                 <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
@@ -166,8 +156,6 @@ function SessionFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
     session_name: initial?.session_name || '',
     start_date: initial?.start_date || '',
     end_date: initial?.end_date || '',
-    is_current: initial?.is_current || false,
-    status: initial?.status || 'active',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
@@ -203,21 +191,6 @@ function SessionFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
               <Label className="text-xs">End Date</Label>
               <Input type="date" value={form.end_date} onChange={(e) => set('end_date', e.target.value)} />
             </div>
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Current Session</p>
-              <p className="text-xs text-muted-foreground">Mark this as the active academic year</p>
-            </div>
-            <input type="checkbox" checked={form.is_current} onChange={(e) => set('is_current', e.target.checked)} className="h-4 w-4" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

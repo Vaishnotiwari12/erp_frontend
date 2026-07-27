@@ -6,9 +6,12 @@
 // Manage uploaded media files — images, videos, and documents.
 //
 // Data Source:
-// frontCms.service.js
+// frontCms.service.js (via useMedia hook)
 //
-// Backend:
+// Backend model: media { file_name, file_url, file_type }
+//   - createMedia(payload, file) uses FormData with 'file' field
+//   - updateMedia(id, payload) uses JSON body
+//
 // APIs should always be called through the service layer.
 // Never call Axios directly from this page.
 // ====================================================================
@@ -44,11 +47,11 @@ import { formatDate } from '@/utils/format'
 const EXPORT_COLS = [
   { key: 'file_name', label: 'File Name' },
   { key: 'file_type', label: 'File Type' },
-  { key: 'file_size', label: 'File Size' },
-  { key: 'uploaded_by', label: 'Uploaded By' },
-  { key: 'status', label: 'Status' },
+  { key: 'file_url', label: 'File URL' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
+// typeFilter matches against file_type (mimetype string), e.g. "image/png"
 const FILE_TYPES = ['image', 'video', 'document']
 
 export default function MediaManagerPage() {
@@ -62,8 +65,8 @@ export default function MediaManagerPage() {
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload) => {
-    await saveMedia(payload)
+  const handleSave = async (payload, file) => {
+    await saveMedia(payload, file)
     setAddOpen(false)
   }
 
@@ -80,10 +83,10 @@ export default function MediaManagerPage() {
         </button>
       ),
     },
-    { accessorKey: 'file_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.file_type}</Badge> },
-    { accessorKey: 'file_size', header: 'Size', cell: ({ row }) => <span className="font-mono text-sm">{row.original.file_size}</span> },
-    { accessorKey: 'uploaded_by', header: 'Uploaded By', cell: ({ row }) => <span className="text-sm">{row.original.uploaded_by}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={row.original.status === 'active' ? 'default' : 'outline'}>{row.original.status}</Badge> },
+    { accessorKey: 'file_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.file_type || '—'}</Badge> },
+    { accessorKey: 'file_url', header: 'File URL', cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground break-all">{row.original.file_url || '—'}</span>
+    ) },
     { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
@@ -105,7 +108,6 @@ export default function MediaManagerPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Media" value={stats.total} icon={FolderOpen} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={FolderOpen} accent="success" />
       </div>
 
       <FilterBar>
@@ -121,7 +123,7 @@ export default function MediaManagerPage() {
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={6} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : rows.length === 0 ? (
         <NoData title="No media found" description="Upload a new file to get started." actionLabel="Add Media" onAction={() => setAddOpen(true)} />
       ) : (
@@ -158,19 +160,17 @@ export default function MediaManagerPage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{viewRow.file_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.file_type} · {viewRow.file_size}</p>
+                <p className="text-xs text-muted-foreground">{viewRow.file_type}</p>
               </div>
-              <Badge variant={viewRow.status === 'active' ? 'default' : 'outline'}>{viewRow.status}</Badge>
             </div>
 
-            {viewRow.file_type === 'image' && viewRow.file_url && (
+            {viewRow.file_type && viewRow.file_type.startsWith('image/') && viewRow.file_url && (
               <img src={viewRow.file_url} alt={viewRow.file_name} className="w-full rounded-xl object-cover" />
             )}
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Uploaded By', value: viewRow.uploaded_by },
-                { label: 'File Size', value: viewRow.file_size },
+                { label: 'File Type', value: viewRow.file_type },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
                 { label: 'File URL', value: viewRow.file_url },
               ].map((f) => (
@@ -196,15 +196,7 @@ export default function MediaManagerPage() {
 
 // ─── Media Form Drawer (Add only) ──────────────────────────────────────────────
 function MediaFormDrawer({ open, onOpenChange, title, onSubmit }) {
-  const [form, setForm] = useState({
-    file_name: '',
-    file_type: 'image',
-    file_url: '',
-    uploaded_by: '',
-    status: 'active',
-  })
-
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  const [file, setFile] = useState(null)
 
   return (
     <Drawer
@@ -217,45 +209,23 @@ function MediaFormDrawer({ open, onOpenChange, title, onSubmit }) {
         <DrawerFooter
           onCancel={() => onOpenChange(false)}
           submitLabel="Add Media"
-          submitDisabled={!form.file_name.trim()}
-          onSubmit={() => onSubmit(form)}
+          submitDisabled={!file}
+          onSubmit={() => onSubmit({}, file)}
         />
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit({}, file) }} className="space-y-4">
         <FormSection columns={1}>
           <div className="space-y-1.5">
-            <Label className="text-xs">File Name <span className="text-destructive">*</span></Label>
-            <Input value={form.file_name} onChange={(e) => set('file_name', e.target.value)} placeholder="example.jpg" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">File Type</Label>
-            <select value={form.file_type} onChange={(e) => set('file_type', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {FILE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">File URL</Label>
-            <Input value={form.file_url} onChange={(e) => set('file_url', e.target.value)} placeholder="https://… (upload placeholder)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Uploaded By</Label>
-              <Input value={form.uploaded_by} onChange={(e) => set('uploaded_by', e.target.value)} placeholder="Uploader name" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+            <Label className="text-xs">File <span className="text-destructive">*</span></Label>
+            <Input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            {file && (
+              <p className="text-xs text-muted-foreground">Selected: {file.name}</p>
+            )}
           </div>
           <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
             <Upload className="mx-auto mb-2 h-6 w-6" />
-            Drag and drop files here (upload placeholder)
+            Select a file above to upload
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

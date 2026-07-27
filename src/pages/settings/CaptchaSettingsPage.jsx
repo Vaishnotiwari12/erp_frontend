@@ -3,98 +3,183 @@
 // Page: Captcha Settings
 //
 // Purpose:
-// Configure the captcha provider for login forms.
+// Manage captcha provider configurations (CRUD table, NOT singleton).
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: provider, site_key, secret_key, status (active|inactive)
 // ====================================================================
 
-import { useState, useEffect } from 'react'
-import { Shield, Save } from 'lucide-react'
-import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import { PageHeader } from '@/components/PageHeader'
-import { FormSection } from '@/components/FormSection'
-import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { useMemo, useState } from 'react'
+import { Shield, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
+import { PageHeader } from '@/components/PageHeader'
+import { SearchBar } from '@/components/SearchBar'
+import { FilterBar } from '@/components/FilterBar'
+import { DataTable } from '@/components/DataTable'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { ExportButtons } from '@/components/ExportButtons'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
+import { FormSection } from '@/components/FormSection'
+import { StatusBadge } from '@/components/StatusBadge'
+import { ActionDropdown } from '@/components/ActionDropdown'
 import { useCaptchaSettings } from '@/hooks/useSettings'
+import { formatDate } from '@/utils/format'
 
-const PROVIDERS = ['Google reCAPTCHA', 'hCaptcha']
-const THEMES = ['light', 'dark']
+const EXPORT_COLS = [
+  { key: 'provider', label: 'Provider' },
+  { key: 'site_key', label: 'Site Key' },
+  { key: 'status', label: 'Status' },
+  { key: 'createdAt', label: 'Created' },
+]
 
 export default function CaptchaSettingsPage() {
-  const { settings, isLoading, updateSettings } = useCaptchaSettings()
-  const [form, setForm] = useState(settings)
+  const { rows, isLoading, search, setSearch, saveCaptcha, deleteCaptcha, updateCaptchaStatus } = useCaptchaSettings()
 
-  useEffect(() => { setForm(settings) }, [settings])
+  const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
+  const [viewRow, setViewRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-  const handleSave = () => updateSettings(form)
+  const handleSave = async (payload, id) => {
+    await saveCaptcha(payload, id)
+    if (id) setEditRow(null)
+    else setAddOpen(false)
+  }
 
-  if (isLoading) return <LoadingSkeleton variant="cards" />
+  const columns = useMemo(() => [
+    { accessorKey: 'provider', header: 'Provider' },
+    { accessorKey: 'site_key', header: 'Site Key', cell: ({ row }) => <span className="text-xs text-muted-foreground font-mono">{row.original.site_key}</span> },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
+  ], [])
+
+  const rowActions = (r) => [
+    { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: r.status === 'active' ? 'Deactivate' : 'Activate', onClick: () => updateCaptchaStatus(r._id, r.status === 'active' ? 'inactive' : 'active') },
+    { separator: true },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'Captcha' }]} />
       <PageHeader
         title="Captcha Settings"
-        description="Configure captcha protection for public forms."
+        description="Manage captcha provider configurations for public forms."
         icon={Shield}
+        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Captcha</Button>}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Captcha Configuration</CardTitle>
-          <CardDescription>Protect login and admission forms from bots.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Enable Captcha</p>
-              <p className="text-xs text-muted-foreground">Require captcha verification on forms</p>
-            </div>
-            <Switch checked={!!form.captcha_enabled} onCheckedChange={(v) => set('captcha_enabled', v)} />
-          </div>
+      <FilterBar>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search captcha configs…" className="max-w-sm" />
+        <ExportButtons rows={rows} columns={EXPORT_COLS} filename="captcha-settings" />
+      </FilterBar>
 
-          <FormSection title="Provider" columns={2}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Captcha Provider</Label>
-              <select value={form.captcha_provider || ''} onChange={(e) => set('captcha_provider', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                {PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Theme</Label>
-              <select value={form.theme || 'light'} onChange={(e) => set('theme', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                {THEMES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </FormSection>
+      {isLoading ? (
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
+      ) : rows.length === 0 ? (
+        <NoData title="No captcha configurations found" description="Add a new captcha provider to get started." actionLabel="Add Captcha" onAction={() => setAddOpen(true)} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={rows}
+          enableSelection
+          enableExport
+          exportFilename="captcha-settings"
+          rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
+        />
+      )}
 
-          <FormSection title="Keys" columns={1}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Site Key</Label>
-              <Input value={form.site_key || ''} onChange={(e) => set('site_key', e.target.value)} placeholder="Public site key" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Secret Key</Label>
-              <Input type="password" value={form.secret_key || ''} onChange={(e) => set('secret_key', e.target.value)} placeholder="Private secret key" />
-            </div>
-          </FormSection>
-        </CardContent>
-        <CardFooter className="justify-end">
-          <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Changes</Button>
-        </CardFooter>
-      </Card>
+      <CaptchaFormDrawer
+        open={addOpen || !!editRow}
+        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
+        title={editRow ? 'Edit Captcha' : 'Add Captcha'}
+        initial={editRow}
+        onSubmit={(payload) => handleSave(payload, editRow?._id)}
+      />
+
+      <Drawer
+        open={!!viewRow}
+        onOpenChange={(o) => !o && setViewRow(null)}
+        title="Captcha Details"
+        description={viewRow?.provider}
+        width="sm:max-w-md"
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
+      >
+        {viewRow && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {[
+              { label: 'Provider', value: viewRow.provider },
+              { label: 'Site Key', value: <span className="font-mono text-xs">{viewRow.site_key}</span> },
+              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value || '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Drawer>
+
+      <DeleteDialog
+        open={!!deleteRow}
+        onOpenChange={(o) => !o && setDeleteRow(null)}
+        entityName={deleteRow?.provider}
+        onConfirm={() => deleteCaptcha(deleteRow._id)}
+      />
     </div>
+  )
+}
+
+function CaptchaFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+  const [form, setForm] = useState({
+    provider: initial?.provider || '',
+    site_key: initial?.site_key || '',
+    secret_key: initial?.secret_key || '',
+  })
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description="Captcha provider configuration"
+      width="sm:max-w-md"
+      footer={
+        <DrawerFooter
+          onCancel={() => onOpenChange(false)}
+          submitLabel={initial ? 'Save Changes' : 'Add Captcha'}
+          submitDisabled={!form.provider.trim()}
+          onSubmit={() => onSubmit(form)}
+        />
+      }
+    >
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+        <FormSection columns={1}>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Provider <span className="text-destructive">*</span></Label>
+            <Input value={form.provider} onChange={(e) => set('provider', e.target.value)} placeholder="e.g. Google reCAPTCHA" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Site Key</Label>
+            <Input value={form.site_key} onChange={(e) => set('site_key', e.target.value)} placeholder="Public site key" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Secret Key</Label>
+            <Input type="password" value={form.secret_key} onChange={(e) => set('secret_key', e.target.value)} placeholder="Private secret key" />
+          </div>
+        </FormSection>
+        <button type="submit" className="hidden" />
+      </form>
+    </Drawer>
   )
 }

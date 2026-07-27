@@ -3,8 +3,8 @@
 // Page: Student ID Card
 //
 // Purpose:
-// Manage student ID card records with create, edit, view, and delete
-// operations. The view drawer renders a visual ID card preview.
+// Manage student ID card designs with create, edit, view, and delete
+// operations.
 //
 // Data Source:
 // certificate.service.js
@@ -21,7 +21,7 @@ import {
   Eye,
   Pencil,
   Trash2,
-  User,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,23 +40,19 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
 import { useStudentIdCards } from '@/hooks/useCertificate'
 import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
-  { key: 'card_name', label: 'Card Name' },
-  { key: 'student_name', label: 'Student' },
-  { key: 'admission_no', label: 'Admission No' },
-  { key: 'class_name', label: 'Class' },
-  { key: 'section', label: 'Section' },
-  { key: 'status', label: 'Status' },
+  { key: 'layout', label: 'Layout' },
+  { key: 'fields_to_show', label: 'Fields To Show' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function StudentIdCardPage() {
   const {
     rows, stats, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
+    search, setSearch,
     saveStudentIdCard, deleteStudentIdCard,
   } = useStudentIdCards()
 
@@ -73,23 +69,22 @@ export default function StudentIdCardPage() {
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'card_name',
-      header: 'Card',
+      accessorKey: 'layout',
+      header: 'Layout',
       cell: ({ row }) => (
         <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <IdCard className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.card_name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.student_name} · {row.original.admission_no}</span>
+            <span className="font-medium hover:underline">{row.original.layout}</span>
+            <span className="text-xs text-muted-foreground">{(row.original.fields_to_show || []).join(', ')}</span>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'class_name', header: 'Class' },
-    { accessorKey: 'section', header: 'Section' },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: 'fields_to_show', header: 'Fields To Show', cell: ({ row }) => (row.original.fields_to_show || []).join(', ') },
+    { accessorKey: 'createdAt', header: 'Created At', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -104,33 +99,27 @@ export default function StudentIdCardPage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Certificate' }, { label: 'Student ID Card' }]} />
       <PageHeader
         title="Student ID Cards"
-        description="Manage student ID card records and preview card layouts."
+        description="Manage student ID card designs and layouts."
         icon={IdCard}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add ID Card</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="Total ID Cards" value={stats.total} icon={IdCard} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={User} accent="success" />
+        <StatCard label="Total" value={stats.total} icon={FileText} accent="success" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by card name, student, or admission no…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by layout…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={rows} columns={EXPORT_COLS} filename="student-id-cards" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={4} />
+        <LoadingSkeleton variant="table" rows={5} cols={3} />
       ) : rows.length === 0 ? (
-        <NoData title="No ID cards found" description="Add a new student ID card to get started." actionLabel="Add ID Card" onAction={() => setAddOpen(true)} />
+        <NoData title="No ID cards found" description="Add a new student ID card design to get started." actionLabel="Add ID Card" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
@@ -151,56 +140,37 @@ export default function StudentIdCardPage() {
         onSubmit={(payload) => handleSave(payload, editRow?._id)}
       />
 
-      {/* Detail drawer with ID card preview */}
+      {/* Detail drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="ID Card Details"
-        description={viewRow?.card_name}
-        width="sm:max-w-lg"
+        description={viewRow?.layout}
+        width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
         {viewRow && (
           <div className="space-y-6">
-            {/* Visual ID card preview */}
-            <div className="mx-auto max-w-sm overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 to-muted shadow-sm">
-              <div className="bg-primary px-4 py-3 text-primary-foreground">
-                <p className="text-sm font-semibold">SCHOOL IDENTITY CARD</p>
-                <p className="text-xs opacity-90">Academic Year 2024-25</p>
+            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <IdCard className="h-5 w-5" />
               </div>
-              <div className="flex gap-4 p-4">
-                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  {viewRow.photo_url ? (
-                    <img src={viewRow.photo_url} alt={viewRow.student_name} className="h-full w-full rounded-lg object-cover" />
-                  ) : (
-                    <User className="h-8 w-8" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="font-semibold">{viewRow.student_name}</p>
-                  <p className="text-xs text-muted-foreground">Adm: {viewRow.admission_no}</p>
-                  <p className="text-xs text-muted-foreground">Class: {viewRow.class_name} ({viewRow.section})</p>
-                  <p className="text-xs text-muted-foreground">Blood: {viewRow.blood_group}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-t bg-muted/30 px-4 py-3 text-xs">
-                <div><span className="text-muted-foreground">Father:</span> {viewRow.father_name}</div>
-                <div><span className="text-muted-foreground">Mother:</span> {viewRow.mother_name}</div>
-                <div><span className="text-muted-foreground">DOB:</span> {formatDate(viewRow.dob)}</div>
-                <div><span className="text-muted-foreground">Phone:</span> {viewRow.phone}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Address:</span> {viewRow.address}</div>
-                <div><span className="text-muted-foreground">Valid till:</span> {formatDate(viewRow.validity)}</div>
+              <div className="flex-1">
+                <p className="font-semibold">{viewRow.layout}</p>
+                <p className="text-xs text-muted-foreground">{(viewRow.fields_to_show || []).join(', ')}</p>
               </div>
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Status', value: viewRow.status },
+                { label: 'Layout', value: viewRow.layout },
+                { label: 'Fields To Show', value: (viewRow.fields_to_show || []).join(', ') },
+                { label: 'Template Config', value: typeof viewRow.template_config === 'object' ? JSON.stringify(viewRow.template_config) : viewRow.template_config },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium capitalize">{f.value || '—'}</dd>
+                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
                 </div>
               ))}
             </dl>
@@ -211,7 +181,7 @@ export default function StudentIdCardPage() {
       <DeleteDialog
         open={!!deleteRow}
         onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.card_name}
+        entityName={deleteRow?.layout}
         onConfirm={() => deleteStudentIdCard(deleteRow._id)}
       />
     </div>
@@ -221,111 +191,64 @@ export default function StudentIdCardPage() {
 // ─── Student ID Card Form Drawer (shared by Add and Edit) ─────────────────────
 function StudentIdCardFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
-    card_name: initial?.card_name || '',
-    student_name: initial?.student_name || '',
-    admission_no: initial?.admission_no || '',
-    class_name: initial?.class_name || '',
-    section: initial?.section || '',
-    father_name: initial?.father_name || '',
-    mother_name: initial?.mother_name || '',
-    dob: initial?.dob || '',
-    address: initial?.address || '',
-    phone: initial?.phone || '',
-    blood_group: initial?.blood_group || '',
-    photo_url: initial?.photo_url || '',
-    status: initial?.status || 'active',
-    validity: initial?.validity || '2025-06-30',
+    layout: initial?.layout || '',
+    fields_to_show: Array.isArray(initial?.fields_to_show) ? initial.fields_to_show.join(', ') : (initial?.fields_to_show || ''),
+    template_config: initial?.template_config ? (typeof initial.template_config === 'object' ? JSON.stringify(initial.template_config, null, 2) : initial.template_config) : '',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
+  const buildPayload = () => {
+    const fields = form.fields_to_show
+      ? form.fields_to_show.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+    let templateConfig = form.template_config
+    if (form.template_config && form.template_config.trim()) {
+      try {
+        templateConfig = JSON.parse(form.template_config)
+      } catch {
+        // keep as string if invalid JSON
+        templateConfig = form.template_config
+      }
+    }
+    return {
+      layout: form.layout,
+      fields_to_show: fields,
+      template_config: templateConfig,
+    }
+  }
 
   return (
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
       title={title}
-      description="Student ID card information"
-      width="sm:max-w-lg"
+      description="Student ID card design information"
+      width="sm:max-w-md"
       footer={
         <DrawerFooter
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add ID Card'}
-          submitDisabled={!form.card_name.trim() || !form.student_name.trim()}
-          onSubmit={() => onSubmit(form)}
+          submitDisabled={!form.layout.trim()}
+          onSubmit={() => onSubmit(buildPayload())}
         />
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(buildPayload()) }} className="space-y-4">
         <FormSection columns={1}>
           <div className="space-y-1.5">
-            <Label className="text-xs">Card Name <span className="text-destructive">*</span></Label>
-            <Input value={form.card_name} onChange={(e) => set('card_name', e.target.value)} placeholder="e.g. Student ID - Aarav Sharma" required />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Student Name <span className="text-destructive">*</span></Label>
-              <Input value={form.student_name} onChange={(e) => set('student_name', e.target.value)} placeholder="e.g. Aarav Sharma" required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Admission No</Label>
-              <Input value={form.admission_no} onChange={(e) => set('admission_no', e.target.value)} placeholder="e.g. ADM-1001" />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Class</Label>
-              <Input value={form.class_name} onChange={(e) => set('class_name', e.target.value)} placeholder="e.g. 10-A" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Section</Label>
-              <Input value={form.section} onChange={(e) => set('section', e.target.value)} placeholder="e.g. A" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Blood Group</Label>
-              <Input value={form.blood_group} onChange={(e) => set('blood_group', e.target.value)} placeholder="e.g. B+" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Father's Name</Label>
-              <Input value={form.father_name} onChange={(e) => set('father_name', e.target.value)} placeholder="Father's name" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Mother's Name</Label>
-              <Input value={form.mother_name} onChange={(e) => set('mother_name', e.target.value)} placeholder="Mother's name" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Date of Birth</Label>
-              <Input type="date" value={form.dob ? form.dob.split('T')[0] : ''} onChange={(e) => set('dob', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Phone</Label>
-              <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="e.g. 9876543210" />
-            </div>
+            <Label className="text-xs">Layout <span className="text-destructive">*</span></Label>
+            <Input value={form.layout} onChange={(e) => set('layout', e.target.value)} placeholder="e.g. Standard Vertical" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Address</Label>
-            <Textarea value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="Home address" rows={2} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Photo URL</Label>
-              <Input value={form.photo_url} onChange={(e) => set('photo_url', e.target.value)} placeholder="/photos/student.jpg" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Valid Until</Label>
-              <Input type="date" value={form.validity ? form.validity.split('T')[0] : ''} onChange={(e) => set('validity', e.target.value)} />
-            </div>
+            <Label className="text-xs">Fields To Show</Label>
+            <Input value={form.fields_to_show} onChange={(e) => set('fields_to_show', e.target.value)} placeholder="e.g. name, class, section, photo" />
+            <p className="text-xs text-muted-foreground">Comma-separated list of fields to display on the card.</p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Label className="text-xs">Template Config</Label>
+            <Textarea value={form.template_config} onChange={(e) => set('template_config', e.target.value)} placeholder='{"theme":"blue","size":"standard"}' rows={4} />
+            <p className="text-xs text-muted-foreground">JSON object for template configuration.</p>
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

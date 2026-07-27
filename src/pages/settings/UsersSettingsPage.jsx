@@ -5,12 +5,7 @@
 // Purpose:
 // Manage system users and their access.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: name, email, password, role_id (ObjectId), user_type, status (active|inactive)
 // ====================================================================
 
 import { useMemo, useState } from 'react'
@@ -35,21 +30,21 @@ import { ActionDropdown } from '@/components/ActionDropdown'
 import { useUsers } from '@/hooks/useSettings'
 import { formatDate, formatRelativeTime } from '@/utils/format'
 
-const ROLES = ['Admin', 'Teacher', 'Accountant', 'Librarian', 'Receptionist', 'Super Admin']
+const USER_TYPES = ['Admin', 'Teacher', 'Accountant', 'Librarian', 'Receptionist', 'Super Admin']
 
 const EXPORT_COLS = [
   { key: 'name', label: 'Name' },
   { key: 'email', label: 'Email' },
-  { key: 'role', label: 'Role' },
+  { key: 'user_type', label: 'User Type' },
   { key: 'status', label: 'Status' },
-  { key: 'last_login', label: 'Last Login' },
+  { key: 'createdAt', label: 'Created' },
 ]
 
 export default function UsersSettingsPage() {
   const {
     rows, isLoading,
     search, setSearch, statusFilter, setStatusFilter,
-    saveUser, deleteUser,
+    saveUser, deleteUser, updateUserStatus,
   } = useUsers()
 
   const [addOpen, setAddOpen] = useState(false)
@@ -66,14 +61,15 @@ export default function UsersSettingsPage() {
   const columns = useMemo(() => [
     { accessorKey: 'name', header: 'Name' },
     { accessorKey: 'email', header: 'Email' },
-    { accessorKey: 'role', header: 'Role', cell: ({ row }) => <Badge variant="secondary">{row.original.role}</Badge> },
+    { accessorKey: 'user_type', header: 'User Type', cell: ({ row }) => <Badge variant="secondary">{row.original.user_type || '—'}</Badge> },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'last_login', header: 'Last Login', cell: ({ row }) => <span className="text-muted-foreground">{row.original.last_login ? formatRelativeTime(row.original.last_login) : 'Never'}</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
     { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: r.status === 'active' ? 'Deactivate' : 'Activate', onClick: () => updateUserStatus(r._id, r.status === 'active' ? 'inactive' : 'active') },
     { separator: true },
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
@@ -137,10 +133,9 @@ export default function UsersSettingsPage() {
             {[
               { label: 'Name', value: viewRow.name },
               { label: 'Email', value: viewRow.email },
-              { label: 'Role', value: viewRow.role },
+              { label: 'User Type', value: <Badge variant="secondary">{viewRow.user_type || '—'}</Badge> },
               { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-              { label: 'Last Login', value: viewRow.last_login ? formatRelativeTime(viewRow.last_login) : 'Never' },
-              { label: 'Created', value: formatDate(viewRow.created_at) },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
             ].map((f) => (
               <div key={f.label} className="space-y-0.5">
                 <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
@@ -165,8 +160,9 @@ function UserFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
     name: initial?.name || '',
     email: initial?.email || '',
-    role: initial?.role || 'Teacher',
-    status: initial?.status || 'active',
+    password: '',
+    user_type: initial?.user_type || 'Teacher',
+    role_id: initial?.role_id || '',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
@@ -198,19 +194,19 @@ function UserFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
             <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="user@school.edu" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Role</Label>
-            <select value={form.role} onChange={(e) => set('role', e.target.value)}
+            <Label className="text-xs">Password {initial ? '(leave blank to keep)' : ''}</Label>
+            <Input type="password" value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="••••••••" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">User Type</Label>
+            <select value={form.user_type} onChange={(e) => set('user_type', e.target.value)}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {USER_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Label className="text-xs">Role ID</Label>
+            <Input value={form.role_id} onChange={(e) => set('role_id', e.target.value)} placeholder="ObjectId of role" />
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

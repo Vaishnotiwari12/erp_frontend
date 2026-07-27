@@ -6,11 +6,7 @@
 // Overview of all settings sub-modules with KPIs and recent updates.
 //
 // Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// settings.service.js (via useSettingsStats)
 // ====================================================================
 
 import { CalendarClock, ShieldCheck, Users, DollarSign, Languages, Boxes, Settings } from 'lucide-react'
@@ -26,7 +22,7 @@ const RECENT_UPDATES = [
   { label: 'General settings updated', time: '2025-01-15T10:30:00Z' },
   { label: 'New session 2024-2025 marked current', time: '2025-01-14T09:15:00Z' },
   { label: 'Role "Accountant" permissions modified', time: '2025-01-13T14:45:00Z' },
-  { label: 'Currency INR set as default', time: '2025-01-12T11:20:00Z' },
+  { label: 'Currency INR set as base', time: '2025-01-12T11:20:00Z' },
   { label: 'Module "Inventory" disabled', time: '2025-01-11T16:00:00Z' },
 ]
 
@@ -47,6 +43,7 @@ export default function SettingsDashboardPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard label="Sessions" value={stats.total_sessions} icon={CalendarClock} accent="primary" />
+          <StatCard label="Active Sessions" value={stats.active_sessions} icon={CalendarClock} accent="success" />
           <StatCard label="Roles" value={stats.total_roles} icon={ShieldCheck} accent="chart2" />
           <StatCard label="Users" value={stats.total_users} icon={Users} accent="success" />
           <StatCard label="Currencies" value={stats.total_currencies} icon={DollarSign} accent="warning" />

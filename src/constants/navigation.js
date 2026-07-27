@@ -130,6 +130,7 @@ export const APP_VERSION = '1.0.0'
 
 export const STORAGE_KEYS = {
   AUTH: 'scholaria.auth',
+  TENANT: 'scholaria.tenant',
   THEME: 'scholaria.theme',
 }
 

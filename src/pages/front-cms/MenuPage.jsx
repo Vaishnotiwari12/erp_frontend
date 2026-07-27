@@ -6,9 +6,11 @@
 // Manage website navigation menus — header, footer, and sidebar.
 //
 // Data Source:
-// frontCms.service.js
+// frontCms.service.js (via useMenus hook)
 //
-// Backend:
+// Backend model: menu { menu_name, link, parent_id, order, menu_type }
+//   - createMenu(payload) / updateMenu(id, payload) use JSON body
+//
 // APIs should always be called through the service layer.
 // Never call Axios directly from this page.
 // ====================================================================
@@ -39,13 +41,14 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { useMenus } from '@/hooks/useFrontCms'
+import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
   { key: 'menu_name', label: 'Menu Name' },
   { key: 'menu_type', label: 'Menu Type' },
-  { key: 'link_url', label: 'Link URL' },
-  { key: 'display_order', label: 'Display Order' },
-  { key: 'status', label: 'Status' },
+  { key: 'link', label: 'Link' },
+  { key: 'order', label: 'Order' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 const MENU_TYPES = ['Header', 'Footer', 'Sidebar']
@@ -79,15 +82,15 @@ export default function MenuPage() {
           </div>
           <div className="flex flex-col">
             <span className="font-medium hover:underline">{row.original.menu_name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.link_url}</span>
+            <span className="text-xs text-muted-foreground">{row.original.link}</span>
           </div>
         </button>
       ),
     },
     { accessorKey: 'menu_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.menu_type}</Badge> },
-    { accessorKey: 'link_url', header: 'Link URL', cell: ({ row }) => <span className="font-mono text-sm">{row.original.link_url}</span> },
-    { accessorKey: 'display_order', header: 'Order', cell: ({ row }) => <span className="font-mono text-sm">{row.original.display_order}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={row.original.status === 'active' ? 'default' : 'outline'}>{row.original.status}</Badge> },
+    { accessorKey: 'link', header: 'Link', cell: ({ row }) => <span className="font-mono text-sm">{row.original.link}</span> },
+    { accessorKey: 'order', header: 'Order', cell: ({ row }) => <span className="font-mono text-sm">{row.original.order}</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
   const rowActions = (r) => [
@@ -109,7 +112,6 @@ export default function MenuPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Menus" value={stats.total} icon={Menu} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={Menu} accent="success" />
       </div>
 
       <FilterBar>
@@ -164,17 +166,16 @@ export default function MenuPage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{viewRow.menu_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.link_url}</p>
+                <p className="text-xs text-muted-foreground">{viewRow.link}</p>
               </div>
-              <Badge variant={viewRow.status === 'active' ? 'default' : 'outline'}>{viewRow.status}</Badge>
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
                 { label: 'Menu Type', value: viewRow.menu_type },
-                { label: 'Display Order', value: viewRow.display_order },
+                { label: 'Order', value: viewRow.order },
                 { label: 'Parent Menu', value: rows.find((m) => m._id === viewRow.parent_id)?.menu_name || 'None' },
-                { label: 'Created On', value: viewRow.createdAt ? new Date(viewRow.createdAt).toLocaleDateString() : '—' },
+                { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
@@ -202,9 +203,8 @@ function MenuFormDrawer({ open, onOpenChange, title, initial, menus, onSubmit })
     menu_name: initial?.menu_name || '',
     menu_type: initial?.menu_type || 'Header',
     parent_id: initial?.parent_id || null,
-    link_url: initial?.link_url || '/',
-    display_order: initial?.display_order || 1,
-    status: initial?.status || 'active',
+    link: initial?.link || '/',
+    order: initial?.order ?? 1,
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
@@ -250,22 +250,12 @@ function MenuFormDrawer({ open, onOpenChange, title, initial, menus, onSubmit })
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Link URL</Label>
-            <Input value={form.link_url} onChange={(e) => set('link_url', e.target.value)} placeholder="/" />
+            <Label className="text-xs">Link</Label>
+            <Input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="/" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Display Order</Label>
-              <Input type="number" min="1" value={form.display_order} onChange={(e) => set('display_order', parseInt(e.target.value) || 1)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Order</Label>
+            <Input type="number" min="0" value={form.order} onChange={(e) => set('order', parseInt(e.target.value) || 0)} />
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

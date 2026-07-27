@@ -3,8 +3,8 @@
 // Page: Student Certificate
 //
 // Purpose:
-// Manage student certificates (Character, Transfer, Migration,
-// Bonafide) with create, edit, view, and delete operations.
+// Manage student certificate templates with create, edit, view, and
+// delete operations.
 //
 // Data Source:
 // certificate.service.js
@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -40,32 +40,21 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
 import { useStudentCertificates } from '@/hooks/useCertificate'
 import { formatDate } from '@/utils/format'
 
-const CERTIFICATE_TYPES = [
-  'Character Certificate',
-  'Transfer Certificate',
-  'Migration Certificate',
-  'Bonafide Certificate',
-]
-
 const EXPORT_COLS = [
   { key: 'certificate_name', label: 'Certificate Name' },
-  { key: 'certificate_type', label: 'Type' },
-  { key: 'student_name', label: 'Student' },
-  { key: 'admission_no', label: 'Admission No' },
-  { key: 'class_name', label: 'Class' },
-  { key: 'status', label: 'Status' },
-  { key: 'issue_date', label: 'Issue Date' },
+  { key: 'template', label: 'Template' },
+  { key: 'header', label: 'Header' },
+  { key: 'body_text', label: 'Body Text' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function StudentCertificatePage() {
   const {
     rows, stats, isLoading,
-    search, setSearch, typeFilter, setTypeFilter,
-    statusFilter, setStatusFilter,
+    search, setSearch,
     saveStudentCertificate, deleteStudentCertificate,
   } = useStudentCertificates()
 
@@ -91,15 +80,14 @@ export default function StudentCertificatePage() {
           </div>
           <div className="flex flex-col">
             <span className="font-medium hover:underline">{row.original.certificate_name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.student_name} · {row.original.admission_no}</span>
+            <span className="text-xs text-muted-foreground">{row.original.template}</span>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'certificate_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.certificate_type}</Badge> },
-    { accessorKey: 'class_name', header: 'Class' },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'issue_date', header: 'Issue Date', cell: ({ row }) => formatDate(row.original.issue_date) },
+    { accessorKey: 'template', header: 'Template' },
+    { accessorKey: 'header', header: 'Header' },
+    { accessorKey: 'createdAt', header: 'Created At', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -114,37 +102,25 @@ export default function StudentCertificatePage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Certificate' }, { label: 'Student Certificate' }]} />
       <PageHeader
         title="Student Certificates"
-        description="Manage student certificates — Character, Transfer, Migration, and Bonafide."
+        description="Manage student certificate templates."
         icon={Award}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Certificate</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="Total Certificates" value={stats.total} icon={FileText} accent="primary" />
-        <StatCard label="Issued" value={stats.issued} icon={Award} accent="success" />
+        <StatCard label="Total" value={stats.total} icon={Award} accent="success" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by name, student, or admission no…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by certificate name…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={rows} columns={EXPORT_COLS} filename="student-certificates" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All types</option>
-            {CERTIFICATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="issued">Issued</option>
-            <option value="pending">Pending</option>
-            <option value="draft">Draft</option>
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={5} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : rows.length === 0 ? (
         <NoData title="No certificates found" description="Add a new student certificate to get started." actionLabel="Add Certificate" onAction={() => setAddOpen(true)} />
       ) : (
@@ -184,18 +160,14 @@ export default function StudentCertificatePage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{viewRow.certificate_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.certificate_type}</p>
+                <p className="text-xs text-muted-foreground">{viewRow.template}</p>
               </div>
-              <StatusBadge status={viewRow.status} />
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Student', value: viewRow.student_name },
-                { label: 'Admission No', value: viewRow.admission_no },
-                { label: 'Class', value: viewRow.class_name },
-                { label: 'Issue Date', value: formatDate(viewRow.issue_date) },
-                { label: 'Created By', value: viewRow.created_by },
+                { label: 'Header', value: viewRow.header },
+                { label: 'Body Text', value: viewRow.body_text },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
@@ -222,11 +194,9 @@ export default function StudentCertificatePage() {
 function StudentCertificateFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
     certificate_name: initial?.certificate_name || '',
-    certificate_type: initial?.certificate_type || 'Character Certificate',
-    student_name: initial?.student_name || '',
-    admission_no: initial?.admission_no || '',
-    class_name: initial?.class_name || '',
-    status: initial?.status || 'draft',
+    template: initial?.template || '',
+    header: initial?.header || '',
+    body_text: initial?.body_text || '',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
@@ -242,7 +212,7 @@ function StudentCertificateFormDrawer({ open, onOpenChange, title, initial, onSu
         <DrawerFooter
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add Certificate'}
-          submitDisabled={!form.certificate_name.trim() || !form.student_name.trim()}
+          submitDisabled={!form.certificate_name.trim()}
           onSubmit={() => onSubmit(form)}
         />
       }
@@ -254,36 +224,16 @@ function StudentCertificateFormDrawer({ open, onOpenChange, title, initial, onSu
             <Input value={form.certificate_name} onChange={(e) => set('certificate_name', e.target.value)} placeholder="e.g. Character Certificate - Aarav" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Certificate Type</Label>
-            <select value={form.certificate_type} onChange={(e) => set('certificate_type', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {CERTIFICATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <Label className="text-xs">Template</Label>
+            <Textarea value={form.template} onChange={(e) => set('template', e.target.value)} placeholder="Template content" rows={3} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Student Name <span className="text-destructive">*</span></Label>
-              <Input value={form.student_name} onChange={(e) => set('student_name', e.target.value)} placeholder="e.g. Aarav Sharma" required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Admission No</Label>
-              <Input value={form.admission_no} onChange={(e) => set('admission_no', e.target.value)} placeholder="e.g. ADM-1001" />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Header</Label>
+            <Input value={form.header} onChange={(e) => set('header', e.target.value)} placeholder="e.g. This is to certify that" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Class</Label>
-              <Input value={form.class_name} onChange={(e) => set('class_name', e.target.value)} placeholder="e.g. 10-A" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
-                <option value="issued">Issued</option>
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Body Text</Label>
+            <Textarea value={form.body_text} onChange={(e) => set('body_text', e.target.value)} placeholder="Body content" rows={3} />
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

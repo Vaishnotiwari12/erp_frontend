@@ -3,12 +3,15 @@
 // Page: News
 //
 // Purpose:
-// Manage news articles, categories, authors, and publish status.
+// Manage news articles, authors, and publish dates.
 //
 // Data Source:
-// frontCms.service.js
+// frontCms.service.js (via useNews hook)
 //
-// Backend:
+// Backend model: news { title, content, publish_date, image, author }
+//   - createNews(payload, file) uses FormData with 'image' field
+//   - updateNews(id, payload) uses JSON body
+//
 // APIs should always be called through the service layer.
 // Never call Axios directly from this page.
 // ====================================================================
@@ -24,7 +27,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
@@ -39,25 +41,20 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
 import { useNews } from '@/hooks/useFrontCms'
 import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
   { key: 'title', label: 'Title' },
-  { key: 'slug', label: 'Slug' },
   { key: 'author', label: 'Author' },
-  { key: 'category', label: 'Category' },
-  { key: 'status', label: 'Status' },
-  { key: 'published_at', label: 'Published At' },
+  { key: 'publish_date', label: 'Publish Date' },
+  { key: 'createdAt', label: 'Created At' },
 ]
-
-const CATEGORIES = ['Academic', 'Sports', 'Events', 'Announcement']
 
 export default function NewsPage() {
   const {
     rows, stats, isLoading,
-    search, setSearch, categoryFilter, setCategoryFilter, statusFilter, setStatusFilter,
+    search, setSearch,
     saveNews, deleteNews,
   } = useNews()
 
@@ -66,8 +63,8 @@ export default function NewsPage() {
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveNews(payload, id)
+  const handleSave = async (payload, file, id) => {
+    await saveNews(payload, file, id)
     if (id) setEditRow(null)
     else setAddOpen(false)
   }
@@ -88,9 +85,9 @@ export default function NewsPage() {
         </button>
       ),
     },
-    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'published_at', header: 'Published', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.published_at)}</span> },
+    { accessorKey: 'author', header: 'Author', cell: ({ row }) => <span className="text-sm">{row.original.author || '—'}</span> },
+    { accessorKey: 'publish_date', header: 'Publish Date', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.publish_date)}</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
   const rowActions = (r) => [
@@ -105,31 +102,19 @@ export default function NewsPage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Front CMS' }, { label: 'News' }]} />
       <PageHeader
         title="News"
-        description="Manage news articles, categories, authors, and publish status."
+        description="Manage news articles, authors, and publish dates."
         icon={Newspaper}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add News</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total News" value={stats.total} icon={Newspaper} accent="primary" />
-        <StatCard label="Published" value={stats.published} icon={Newspaper} accent="success" />
       </div>
 
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search news…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={rows} columns={EXPORT_COLS} filename="news" />
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
         </div>
       </FilterBar>
 
@@ -153,7 +138,7 @@ export default function NewsPage() {
         onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
         title={editRow ? 'Edit News' : 'Add News'}
         initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
+        onSubmit={(payload, file) => handleSave(payload, file, editRow?._id)}
       />
 
       <Drawer
@@ -174,14 +159,12 @@ export default function NewsPage() {
                 <p className="font-semibold">{viewRow.title}</p>
                 <p className="text-xs text-muted-foreground">{viewRow.author}</p>
               </div>
-              <StatusBadge status={viewRow.status} />
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Category', value: viewRow.category },
-                { label: 'Slug', value: viewRow.slug },
-                { label: 'Published At', value: formatDate(viewRow.published_at) },
+                { label: 'Author', value: viewRow.author },
+                { label: 'Publish Date', value: formatDate(viewRow.publish_date) },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
@@ -191,10 +174,10 @@ export default function NewsPage() {
               ))}
             </dl>
 
-            {viewRow.excerpt && (
+            {viewRow.content && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Excerpt</p>
-                <p className="text-sm">{viewRow.excerpt}</p>
+                <p className="text-xs font-medium text-muted-foreground">Content</p>
+                <p className="text-sm whitespace-pre-wrap">{viewRow.content}</p>
               </div>
             )}
           </div>
@@ -215,14 +198,11 @@ export default function NewsPage() {
 function NewsFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
     title: initial?.title || '',
-    slug: initial?.slug || '',
-    excerpt: initial?.excerpt || '',
     content: initial?.content || '',
-    image_url: initial?.image_url || '',
+    publish_date: initial?.publish_date ? initial.publish_date.slice(0, 10) : '',
     author: initial?.author || '',
-    category: initial?.category || 'Academic',
-    status: initial?.status || 'draft',
   })
+  const [file, setFile] = useState(null)
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
 
@@ -238,52 +218,37 @@ function NewsFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add News'}
           submitDisabled={!form.title.trim()}
-          onSubmit={() => onSubmit(form)}
+          onSubmit={() => onSubmit(form, file)}
         />
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form, file) }} className="space-y-4">
         <FormSection columns={1}>
           <div className="space-y-1.5">
             <Label className="text-xs">Title <span className="text-destructive">*</span></Label>
             <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="News title" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Slug</Label>
-            <Input value={form.slug} onChange={(e) => set('slug', e.target.value)} placeholder="news-slug" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Excerpt</Label>
-            <Textarea value={form.excerpt} onChange={(e) => set('excerpt', e.target.value)} placeholder="Short summary" rows={2} />
-          </div>
-          <div className="space-y-1.5">
             <Label className="text-xs">Content</Label>
             <Textarea value={form.content} onChange={(e) => set('content', e.target.value)} placeholder="Full article content" rows={4} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Image URL</Label>
-            <Input value={form.image_url} onChange={(e) => set('image_url', e.target.value)} placeholder="https://… (upload placeholder)" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Author</Label>
-              <Input value={form.author} onChange={(e) => set('author', e.target.value)} placeholder="Author name" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Category</Label>
-              <select value={form.category} onChange={(e) => set('category', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            <Label className="text-xs">Publish Date</Label>
+            <Input type="date" value={form.publish_date} onChange={(e) => set('publish_date', e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
+            <Label className="text-xs">Author</Label>
+            <Input value={form.author} onChange={(e) => set('author', e.target.value)} placeholder="Author name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Image</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            {initial?.image && !file && (
+              <p className="text-xs text-muted-foreground">Current: {initial.image}</p>
+            )}
+            {file && (
+              <p className="text-xs text-muted-foreground">Selected: {file.name}</p>
+            )}
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

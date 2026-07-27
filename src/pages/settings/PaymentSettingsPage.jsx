@@ -3,106 +3,193 @@
 // Page: Payment Settings
 //
 // Purpose:
-// Configure the payment gateway for fee collection.
+// Manage payment gateway configurations (CRUD table, NOT singleton).
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: provider, api_key, secret_key, mode (sandbox|live), status (Active|Inactive)
 // ====================================================================
 
-import { useState, useEffect } from 'react'
-import { CreditCard, Save } from 'lucide-react'
-import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import { PageHeader } from '@/components/PageHeader'
-import { FormSection } from '@/components/FormSection'
-import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { useMemo, useState } from 'react'
+import { CreditCard, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
+import { PageHeader } from '@/components/PageHeader'
+import { SearchBar } from '@/components/SearchBar'
+import { FilterBar } from '@/components/FilterBar'
+import { DataTable } from '@/components/DataTable'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { ExportButtons } from '@/components/ExportButtons'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
+import { FormSection } from '@/components/FormSection'
+import { StatusBadge } from '@/components/StatusBadge'
+import { ActionDropdown } from '@/components/ActionDropdown'
 import { usePaymentSettings } from '@/hooks/useSettings'
+import { formatDate } from '@/utils/format'
 
-const GATEWAYS = ['Stripe', 'Razorpay', 'PayPal']
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY']
+const EXPORT_COLS = [
+  { key: 'provider', label: 'Provider' },
+  { key: 'mode', label: 'Mode' },
+  { key: 'status', label: 'Status' },
+  { key: 'createdAt', label: 'Created' },
+]
 
 export default function PaymentSettingsPage() {
-  const { settings, isLoading, updateSettings } = usePaymentSettings()
-  const [form, setForm] = useState(settings)
+  const { rows, isLoading, search, setSearch, savePayment, deletePayment, activatePayment } = usePaymentSettings()
 
-  useEffect(() => { setForm(settings) }, [settings])
+  const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
+  const [viewRow, setViewRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-  const handleSave = () => updateSettings(form)
+  const handleSave = async (payload, id) => {
+    await savePayment(payload, id)
+    if (id) setEditRow(null)
+    else setAddOpen(false)
+  }
 
-  if (isLoading) return <LoadingSkeleton variant="cards" />
+  const columns = useMemo(() => [
+    { accessorKey: 'provider', header: 'Provider' },
+    { accessorKey: 'mode', header: 'Mode', cell: ({ row }) => <Badge variant={row.original.mode === 'live' ? 'destructive' : 'secondary'}>{row.original.mode}</Badge> },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
+  ], [])
+
+  const rowActions = (r) => [
+    { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: 'Activate', icon: CreditCard, onClick: () => activatePayment(r._id) },
+    { separator: true },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'Payment' }]} />
       <PageHeader
         title="Payment Settings"
-        description="Configure the payment gateway for online fee collection."
+        description="Manage payment gateway configurations and activate the active provider."
         icon={CreditCard}
+        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Gateway</Button>}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Gateway Configuration</CardTitle>
-          <CardDescription>Payment provider credentials and options.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Enable Online Payments</p>
-              <p className="text-xs text-muted-foreground">Allow parents to pay fees online</p>
-            </div>
-            <Switch checked={!!form.payment_enabled} onCheckedChange={(v) => set('payment_enabled', v)} />
-          </div>
+      <FilterBar>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search gateways…" className="max-w-sm" />
+        <ExportButtons rows={rows} columns={EXPORT_COLS} filename="payment-settings" />
+      </FilterBar>
 
-          <FormSection title="Provider" columns={2}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Payment Gateway</Label>
-              <select value={form.payment_gateway || ''} onChange={(e) => set('payment_gateway', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                {GATEWAYS.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Currency</Label>
-              <select value={form.currency || ''} onChange={(e) => set('currency', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </FormSection>
+      {isLoading ? (
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
+      ) : rows.length === 0 ? (
+        <NoData title="No payment gateways found" description="Add a new payment gateway to get started." actionLabel="Add Gateway" onAction={() => setAddOpen(true)} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={rows}
+          enableSelection
+          enableExport
+          exportFilename="payment-settings"
+          rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
+        />
+      )}
 
-          <FormSection title="Credentials" columns={1}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">API Key (Publishable)</Label>
-              <Input value={form.api_key || ''} onChange={(e) => set('api_key', e.target.value)} placeholder="pk_test_…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Secret Key</Label>
-              <Input type="password" value={form.secret_key || ''} onChange={(e) => set('secret_key', e.target.value)} placeholder="sk_test_…" />
-            </div>
-          </FormSection>
+      <PaymentFormDrawer
+        open={addOpen || !!editRow}
+        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
+        title={editRow ? 'Edit Gateway' : 'Add Gateway'}
+        initial={editRow}
+        onSubmit={(payload) => handleSave(payload, editRow?._id)}
+      />
 
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Sandbox Mode</p>
-              <p className="text-xs text-muted-foreground">Use test environment (no real charges)</p>
-            </div>
-            <Switch checked={!!form.sandbox_mode} onCheckedChange={(v) => set('sandbox_mode', v)} />
-          </div>
-        </CardContent>
-        <CardFooter className="justify-end">
-          <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Changes</Button>
-        </CardFooter>
-      </Card>
+      <Drawer
+        open={!!viewRow}
+        onOpenChange={(o) => !o && setViewRow(null)}
+        title="Gateway Details"
+        description={viewRow?.provider}
+        width="sm:max-w-md"
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
+      >
+        {viewRow && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {[
+              { label: 'Provider', value: viewRow.provider },
+              { label: 'Mode', value: <Badge variant={viewRow.mode === 'live' ? 'destructive' : 'secondary'}>{viewRow.mode}</Badge> },
+              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value || '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Drawer>
+
+      <DeleteDialog
+        open={!!deleteRow}
+        onOpenChange={(o) => !o && setDeleteRow(null)}
+        entityName={deleteRow?.provider}
+        onConfirm={() => deletePayment(deleteRow._id)}
+      />
     </div>
+  )
+}
+
+function PaymentFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+  const [form, setForm] = useState({
+    provider: initial?.provider || '',
+    api_key: initial?.api_key || '',
+    secret_key: initial?.secret_key || '',
+    mode: initial?.mode || 'sandbox',
+  })
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description="Payment gateway configuration"
+      width="sm:max-w-md"
+      footer={
+        <DrawerFooter
+          onCancel={() => onOpenChange(false)}
+          submitLabel={initial ? 'Save Changes' : 'Add Gateway'}
+          submitDisabled={!form.provider.trim()}
+          onSubmit={() => onSubmit(form)}
+        />
+      }
+    >
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+        <FormSection columns={1}>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Provider <span className="text-destructive">*</span></Label>
+            <Input value={form.provider} onChange={(e) => set('provider', e.target.value)} placeholder="e.g. Stripe" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">API Key</Label>
+            <Input value={form.api_key} onChange={(e) => set('api_key', e.target.value)} placeholder="pk_test_…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Secret Key</Label>
+            <Input type="password" value={form.secret_key} onChange={(e) => set('secret_key', e.target.value)} placeholder="sk_test_…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Mode</Label>
+            <select value={form.mode} onChange={(e) => set('mode', e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+              <option value="sandbox">sandbox</option>
+              <option value="live">live</option>
+            </select>
+          </div>
+        </FormSection>
+        <button type="submit" className="hidden" />
+      </form>
+    </Drawer>
   )
 }

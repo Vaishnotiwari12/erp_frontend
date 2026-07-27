@@ -2,568 +2,300 @@
 // Settings Service
 //
 // Service layer isolates all backend communication for the Settings module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
+// Pages never call APIs directly — they call these methods.
 //
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
+// Backend routes:
+//   /api/settings         — General settings (singleton: GET, POST)
+//   /api/session          — Academic sessions (CRUD + activate)
+//   /api/role-permission  — Role permissions (CRUD)
+//   /api/users            — Tenant users (CRUD + filter by type + status)
+//   /api/notification    — Notification settings (CRUD)
+//   /api/sms              — SMS gateway settings (CRUD + activate)
+//   /api/payment          — Payment gateway settings (CRUD + activate)
+//   /api/currency         — Currencies (CRUD + status + set base)
+//   /api/language         — Languages (CRUD + status + RTL + set active)
+//   /api/captcha          — Captcha settings (CRUD + status)
+//   /api/modules          — Module control (CRUD + filter by type + status)
+//   /api/front-cms        — Front CMS settings (singleton: GET, POST)
+//   /api/custom-fields    — Custom fields (CRUD)
+//   /api/system-fields    — System fields (CRUD + filter by module + status)
+//   /api/file-settings    — File type settings (GET, POST, PUT)
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  generalSettings,
-  sessionSettings,
-  rolePermissions,
-  userSettings,
-  notificationSettings,
-  smsSettings,
-  paymentSettings,
-  currencySettings,
-  languageSettings,
-  captchaSettings,
-  modules,
-  frontCmsSettings,
-  customFields,
-  systemFields,
-  fileTypes,
-  settingsStats,
-} from '@/data/settings.mock'
+import apiClient from './api'
 
 export const settingsService = {
-  // ─── Dashboard / Stats ──────────────────────────────────────────────────────
-
-  // Fetch Settings Dashboard Stats (derived)
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /api/settings/stats (derived)
-    // ====================================================================
-    return mockResponse(settingsStats)
-  },
-
-  // ─── General Settings ──────────────────────────────────────────────────────
-
-  // Fetch General Settings
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
+  // ─── General Settings (singleton) ────────────────────────────────────────────
   async getGeneralSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/settings
-    // ====================================================================
-    return mockResponse(generalSettings)
+    return apiClient.get('/settings')
+  },
+  async saveGeneralSettings(payload) {
+    return apiClient.post('/settings', payload)
   },
 
-  // Update General Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/settings
-  async updateGeneralSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/settings
-    // ====================================================================
-    return mockResponse({ ...generalSettings, ...payload })
-  },
-
-  // ─── Session Settings ──────────────────────────────────────────────────────
-
-  // Fetch Sessions
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/session
+  // ─── Session Settings ────────────────────────────────────────────────────────
   async getSessions() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/session
-    // ====================================================================
-    return mockResponse(sessionSettings)
+    return apiClient.get('/session')
   },
-
-  // Create Session
-  // TODO(BACKEND):
-  // Replace with POST /api/session
+  async getSessionById(id) {
+    return apiClient.get(`/session/${id}`)
+  },
   async createSession(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/session
-    // ====================================================================
-    return mockResponse({ _id: `ss-${Date.now()}`, is_current: false, status: 'active', ...payload })
+    return apiClient.post('/session', payload)
   },
-
-  // Update Session
-  // TODO(BACKEND):
-  // Replace with PUT /api/session/:id
   async updateSession(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/session/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/session/${id}`, payload)
   },
-
-  // Delete Session
-  // TODO(BACKEND):
-  // Replace with DELETE /api/session/:id
   async deleteSession(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/session/:id
-    // ====================================================================
-    return mockResponse({ message: 'Session deleted successfully' })
+    return apiClient.delete(`/session/${id}`)
+  },
+  async activateSession(id) {
+    return apiClient.put(`/session/activate/${id}`)
   },
 
-  // ─── Role Permissions ──────────────────────────────────────────────────────
-
-  // Fetch Role Permissions
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/role-permission
+  // ─── Role Permissions ────────────────────────────────────────────────────────
   async getRolePermissions() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/role-permission
-    // ====================================================================
-    return mockResponse(rolePermissions)
+    return apiClient.get('/role-permission')
   },
-
-  // Create Role Permission
-  // TODO(BACKEND):
-  // Replace with POST /api/role-permission
+  async getRolePermissionById(id) {
+    return apiClient.get(`/role-permission/${id}`)
+  },
   async createRolePermission(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/role-permission
-    // ====================================================================
-    return mockResponse({ _id: `rp-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/role-permission', payload)
   },
-
-  // Update Role Permission
-  // TODO(BACKEND):
-  // Replace with PUT /api/role-permission/:id
   async updateRolePermission(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/role-permission/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/role-permission/${id}`, payload)
   },
-
-  // Delete Role Permission
-  // TODO(BACKEND):
-  // Replace with DELETE /api/role-permission/:id
   async deleteRolePermission(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/role-permission/:id
-    // ====================================================================
-    return mockResponse({ message: 'Role permission deleted successfully' })
+    return apiClient.delete(`/role-permission/${id}`)
   },
 
-  // ─── Users ──────────────────────────────────────────────────────────────────
-
-  // Fetch Users
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/users
+  // ─── Users ────────────────────────────────────────────────────────────────────
   async getUsers() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/users
-    // ====================================================================
-    return mockResponse(userSettings)
+    return apiClient.get('/users')
   },
-
-  // Create User
-  // TODO(BACKEND):
-  // Replace with POST /api/users
+  async getUsersByType(type) {
+    return apiClient.get(`/users/type/${type}`)
+  },
+  async getUserById(id) {
+    return apiClient.get(`/users/${id}`)
+  },
   async createUser(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/users
-    // ====================================================================
-    return mockResponse({ _id: `us-${Date.now()}`, status: 'active', created_at: new Date().toISOString(), last_login: null, ...payload })
+    return apiClient.post('/users', payload)
   },
-
-  // Update User
-  // TODO(BACKEND):
-  // Replace with PUT /api/users/:id
   async updateUser(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/users/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/users/${id}`, payload)
   },
-
-  // Delete User
-  // TODO(BACKEND):
-  // Replace with DELETE /api/users/:id
   async deleteUser(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/users/:id
-    // ====================================================================
-    return mockResponse({ message: 'User deleted successfully' })
+    return apiClient.delete(`/users/${id}`)
+  },
+  async updateUserStatus(id, status) {
+    return apiClient.patch(`/users/status/${id}`, { status })
   },
 
-  // ─── Notification Settings ──────────────────────────────────────────────────
-
-  // Fetch Notification Settings
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/notification
-  async getNotificationSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/notification
-    // ====================================================================
-    return mockResponse(notificationSettings)
+  // ─── Notification Settings ────────────────────────────────────────────────────
+  async getNotifications() {
+    return apiClient.get('/notification')
+  },
+  async getNotificationById(id) {
+    return apiClient.get(`/notification/${id}`)
+  },
+  async createNotification(payload) {
+    return apiClient.post('/notification', payload)
+  },
+  async updateNotification(id, payload) {
+    return apiClient.put(`/notification/${id}`, payload)
+  },
+  async deleteNotification(id) {
+    return apiClient.delete(`/notification/${id}`)
   },
 
-  // Update Notification Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/notification
-  async updateNotificationSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/notification
-    // ====================================================================
-    return mockResponse({ ...notificationSettings, ...payload })
-  },
-
-  // ─── SMS Settings ───────────────────────────────────────────────────────────
-
-  // Fetch SMS Settings
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/sms
+  // ─── SMS Settings ─────────────────────────────────────────────────────────────
   async getSmsSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/sms
-    // ====================================================================
-    return mockResponse(smsSettings)
+    return apiClient.get('/sms')
+  },
+  async getSmsSettingById(id) {
+    return apiClient.get(`/sms/${id}`)
+  },
+  async createSmsSettings(payload) {
+    return apiClient.post('/sms', payload)
+  },
+  async updateSmsSettings(id, payload) {
+    return apiClient.put(`/sms/${id}`, payload)
+  },
+  async deleteSmsSettings(id) {
+    return apiClient.delete(`/sms/${id}`)
+  },
+  async activateSms(id) {
+    return apiClient.put(`/sms/activate/${id}`)
   },
 
-  // Update SMS Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/sms
-  async updateSmsSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/sms
-    // ====================================================================
-    return mockResponse({ ...smsSettings, ...payload })
-  },
-
-  // ─── Payment Settings ───────────────────────────────────────────────────────
-
-  // Fetch Payment Settings
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/payment
+  // ─── Payment Settings ─────────────────────────────────────────────────────────
   async getPaymentSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/payment
-    // ====================================================================
-    return mockResponse(paymentSettings)
+    return apiClient.get('/payment')
+  },
+  async getPaymentSettingById(id) {
+    return apiClient.get(`/payment/${id}`)
+  },
+  async createPaymentSettings(payload) {
+    return apiClient.post('/payment', payload)
+  },
+  async updatePaymentSettings(id, payload) {
+    return apiClient.put(`/payment/${id}`, payload)
+  },
+  async deletePaymentSettings(id) {
+    return apiClient.delete(`/payment/${id}`)
+  },
+  async activatePayment(id) {
+    return apiClient.put(`/payment/activate/${id}`)
   },
 
-  // Update Payment Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/payment
-  async updatePaymentSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/payment
-    // ====================================================================
-    return mockResponse({ ...paymentSettings, ...payload })
-  },
-
-  // ─── Currency Settings ──────────────────────────────────────────────────────
-
-  // Fetch Currencies
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/currency
+  // ─── Currency Settings ────────────────────────────────────────────────────────
   async getCurrencies() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/currency
-    // ====================================================================
-    return mockResponse(currencySettings)
+    return apiClient.get('/currency')
   },
-
-  // Create Currency
-  // TODO(BACKEND):
-  // Replace with POST /api/currency
+  async getCurrencyById(id) {
+    return apiClient.get(`/currency/${id}`)
+  },
   async createCurrency(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/currency
-    // ====================================================================
-    return mockResponse({ _id: `cr-${Date.now()}`, is_default: false, status: 'active', ...payload })
+    return apiClient.post('/currency', payload)
   },
-
-  // Update Currency
-  // TODO(BACKEND):
-  // Replace with PUT /api/currency/:id
   async updateCurrency(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/currency/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/currency/${id}`, payload)
   },
-
-  // Delete Currency
-  // TODO(BACKEND):
-  // Replace with DELETE /api/currency/:id
   async deleteCurrency(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/currency/:id
-    // ====================================================================
-    return mockResponse({ message: 'Currency deleted successfully' })
+    return apiClient.delete(`/currency/${id}`)
+  },
+  async setBaseCurrency(id) {
+    return apiClient.patch(`/currency/base/${id}`)
+  },
+  async updateCurrencyStatus(id, status) {
+    return apiClient.patch(`/currency/status/${id}`, { status })
   },
 
   // ─── Language Settings ────────────────────────────────────────────────────────
-
-  // Fetch Languages
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/language
   async getLanguages() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/language
-    // ====================================================================
-    return mockResponse(languageSettings)
+    return apiClient.get('/language')
   },
-
-  // Create Language
-  // TODO(BACKEND):
-  // Replace with POST /api/language
+  async getLanguageById(id) {
+    return apiClient.get(`/language/${id}`)
+  },
   async createLanguage(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/language
-    // ====================================================================
-    return mockResponse({ _id: `lg-${Date.now()}`, is_default: false, status: 'active', ...payload })
+    return apiClient.post('/language', payload)
   },
-
-  // Update Language
-  // TODO(BACKEND):
-  // Replace with PUT /api/language/:id
   async updateLanguage(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/language/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/language/${id}`, payload)
   },
-
-  // Delete Language
-  // TODO(BACKEND):
-  // Replace with DELETE /api/language/:id
   async deleteLanguage(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/language/:id
-    // ====================================================================
-    return mockResponse({ message: 'Language deleted successfully' })
+    return apiClient.delete(`/language/${id}`)
+  },
+  async setActiveLanguage(id) {
+    return apiClient.patch(`/language/active/${id}`)
+  },
+  async toggleLanguageRtl(id) {
+    return apiClient.patch(`/language/rtl/${id}`)
+  },
+  async updateLanguageStatus(id, status) {
+    return apiClient.patch(`/language/status/${id}`, { status })
   },
 
-  // ─── Captcha Settings ────────────────────────────────────────────────────────
-
-  // Fetch Captcha Settings
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/captcha
+  // ─── Captcha Settings ──────────────────────────────────────────────────────────
   async getCaptchaSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/captcha
-    // ====================================================================
-    return mockResponse(captchaSettings)
+    return apiClient.get('/captcha')
   },
-
-  // Update Captcha Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/captcha
-  async updateCaptchaSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/captcha
-    // ====================================================================
-    return mockResponse({ ...captchaSettings, ...payload })
+  async getCaptchaSettingById(id) {
+    return apiClient.get(`/captcha/${id}`)
+  },
+  async createCaptchaSettings(payload) {
+    return apiClient.post('/captcha', payload)
+  },
+  async updateCaptchaSettings(id, payload) {
+    return apiClient.put(`/captcha/${id}`, payload)
+  },
+  async deleteCaptchaSettings(id) {
+    return apiClient.delete(`/captcha/${id}`)
+  },
+  async updateCaptchaStatus(id, status) {
+    return apiClient.patch(`/captcha/status/${id}`, { status })
   },
 
   // ─── Modules ──────────────────────────────────────────────────────────────────
-
-  // Fetch Modules
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/modules
   async getModules() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/modules
-    // ====================================================================
-    return mockResponse(modules)
+    return apiClient.get('/modules')
   },
-
-  // Update Module
-  // TODO(BACKEND):
-  // Replace with PUT /api/modules/:id
+  async getModulesByType(type) {
+    return apiClient.get(`/modules/type/${type}`)
+  },
+  async getModuleById(id) {
+    return apiClient.get(`/modules/${id}`)
+  },
+  async createModule(payload) {
+    return apiClient.post('/modules', payload)
+  },
   async updateModule(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/modules/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/modules/${id}`, payload)
+  },
+  async deleteModule(id) {
+    return apiClient.delete(`/modules/${id}`)
+  },
+  async updateModuleStatus(id, status) {
+    return apiClient.patch(`/modules/status/${id}`, { status })
   },
 
-  // ─── Front CMS Settings ──────────────────────────────────────────────────────
-
-  // Fetch Front CMS Settings
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/front-cms
+  // ─── Front CMS Settings (singleton) ────────────────────────────────────────────
   async getFrontCmsSettings() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/front-cms
-    // ====================================================================
-    return mockResponse(frontCmsSettings)
+    return apiClient.get('/front-cms')
+  },
+  async saveFrontCmsSettings(payload) {
+    return apiClient.post('/front-cms', payload)
   },
 
-  // Update Front CMS Settings
-  // TODO(BACKEND):
-  // Replace with PUT /api/front-cms
-  async updateFrontCmsSettings(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/front-cms
-    // ====================================================================
-    return mockResponse({ ...frontCmsSettings, ...payload })
-  },
-
-  // ─── Custom Fields ────────────────────────────────────────────────────────────
-
-  // Fetch Custom Fields
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/custom-fields
+  // ─── Custom Fields ──────────────────────────────────────────────────────────────
   async getCustomFields() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/custom-fields
-    // ====================================================================
-    return mockResponse(customFields)
+    return apiClient.get('/custom-fields')
   },
-
-  // Create Custom Field
-  // TODO(BACKEND):
-  // Replace with POST /api/custom-fields
+  async getCustomFieldById(id) {
+    return apiClient.get(`/custom-fields/${id}`)
+  },
   async createCustomField(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/custom-fields
-    // ====================================================================
-    return mockResponse({ _id: `cf-${Date.now()}`, is_required: false, options: [], status: 'active', createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/custom-fields', payload)
   },
-
-  // Update Custom Field
-  // TODO(BACKEND):
-  // Replace with PUT /api/custom-fields/:id
   async updateCustomField(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/custom-fields/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/custom-fields/${id}`, payload)
   },
-
-  // Delete Custom Field
-  // TODO(BACKEND):
-  // Replace with DELETE /api/custom-fields/:id
   async deleteCustomField(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/custom-fields/:id
-    // ====================================================================
-    return mockResponse({ message: 'Custom field deleted successfully' })
+    return apiClient.delete(`/custom-fields/${id}`)
   },
 
-  // ─── System Fields ────────────────────────────────────────────────────────────
-
-  // Fetch System Fields
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/system-fields
+  // ─── System Fields ──────────────────────────────────────────────────────────────
   async getSystemFields() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/system-fields
-    // ====================================================================
-    return mockResponse(systemFields)
+    return apiClient.get('/system-fields')
+  },
+  async getSystemFieldsByType(type) {
+    return apiClient.get(`/system-fields/type/${type}`)
+  },
+  async getSystemFieldById(id) {
+    return apiClient.get(`/system-fields/${id}`)
+  },
+  async createSystemField(payload) {
+    return apiClient.post('/system-fields', payload)
+  },
+  async updateSystemFieldStatus(id, status) {
+    return apiClient.patch(`/system-fields/status/${id}`, { status })
+  },
+  async deleteSystemField(id) {
+    return apiClient.delete(`/system-fields/${id}`)
   },
 
-  // Update System Field
-  // TODO(BACKEND):
-  // Replace with PUT /api/system-fields/:id
-  async updateSystemField(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/system-fields/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
-  },
-
-  // ─── File Types ────────────────────────────────────────────────────────────────
-
-  // Fetch File Types
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/file-settings
+  // ─── File Types ──────────────────────────────────────────────────────────────────
   async getFileTypes() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/file-settings
-    // ====================================================================
-    return mockResponse(fileTypes)
+    return apiClient.get('/file-settings')
   },
-
-  // Create File Type
-  // TODO(BACKEND):
-  // Replace with POST /api/file-settings
   async createFileType(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/file-settings
-    // ====================================================================
-    return mockResponse({ _id: `ft-${Date.now()}`, is_allowed: true, status: 'active', ...payload })
+    return apiClient.post('/file-settings', payload)
   },
-
-  // Update File Type
-  // TODO(BACKEND):
-  // Replace with PUT /api/file-settings/:id
-  async updateFileType(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/file-settings/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
-  },
-
-  // Delete File Type
-  // TODO(BACKEND):
-  // Replace with DELETE /api/file-settings/:id
-  async deleteFileType(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/file-settings/:id
-    // ====================================================================
-    return mockResponse({ message: 'File type deleted successfully' })
+  async updateFileType(payload) {
+    return apiClient.put('/file-settings', payload)
   },
 }
 

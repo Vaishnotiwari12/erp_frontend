@@ -1,26 +1,25 @@
 // ====================================================================
 // Providers — Global Context Composition
 //
-// Purpose:
 // Wraps the entire app in all required Context providers in the correct
 // nesting order so every component has access to shared state.
 //
-// Provider order matters:
-//   ThemeProvider (outermost) — must be available to AuthProvider UI and
-//   every downstream component.
-//   AuthProvider (inner) — depends on theme for its login form styling.
-//
-// Adding a new global provider (e.g. QueryClientProvider) belongs here so
-// the rest of the app stays unaware of the provider tree.
+// Provider order:
+//   ThemeProvider (outermost) — available to everything.
+//   AuthProvider — provides session + tenant info.
+//   ModuleProvider — depends on auth to fetch enabled modules + permissions.
 // ====================================================================
 
 import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
+import { ModuleProvider } from '@/context/ModuleContext'
 
 export function Providers({ children }) {
   return (
     <ThemeProvider>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <ModuleProvider>{children}</ModuleProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

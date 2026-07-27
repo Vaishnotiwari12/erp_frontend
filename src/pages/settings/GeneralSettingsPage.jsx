@@ -3,14 +3,10 @@
 // Page: General Settings
 //
 // Purpose:
-// Configure school-wide general information (name, contact, branding).
+// Configure school-wide general information (name, branding, localization).
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: school_name, logo, theme, timezone, date_format,
+//                 currency, language, config (Mixed)
 // ====================================================================
 
 import { useState, useEffect } from 'react'
@@ -22,12 +18,14 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { useGeneralSettings } from '@/hooks/useSettings'
 
 const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']
 const TIMEZONES = ['Asia/Kolkata', 'America/New_York', 'Europe/London', 'Asia/Dubai', 'Asia/Tokyo']
+const THEMES = ['light', 'dark', 'system']
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY']
+const LANGUAGES = ['en', 'es', 'fr', 'de', 'hi', 'ar']
 
 export default function GeneralSettingsPage() {
   const { settings, isLoading, updateSettings } = useGeneralSettings()
@@ -63,45 +61,18 @@ export default function GeneralSettingsPage() {
               <Input value={form.school_name || ''} onChange={(e) => set('school_name', e.target.value)} placeholder="e.g. Scholaria International" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">School Code</Label>
-              <Input value={form.school_code || ''} onChange={(e) => set('school_code', e.target.value)} placeholder="e.g. SIS-2024" />
-            </div>
-          </FormSection>
-
-          <FormSection title="Contact" columns={2}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Phone</Label>
-              <Input value={form.phone || ''} onChange={(e) => set('phone', e.target.value)} placeholder="+91 98765 43210" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} placeholder="info@school.edu" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Website</Label>
-              <Input value={form.website || ''} onChange={(e) => set('website', e.target.value)} placeholder="https://school.edu" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Academic Year</Label>
-              <Input value={form.academic_year || ''} onChange={(e) => set('academic_year', e.target.value)} placeholder="2024-2025" />
-            </div>
-          </FormSection>
-
-          <FormSection title="Address" columns={1}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Address</Label>
-              <Textarea value={form.address || ''} onChange={(e) => set('address', e.target.value)} placeholder="Full postal address" rows={3} />
+              <Label className="text-xs">Logo URL</Label>
+              <Input value={form.logo || ''} onChange={(e) => set('logo', e.target.value)} placeholder="https://school.edu/logo.png" />
             </div>
           </FormSection>
 
           <FormSection title="Branding" columns={2}>
             <div className="space-y-1.5">
-              <Label className="text-xs">Logo URL</Label>
-              <Input value={form.logo_url || ''} onChange={(e) => set('logo_url', e.target.value)} placeholder="https://school.edu/logo.png" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Favicon URL</Label>
-              <Input value={form.favicon_url || ''} onChange={(e) => set('favicon_url', e.target.value)} placeholder="https://school.edu/favicon.ico" />
+              <Label className="text-xs">Theme</Label>
+              <select value={form.theme || 'light'} onChange={(e) => set('theme', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {THEMES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
           </FormSection>
 
@@ -122,7 +93,20 @@ export default function GeneralSettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Language</Label>
-              <Input value={form.language || ''} onChange={(e) => set('language', e.target.value)} placeholder="en" />
+              <select value={form.language || 'en'} onChange={(e) => set('language', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+          </FormSection>
+
+          <FormSection title="Currency" columns={1}>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Default Currency</Label>
+              <select value={form.currency || 'USD'} onChange={(e) => set('currency', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </FormSection>
         </CardContent>

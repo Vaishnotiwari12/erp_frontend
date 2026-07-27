@@ -3,18 +3,14 @@
 // Page: Front CMS Settings
 //
 // Purpose:
-// Configure the public-facing front CMS site content.
+// Configure the public-facing front CMS site settings (singleton object).
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields (settingsSchema): school_name, logo, theme, timezone,
+//                                  date_format, currency, language, config (Mixed)
 // ====================================================================
 
 import { useState, useEffect } from 'react'
-import { Globe, Save } from 'lucide-react'
+import { Globe, Save, RotateCcw } from 'lucide-react'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { FormSection } from '@/components/FormSection'
@@ -22,10 +18,14 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { useFrontCmsSettings } from '@/hooks/useSettings'
+
+const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']
+const TIMEZONES = ['Asia/Kolkata', 'America/New_York', 'Europe/London', 'Asia/Dubai', 'Asia/Tokyo']
+const THEMES = ['light', 'dark', 'system']
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'JPY']
+const LANGUAGES = ['en', 'es', 'fr', 'de', 'hi', 'ar']
 
 export default function FrontCmsSettingsPage() {
   const { settings, isLoading, updateSettings } = useFrontCmsSettings()
@@ -34,7 +34,9 @@ export default function FrontCmsSettingsPage() {
   useEffect(() => { setForm(settings) }, [settings])
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
   const handleSave = () => updateSettings(form)
+  const handleReset = () => setForm(settings)
 
   if (isLoading) return <LoadingSkeleton variant="cards" />
 
@@ -43,70 +45,73 @@ export default function FrontCmsSettingsPage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'Front CMS' }]} />
       <PageHeader
         title="Front CMS Settings"
-        description="Configure the public-facing website content and social links."
+        description="Configure the public-facing website branding and localization."
         icon={Globe}
       />
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Site Content</CardTitle>
-          <CardDescription>Branding and text shown on the public site.</CardDescription>
+          <CardDescription>Branding and settings shown on the public site.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <FormSection title="Branding" columns={1}>
+          <FormSection title="Identity" columns={2}>
             <div className="space-y-1.5">
-              <Label className="text-xs">Site Title</Label>
-              <Input value={form.site_title || ''} onChange={(e) => set('site_title', e.target.value)} placeholder="School name" />
+              <Label className="text-xs">School Name <span className="text-destructive">*</span></Label>
+              <Input value={form.school_name || ''} onChange={(e) => set('school_name', e.target.value)} placeholder="e.g. Scholaria International" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Tagline</Label>
-              <Input value={form.tagline || ''} onChange={(e) => set('tagline', e.target.value)} placeholder="Empowering minds…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Footer Text</Label>
-              <Textarea value={form.footer_text || ''} onChange={(e) => set('footer_text', e.target.value)} placeholder="© 2025 School…" rows={2} />
+              <Label className="text-xs">Logo URL</Label>
+              <Input value={form.logo || ''} onChange={(e) => set('logo', e.target.value)} placeholder="https://school.edu/logo.png" />
             </div>
           </FormSection>
 
-          <FormSection title="Social Links" columns={2}>
+          <FormSection title="Branding" columns={2}>
             <div className="space-y-1.5">
-              <Label className="text-xs">Facebook</Label>
-              <Input value={form.social_facebook || ''} onChange={(e) => set('social_facebook', e.target.value)} placeholder="https://facebook.com/…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Twitter</Label>
-              <Input value={form.social_twitter || ''} onChange={(e) => set('social_twitter', e.target.value)} placeholder="https://twitter.com/…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Instagram</Label>
-              <Input value={form.social_instagram || ''} onChange={(e) => set('social_instagram', e.target.value)} placeholder="https://instagram.com/…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">YouTube</Label>
-              <Input value={form.social_youtube || ''} onChange={(e) => set('social_youtube', e.target.value)} placeholder="https://youtube.com/…" />
+              <Label className="text-xs">Theme</Label>
+              <select value={form.theme || 'light'} onChange={(e) => set('theme', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {THEMES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
           </FormSection>
 
-          <FormSection title="Contact" columns={2}>
+          <FormSection title="Localization" columns={3}>
             <div className="space-y-1.5">
-              <Label className="text-xs">Contact Email</Label>
-              <Input type="email" value={form.contact_email || ''} onChange={(e) => set('contact_email', e.target.value)} placeholder="contact@school.edu" />
+              <Label className="text-xs">Date Format</Label>
+              <select value={form.date_format || ''} onChange={(e) => set('date_format', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {DATE_FORMATS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Contact Phone</Label>
-              <Input value={form.contact_phone || ''} onChange={(e) => set('contact_phone', e.target.value)} placeholder="+91 98765 43210" />
+              <Label className="text-xs">Timezone</Label>
+              <select value={form.timezone || ''} onChange={(e) => set('timezone', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Language</Label>
+              <select value={form.language || 'en'} onChange={(e) => set('language', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </select>
             </div>
           </FormSection>
 
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Maintenance Mode</p>
-              <p className="text-xs text-muted-foreground">Take the public site offline for maintenance</p>
+          <FormSection title="Currency" columns={1}>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Default Currency</Label>
+              <select value={form.currency || 'USD'} onChange={(e) => set('currency', e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            <Switch checked={!!form.maintenance_mode} onCheckedChange={(v) => set('maintenance_mode', v)} />
-          </div>
+          </FormSection>
         </CardContent>
-        <CardFooter className="justify-end">
+        <CardFooter className="justify-end gap-2">
+          <Button variant="outline" onClick={handleReset}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
           <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Changes</Button>
         </CardFooter>
       </Card>

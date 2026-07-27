@@ -3,18 +3,14 @@
 // Page: File Type Settings
 //
 // Purpose:
-// Manage allowed file types, mime types, and size limits.
+// Manage allowed file extensions and maximum upload size.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: allowed_extensions ([String]), max_size (Number)
+// Note: No delete endpoint. updateFileType takes payload (no id).
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { FileType, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Save, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,199 +20,118 @@ import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { DataTable } from '@/components/DataTable'
-import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
-import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { ActionDropdown } from '@/components/ActionDropdown'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { useFileTypes } from '@/hooks/useSettings'
 
-const CATEGORIES = ['image', 'document', 'video']
-
 const EXPORT_COLS = [
-  { key: 'extension', label: 'Extension' },
-  { key: 'mime_type', label: 'MIME Type' },
+  { key: 'allowed_extensions', label: 'Allowed Extensions' },
   { key: 'max_size', label: 'Max Size (MB)' },
-  { key: 'category', label: 'Category' },
-  { key: 'is_allowed', label: 'Allowed' },
-  { key: 'status', label: 'Status' },
 ]
 
 export default function FileTypePage() {
-  const { rows, isLoading, search, setSearch, saveFileType, deleteFileType } = useFileTypes()
-
-  const [addOpen, setAddOpen] = useState(false)
-  const [editRow, setEditRow] = useState(null)
-  const [viewRow, setViewRow] = useState(null)
-  const [deleteRow, setDeleteRow] = useState(null)
-
-  const handleSave = async (payload, id) => {
-    await saveFileType(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const { rows, isLoading, search, setSearch, saveFileType } = useFileTypes()
 
   const columns = useMemo(() => [
-    { accessorKey: 'extension', header: 'Extension' },
-    { accessorKey: 'mime_type', header: 'MIME Type', cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.mime_type}</span> },
+    { accessorKey: 'allowed_extensions', header: 'Allowed Extensions', cell: ({ row }) => {
+      const exts = Array.isArray(row.original.allowed_extensions) ? row.original.allowed_extensions : []
+      return exts.length > 0
+        ? <div className="flex flex-wrap gap-1">{exts.map((e) => <Badge key={e} variant="outline" className="text-xs">{e}</Badge>)}</div>
+        : <span className="text-muted-foreground">—</span>
+    } },
     { accessorKey: 'max_size', header: 'Max Size (MB)' },
-    { accessorKey: 'category', header: 'Category', cell: ({ row }) => <Badge variant="outline">{row.original.category}</Badge> },
-    { accessorKey: 'is_allowed', header: 'Allowed', cell: ({ row }) => row.original.is_allowed ? <Badge>Allowed</Badge> : <span className="text-muted-foreground">Blocked</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   ], [])
-
-  const rowActions = (r) => [
-    { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
-    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
-    { separator: true },
-    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
-  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'File Types' }]} />
       <PageHeader
         title="File Type Settings"
-        description="Manage allowed file extensions, MIME types, and size limits."
-        icon={FileType}
-        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add File Type</Button>}
+        description="Manage allowed file extensions and maximum upload size."
       />
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search file types…" className="max-w-sm" />
-        <ExportButtons rows={rows} columns={EXPORT_COLS} filename="file-types" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search extensions…" className="max-w-sm" />
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={6} />
+        <LoadingSkeleton variant="table" rows={3} cols={2} />
       ) : rows.length === 0 ? (
-        <NoData title="No file types found" description="Add a new file type to get started." actionLabel="Add File Type" onAction={() => setAddOpen(true)} />
+        <NoData title="No file type settings found" description="Configure allowed extensions below." />
       ) : (
         <DataTable
           columns={columns}
           data={rows}
-          enableSelection
           enableExport
           exportFilename="file-types"
-          rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <FileTypeFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit File Type' : 'Add File Type'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
-
-      <Drawer
-        open={!!viewRow}
-        onOpenChange={(o) => !o && setViewRow(null)}
-        title="File Type Details"
-        description={viewRow?.extension}
-        width="sm:max-w-md"
-        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
-      >
-        {viewRow && (
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            {[
-              { label: 'Extension', value: viewRow.extension },
-              { label: 'MIME Type', value: viewRow.mime_type },
-              { label: 'Max Size', value: `${viewRow.max_size} MB` },
-              { label: 'Category', value: <Badge variant="outline">{viewRow.category}</Badge> },
-              { label: 'Allowed', value: viewRow.is_allowed ? 'Yes' : 'No' },
-              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-            ].map((f) => (
-              <div key={f.label} className="space-y-0.5">
-                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                <dd className="text-sm font-medium">{f.value || '—'}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </Drawer>
-
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.extension}
-        onConfirm={() => deleteFileType(deleteRow._id)}
+      <FileTypeForm
+        initial={rows[0]}
+        isLoading={isLoading}
+        onSave={saveFileType}
       />
     </div>
   )
 }
 
-function FileTypeFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+function FileTypeForm({ initial, isLoading, onSave }) {
   const [form, setForm] = useState({
-    extension: initial?.extension || '',
-    mime_type: initial?.mime_type || '',
+    allowed_extensions: Array.isArray(initial?.allowed_extensions) ? initial.allowed_extensions.join(', ') : '',
     max_size: initial?.max_size ?? 5,
-    is_allowed: initial?.is_allowed ?? true,
-    category: initial?.category || 'image',
-    status: initial?.status || 'active',
   })
+
+  useEffect(() => {
+    if (initial) {
+      setForm({
+        allowed_extensions: Array.isArray(initial.allowed_extensions) ? initial.allowed_extensions.join(', ') : '',
+        max_size: initial.max_size ?? 5,
+      })
+    }
+  }, [initial])
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
 
+  const handleSubmit = () => {
+    const exts = form.allowed_extensions.split(',').map((e) => e.trim()).filter(Boolean)
+    onSave({ allowed_extensions: exts, max_size: Number(form.max_size) || 1 })
+  }
+
+  const handleReset = () => {
+    if (initial) {
+      setForm({
+        allowed_extensions: Array.isArray(initial.allowed_extensions) ? initial.allowed_extensions.join(', ') : '',
+        max_size: initial.max_size ?? 5,
+      })
+    }
+  }
+
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="File type configuration"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add File Type'}
-          submitDisabled={!form.extension.trim() || !form.mime_type.trim()}
-          onSubmit={() => onSubmit(form)}
-        />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={2}>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">File Upload Configuration</CardTitle>
+        <CardDescription>Set the allowed file extensions and maximum upload size.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <FormSection columns={1}>
           <div className="space-y-1.5">
-            <Label className="text-xs">Extension <span className="text-destructive">*</span></Label>
-            <Input value={form.extension} onChange={(e) => set('extension', e.target.value)} placeholder=".jpg" required />
+            <Label className="text-xs">Allowed Extensions (comma-separated)</Label>
+            <Input value={form.allowed_extensions} onChange={(e) => set('allowed_extensions', e.target.value)} placeholder="jpg, png, pdf, docx" />
+            <p className="text-xs text-muted-foreground">Separate each extension with a comma. Do not include the leading dot.</p>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Category</Label>
-            <select value={form.category} onChange={(e) => set('category', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <Label className="text-xs">Max Size (MB)</Label>
+            <Input type="number" min="1" value={form.max_size} onChange={(e) => set('max_size', e.target.value)} />
           </div>
         </FormSection>
-        <div className="space-y-1.5">
-          <Label className="text-xs">MIME Type <span className="text-destructive">*</span></Label>
-          <Input value={form.mime_type} onChange={(e) => set('mime_type', e.target.value)} placeholder="image/jpeg" required />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Max Size (MB)</Label>
-          <Input type="number" min="1" value={form.max_size} onChange={(e) => set('max_size', parseInt(e.target.value) || 1)} />
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Allowed</p>
-            <p className="text-xs text-muted-foreground">Permit uploads of this file type</p>
-          </div>
-          <input type="checkbox" checked={form.is_allowed} onChange={(e) => set('is_allowed', e.target.checked)} className="h-4 w-4" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Status</Label>
-          <select value={form.status} onChange={(e) => set('status', e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+      </CardContent>
+      <CardFooter className="justify-end gap-2">
+        <Button variant="outline" onClick={handleReset} disabled={isLoading}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
+        <Button onClick={handleSubmit} disabled={isLoading}><Save className="mr-2 h-4 w-4" /> Save</Button>
+      </CardFooter>
+    </Card>
   )
 }

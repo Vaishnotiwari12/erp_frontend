@@ -3,12 +3,15 @@
 // Page: Banners
 //
 // Purpose:
-// Manage homepage banner images, display order, and publish status.
+// Manage homepage banner images, links, and display order.
 //
 // Data Source:
-// frontCms.service.js
+// frontCms.service.js (via useBanners hook)
 //
-// Backend:
+// Backend model: banner { image_url, title, link, order }
+//   - createBanner(payload, file) uses FormData with 'image' field
+//   - updateBanner(id, payload) uses JSON body
+//
 // APIs should always be called through the service layer.
 // Never call Axios directly from this page.
 // ====================================================================
@@ -20,6 +23,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,23 +41,21 @@ import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
 import { useBanners } from '@/hooks/useFrontCms'
 import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
   { key: 'title', label: 'Title' },
-  { key: 'subtitle', label: 'Subtitle' },
-  { key: 'link_url', label: 'Link URL' },
-  { key: 'display_order', label: 'Display Order' },
-  { key: 'status', label: 'Status' },
-  { key: 'published_at', label: 'Published At' },
+  { key: 'link', label: 'Link' },
+  { key: 'order', label: 'Order' },
+  { key: 'image_url', label: 'Image URL' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function BannerPage() {
   const {
     rows, stats, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
+    search, setSearch,
     saveBanner, deleteBanner,
   } = useBanners()
 
@@ -62,8 +64,8 @@ export default function BannerPage() {
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveBanner(payload, id)
+  const handleSave = async (payload, file, id) => {
+    await saveBanner(payload, file, id)
     if (id) setEditRow(null)
     else setAddOpen(false)
   }
@@ -74,19 +76,23 @@ export default function BannerPage() {
       header: 'Title',
       cell: ({ row }) => (
         <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Image className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.title}</span>
-            <span className="text-xs text-muted-foreground">{row.original.subtitle}</span>
-          </div>
+          {row.original.image_url ? (
+            <img src={row.original.image_url} alt={row.original.title} className="h-9 w-9 rounded-lg object-cover" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Image className="h-4 w-4" />
+            </div>
+          )}
+          <span className="font-medium hover:underline">{row.original.title}</span>
         </button>
       ),
     },
-    { accessorKey: 'display_order', header: 'Order', cell: ({ row }) => <span className="font-mono text-sm">{row.original.display_order}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'published_at', header: 'Published', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.published_at)}</span> },
+    { accessorKey: 'link', header: 'Link', cell: ({ row }) => <span className="font-mono text-sm">{row.original.link || '—'}</span> },
+    { accessorKey: 'order', header: 'Order', cell: ({ row }) => <span className="font-mono text-sm">{row.original.order}</span> },
+    { accessorKey: 'image_url', header: 'Image', cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground break-all">{row.original.image_url || '—'}</span>
+    ) },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
   ], [])
 
   const rowActions = (r) => [
@@ -101,31 +107,24 @@ export default function BannerPage() {
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Front CMS' }, { label: 'Banners' }]} />
       <PageHeader
         title="Banners"
-        description="Manage homepage banner images, display order, and publish status."
+        description="Manage homepage banner images, links, and display order."
         icon={Image}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Banner</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Banners" value={stats.total} icon={Image} accent="primary" />
-        <StatCard label="Published" value={stats.published} icon={Image} accent="success" />
       </div>
 
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search banners…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={rows} columns={EXPORT_COLS} filename="banners" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={4} />
+        <LoadingSkeleton variant="table" rows={5} cols={5} />
       ) : rows.length === 0 ? (
         <NoData title="No banners found" description="Add a new banner to get started." actionLabel="Add Banner" onAction={() => setAddOpen(true)} />
       ) : (
@@ -144,7 +143,7 @@ export default function BannerPage() {
         onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
         title={editRow ? 'Edit Banner' : 'Add Banner'}
         initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
+        onSubmit={(payload, file) => handleSave(payload, file, editRow?._id)}
       />
 
       <Drawer
@@ -157,27 +156,28 @@ export default function BannerPage() {
       >
         {viewRow && (
           <div className="space-y-6">
+            {viewRow.image_url && (
+              <img src={viewRow.image_url} alt={viewRow.title} className="w-full rounded-xl object-cover" />
+            )}
             <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Image className="h-5 w-5" />
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{viewRow.title}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.subtitle}</p>
               </div>
-              <StatusBadge status={viewRow.status} />
             </div>
 
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
               {[
-                { label: 'Link URL', value: viewRow.link_url },
-                { label: 'Display Order', value: viewRow.display_order },
-                { label: 'Published At', value: formatDate(viewRow.published_at) },
+                { label: 'Link', value: viewRow.link },
+                { label: 'Order', value: viewRow.order },
+                { label: 'Image URL', value: viewRow.image_url },
                 { label: 'Created On', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
+                  <dd className="text-sm font-medium break-all">{f.value || '—'}</dd>
                 </div>
               ))}
             </dl>
@@ -199,14 +199,17 @@ export default function BannerPage() {
 function BannerFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
     title: initial?.title || '',
-    subtitle: initial?.subtitle || '',
-    image_url: initial?.image_url || '',
-    link_url: initial?.link_url || '',
-    display_order: initial?.display_order || 1,
-    status: initial?.status || 'draft',
+    link: initial?.link || '',
+    order: initial?.order ?? 1,
   })
+  const [file, setFile] = useState(null)
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(form, file)
+  }
 
   return (
     <Drawer
@@ -220,41 +223,33 @@ function BannerFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add Banner'}
           submitDisabled={!form.title.trim()}
-          onSubmit={() => onSubmit(form)}
+          onSubmit={() => onSubmit(form, file)}
         />
       }
     >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <FormSection columns={1}>
           <div className="space-y-1.5">
             <Label className="text-xs">Title <span className="text-destructive">*</span></Label>
             <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Banner title" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Subtitle</Label>
-            <Input value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} placeholder="Banner subtitle" />
+            <Label className="text-xs">Link</Label>
+            <Input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="/about" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Image URL</Label>
-            <Input value={form.image_url} onChange={(e) => set('image_url', e.target.value)} placeholder="https://… (upload placeholder)" />
+            <Label className="text-xs">Order</Label>
+            <Input type="number" min="0" value={form.order} onChange={(e) => set('order', parseInt(e.target.value) || 0)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Link URL</Label>
-            <Input value={form.link_url} onChange={(e) => set('link_url', e.target.value)} placeholder="/about" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Display Order</Label>
-              <Input type="number" min="1" value={form.display_order} onChange={(e) => set('display_order', parseInt(e.target.value) || 1)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </div>
+            <Label className="text-xs">Banner Image</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            {initial?.image_url && !file && (
+              <p className="text-xs text-muted-foreground">Current: {initial.image_url}</p>
+            )}
+            {file && (
+              <p className="text-xs text-muted-foreground">Selected: {file.name}</p>
+            )}
           </div>
         </FormSection>
         <button type="submit" className="hidden" />

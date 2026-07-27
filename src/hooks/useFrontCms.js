@@ -2,10 +2,18 @@
 //
 // Keeps business logic separate from UI.
 //
-// Later backend APIs will automatically work without changing pages.
-//
-// This hook wraps frontCmsService calls and provides memoized filtering,
+// Wraps frontCmsService calls and provides memoized filtering,
 // statistics, and CRUD handlers so pages stay UI-only.
+//
+// Backend model field names (do NOT invent fields):
+//   banner:   { image_url, title, link, order }
+//   news:     { title, content, publish_date, image, author }
+//   event:    { event_title, event_date, description, image }
+//   gallery:  { gallery_title, image_url, category }
+//   page:     { page_title, slug, content, meta_title, meta_description }
+//   menu:     { menu_name, link, parent_id, order, menu_type }
+//   media:    { file_name, file_url, file_type }
+// All models have _id, createdAt, updatedAt.
 
 import { useMemo, useState, useCallback } from 'react'
 import { frontCmsService } from '@/services/frontCms.service'
@@ -13,47 +21,64 @@ import { useAsyncData } from '@/hooks/useAsyncData'
 import { useToast } from '@/hooks/use-toast'
 
 // ─── useFrontCmsStats ──────────────────────────────────────────────────────────
-// Provides dashboard stats for the Front CMS module.
+// Derives dashboard stats by fetching all 7 lists and counting rows.
+// The backend has no dedicated stats endpoint.
 export function useFrontCmsStats() {
-  const { data, isLoading } = useAsyncData(() => frontCmsService.getStats(), [])
-  const stats = data || {}
+  const banners = useAsyncData(() => frontCmsService.getBanners(), [])
+  const news = useAsyncData(() => frontCmsService.getNews(), [])
+  const events = useAsyncData(() => frontCmsService.getEvents(), [])
+  const gallery = useAsyncData(() => frontCmsService.getGallery(), [])
+  const pages = useAsyncData(() => frontCmsService.getPages(), [])
+  const media = useAsyncData(() => frontCmsService.getMedia(), [])
+  const menus = useAsyncData(() => frontCmsService.getMenus(), [])
+
+  const isLoading =
+    banners.isLoading ||
+    news.isLoading ||
+    events.isLoading ||
+    gallery.isLoading ||
+    pages.isLoading ||
+    media.isLoading ||
+    menus.isLoading
+
+  const stats = useMemo(() => ({
+    total_banners: (banners.data || []).length,
+    total_news: (news.data || []).length,
+    total_events: (events.data || []).length,
+    total_gallery: (gallery.data || []).length,
+    total_pages: (pages.data || []).length,
+    total_media: (media.data || []).length,
+    total_menus: (menus.data || []).length,
+  }), [banners.data, news.data, events.data, gallery.data, pages.data, media.data, menus.data])
+
   return { stats, isLoading }
 }
 
 // ─── useBanners ────────────────────────────────────────────────────────────────
-// Manages banner list state, filtering, stats, and CRUD operations.
+// Filter by title. No status filter (backend has no status field).
 export function useBanners() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getBanners(), [])
 
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered banners
-  // unless banner list or filters change.
   const filtered = useMemo(() => rows.filter((b) => {
     const q = search.toLowerCase()
-    const matchSearch = !q ||
-      (b.title || '').toLowerCase().includes(q) ||
-      (b.subtitle || '').toLowerCase().includes(q)
-    const matchStatus = statusFilter === 'all' || b.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
+    return !q || (b.title || '').toLowerCase().includes(q)
+  }), [rows, search])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    published: rows.filter((b) => b.status === 'published').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
-  const saveBanner = useCallback(async (payload, id) => {
+  const saveBanner = useCallback(async (payload, file, id) => {
     if (id) {
       await frontCmsService.updateBanner(id, payload)
       toast({ title: 'Banner updated', description: payload.title })
     } else {
-      await frontCmsService.createBanner(payload)
+      await frontCmsService.createBanner(payload, file)
       toast({ title: 'Banner added', description: payload.title })
     }
     refetch()
@@ -70,49 +95,38 @@ export function useBanners() {
     stats,
     isLoading,
     search, setSearch,
-    statusFilter, setStatusFilter,
     saveBanner,
     deleteBanner,
   }
 }
 
 // ─── useNews ────────────────────────────────────────────────────────────────────
-// Manages news list state, filtering, stats, and CRUD operations.
+// Filter by title and author. No category or status filter (no such fields).
 export function useNews() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getNews(), [])
 
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered news
-  // unless news list or filters change.
   const filtered = useMemo(() => rows.filter((n) => {
     const q = search.toLowerCase()
-    const matchSearch = !q ||
+    return !q ||
       (n.title || '').toLowerCase().includes(q) ||
-      (n.author || '').toLowerCase().includes(q) ||
-      (n.slug || '').toLowerCase().includes(q)
-    const matchCategory = categoryFilter === 'all' || n.category === categoryFilter
-    const matchStatus = statusFilter === 'all' || n.status === statusFilter
-    return matchSearch && matchCategory && matchStatus
-  }), [rows, search, categoryFilter, statusFilter])
+      (n.author || '').toLowerCase().includes(q)
+  }), [rows, search])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    published: rows.filter((n) => n.status === 'published').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
-  const saveNews = useCallback(async (payload, id) => {
+  const saveNews = useCallback(async (payload, file, id) => {
     if (id) {
       await frontCmsService.updateNews(id, payload)
       toast({ title: 'News updated', description: payload.title })
     } else {
-      await frontCmsService.createNews(payload)
+      await frontCmsService.createNews(payload, file)
       toast({ title: 'News added', description: payload.title })
     }
     refetch()
@@ -129,50 +143,39 @@ export function useNews() {
     stats,
     isLoading,
     search, setSearch,
-    categoryFilter, setCategoryFilter,
-    statusFilter, setStatusFilter,
     saveNews,
     deleteNews,
   }
 }
 
 // ─── useEvents ──────────────────────────────────────────────────────────────────
-// Manages event list state, filtering, stats, and CRUD operations.
+// Filter by event_title (NOT title) and description. No category or status filter.
 export function useEvents() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getEvents(), [])
 
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered events
-  // unless event list or filters change.
   const filtered = useMemo(() => rows.filter((e) => {
     const q = search.toLowerCase()
-    const matchSearch = !q ||
-      (e.title || '').toLowerCase().includes(q) ||
-      (e.location || '').toLowerCase().includes(q)
-    const matchCategory = categoryFilter === 'all' || e.category === categoryFilter
-    const matchStatus = statusFilter === 'all' || e.status === statusFilter
-    return matchSearch && matchCategory && matchStatus
-  }), [rows, search, categoryFilter, statusFilter])
+    return !q ||
+      (e.event_title || '').toLowerCase().includes(q) ||
+      (e.description || '').toLowerCase().includes(q)
+  }), [rows, search])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    published: rows.filter((e) => e.status === 'published').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
-  const saveEvent = useCallback(async (payload, id) => {
+  const saveEvent = useCallback(async (payload, file, id) => {
     if (id) {
       await frontCmsService.updateEvent(id, payload)
-      toast({ title: 'Event updated', description: payload.title })
+      toast({ title: 'Event updated', description: payload.event_title })
     } else {
-      await frontCmsService.createEvent(payload)
-      toast({ title: 'Event added', description: payload.title })
+      await frontCmsService.createEvent(payload, file)
+      toast({ title: 'Event added', description: payload.event_title })
     }
     refetch()
   }, [refetch, toast])
@@ -188,49 +191,40 @@ export function useEvents() {
     stats,
     isLoading,
     search, setSearch,
-    categoryFilter, setCategoryFilter,
-    statusFilter, setStatusFilter,
     saveEvent,
     deleteEvent,
   }
 }
 
 // ─── useGallery ──────────────────────────────────────────────────────────────────
-// Manages gallery list state, filtering, stats, and CRUD operations.
+// Filter by gallery_title (NOT title). Keep category filter (field exists). No status filter.
 export function useGallery() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getGallery(), [])
 
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered gallery items
-  // unless gallery list or filters change.
   const filtered = useMemo(() => rows.filter((g) => {
     const q = search.toLowerCase()
-    const matchSearch = !q ||
-      (g.title || '').toLowerCase().includes(q)
+    const matchSearch = !q || (g.gallery_title || '').toLowerCase().includes(q)
     const matchCategory = categoryFilter === 'all' || g.category === categoryFilter
-    const matchStatus = statusFilter === 'all' || g.status === statusFilter
-    return matchSearch && matchCategory && matchStatus
-  }), [rows, search, categoryFilter, statusFilter])
+    return matchSearch && matchCategory
+  }), [rows, search, categoryFilter])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    published: rows.filter((g) => g.status === 'published').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
-  const saveGallery = useCallback(async (payload, id) => {
+  const saveGallery = useCallback(async (payload, file, id) => {
     if (id) {
       await frontCmsService.updateGallery(id, payload)
-      toast({ title: 'Gallery item updated', description: payload.title })
+      toast({ title: 'Gallery item updated', description: payload.gallery_title })
     } else {
-      await frontCmsService.createGallery(payload)
-      toast({ title: 'Gallery item added', description: payload.title })
+      await frontCmsService.createGallery(payload, file)
+      toast({ title: 'Gallery item added', description: payload.gallery_title })
     }
     refetch()
   }, [refetch, toast])
@@ -247,14 +241,13 @@ export function useGallery() {
     isLoading,
     search, setSearch,
     categoryFilter, setCategoryFilter,
-    statusFilter, setStatusFilter,
     saveGallery,
     deleteGallery,
   }
 }
 
 // ─── useMedia ────────────────────────────────────────────────────────────────────
-// Manages media list state, filtering, stats, and CRUD operations.
+// Filter by file_name and file_type. No uploaded_by. Keep typeFilter matching file_type (mimetype).
 export function useMedia() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getMedia(), [])
@@ -264,29 +257,26 @@ export function useMedia() {
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered media
-  // unless media list or filters change.
   const filtered = useMemo(() => rows.filter((m) => {
     const q = search.toLowerCase()
     const matchSearch = !q ||
       (m.file_name || '').toLowerCase().includes(q) ||
-      (m.uploaded_by || '').toLowerCase().includes(q)
-    const matchType = typeFilter === 'all' || m.file_type === typeFilter
+      (m.file_type || '').toLowerCase().includes(q)
+    const matchType = typeFilter === 'all' ||
+      (m.file_type || '').toLowerCase().includes(typeFilter.toLowerCase())
     return matchSearch && matchType
   }), [rows, search, typeFilter])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    active: rows.filter((m) => m.status === 'active').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
-  const saveMedia = useCallback(async (payload, id) => {
+  const saveMedia = useCallback(async (payload, file, id) => {
     if (id) {
-      await frontCmsService.createMedia(payload)
+      await frontCmsService.updateMedia(id, payload)
       toast({ title: 'Media updated', description: payload.file_name })
     } else {
-      await frontCmsService.createMedia(payload)
+      await frontCmsService.createMedia(payload, file)
       toast({ title: 'Media added', description: payload.file_name })
     }
     refetch()
@@ -310,33 +300,26 @@ export function useMedia() {
 }
 
 // ─── useCmsPages ──────────────────────────────────────────────────────────────────
-// Manages CMS pages list state, filtering, stats, and CRUD operations.
+// Filter by page_title and slug. No status filter.
 export function useCmsPages() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getPages(), [])
 
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered pages
-  // unless page list or filters change.
   const filtered = useMemo(() => rows.filter((p) => {
     const q = search.toLowerCase()
-    const matchSearch = !q ||
+    return !q ||
       (p.page_title || '').toLowerCase().includes(q) ||
       (p.slug || '').toLowerCase().includes(q)
-    const matchStatus = statusFilter === 'all' || p.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
+  }), [rows, search])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    published: rows.filter((p) => p.status === 'published').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
   const savePage = useCallback(async (payload, id) => {
     if (id) {
       await frontCmsService.updatePage(id, payload)
@@ -359,14 +342,13 @@ export function useCmsPages() {
     stats,
     isLoading,
     search, setSearch,
-    statusFilter, setStatusFilter,
     savePage,
     deletePage,
   }
 }
 
 // ─── useMenus ────────────────────────────────────────────────────────────────────
-// Manages menu list state, filtering, stats, and CRUD operations.
+// Filter by menu_name and link (NOT link_url). Keep typeFilter matching menu_type.
 export function useMenus() {
   const { toast } = useToast()
   const { data, isLoading, refetch } = useAsyncData(() => frontCmsService.getMenus(), [])
@@ -376,23 +358,19 @@ export function useMenus() {
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered menus
-  // unless menu list or filters change.
   const filtered = useMemo(() => rows.filter((m) => {
     const q = search.toLowerCase()
     const matchSearch = !q ||
       (m.menu_name || '').toLowerCase().includes(q) ||
-      (m.link_url || '').toLowerCase().includes(q)
+      (m.link || '').toLowerCase().includes(q)
     const matchType = typeFilter === 'all' || m.menu_type === typeFilter
     return matchSearch && matchType
   }), [rows, search, typeFilter])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    active: rows.filter((m) => m.status === 'active').length,
   }), [rows])
 
-  // Prevent unnecessary child re-renders.
   const saveMenu = useCallback(async (payload, id) => {
     if (id) {
       await frontCmsService.updateMenu(id, payload)

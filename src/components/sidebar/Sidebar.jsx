@@ -4,30 +4,54 @@ import { ChevronDown, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { APP_NAME } from '@/constants/navigation'
 import { sidebarItems } from '@/config/sidebar'
+import { useAuth } from '@/context/AuthContext'
+import { useModules } from '@/context/ModuleContext'
 
 const EXPANDED_KEY = 'scholaria.sidebar.expanded'
 
-// Read persisted expanded section ids; falls back to first section expanded.
+// Read the single persisted expanded section; falls back to first section.
 function readExpanded() {
   try {
     const raw = localStorage.getItem(EXPANDED_KEY)
-    if (raw) return new Set(JSON.parse(raw))
+    if (raw) {
+      const arr = JSON.parse(raw)
+      return new Set(arr.length ? arr : [sidebarItems[0]?.id].filter(Boolean))
+    }
   } catch {
     // ignore
   }
   return new Set(sidebarItems.length ? [sidebarItems[0].id] : [])
 }
 
-// Configuration-driven premium sidebar. Renders from src/config/sidebar.js.
-// Features: nested dropdowns, animated accordion (grid-rows), chevron rotation,
-// persisted expanded state, auto-expand active section, active pill indicator,
-// rounded hover state, collapsed icon-only mode with tooltips, dark mode,
-// keyboard accessible, responsive (mobile drawer handled by Navbar).
+// Maps sidebar section ids to backend module_name values for filtering.
+const SECTION_TO_MODULE = {
+  dashboard: 'Dashboard',
+  students: 'Students',
+  academics: 'Academics',
+  attendance: 'Attendance',
+  examinations: 'Examinations',
+  fees: 'Fees',
+  hr: 'HR',
+  library: 'Library',
+  transport: 'Transport',
+  hostel: 'Hostel',
+  inventory: 'Inventory',
+  'front-office': 'Front Office',
+  certificate: 'Certificate',
+  'front-cms': 'Front CMS',
+  'settings-module': 'Settings',
+  users: 'Users',
+  schools: 'Schools',
+  domains: 'Domains',
+}
+
 export function Sidebar({ collapsed, onNavigate }) {
   const location = useLocation()
+  const { tenant, user } = useAuth()
+  const { isModuleEnabled, hasPermission } = useModules()
   const [expanded, setExpanded] = useState(readExpanded)
 
-  // Persist expanded state across reloads.
+  // Persist the single expanded section across reloads.
   useEffect(() => {
     try {
       localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded]))
@@ -49,16 +73,29 @@ export function Sidebar({ collapsed, onNavigate }) {
 
   useEffect(() => {
     if (!activeSectionId) return
-    setExpanded((prev) => (prev.has(activeSectionId) ? prev : new Set([...prev, activeSectionId])))
+    setExpanded(new Set([activeSectionId]))
   }, [activeSectionId])
 
+  // Accordion: opening one section closes all others.
   const toggle = (id) =>
     setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+      if (prev.has(id) && prev.size === 1) return prev
+      return new Set([id])
     })
+
+  // Filter sidebar items by enabled modules + role permissions.
+  const visibleItems = useMemo(() => {
+    return sidebarItems.filter((item) => {
+      const moduleName = SECTION_TO_MODULE[item.id]
+      if (moduleName && !isModuleEnabled(item.id)) return false
+      if (!hasPermission(item.id, 'view')) return false
+      return true
+    })
+  }, [isModuleEnabled, hasPermission])
+
+  // Tenant display: logo + school name from backend settings.
+  const tenantName = tenant?.school_name || APP_NAME
+  const tenantLogo = tenant?.logo
 
   return (
     <aside
@@ -67,15 +104,21 @@ export function Sidebar({ collapsed, onNavigate }) {
         collapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]',
       )}
     >
-      {/* Brand */}
+      {/* Brand — tenant school logo + name */}
       <div className={cn('flex h-16 items-center gap-3 border-b border-border/60', collapsed ? 'justify-center px-2' : 'px-5')}>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-          <GraduationCap className="h-5 w-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary text-primary-foreground shadow-sm">
+          {tenantLogo ? (
+            <img src={tenantLogo} alt={tenantName} className="h-full w-full object-cover" />
+          ) : (
+            <GraduationCap className="h-5 w-5" />
+          )}
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="truncate font-display text-[15px] font-bold leading-tight tracking-tight">{APP_NAME}</p>
-            <p className="truncate text-xs font-medium leading-tight text-muted-foreground">Admin Console</p>
+            <p className="truncate font-display text-[15px] font-bold leading-tight tracking-tight">{tenantName}</p>
+            <p className="truncate text-xs font-medium leading-tight text-muted-foreground">
+              {user?.role === 'superadmin' ? 'Super Admin' : user?.role || 'Admin'} Console
+            </p>
           </div>
         )}
       </div>
@@ -83,7 +126,7 @@ export function Sidebar({ collapsed, onNavigate }) {
       {/* Navigation */}
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4" aria-label="Primary">
         <ul className={cn('space-y-1', collapsed && 'space-y-1.5')}>
-          {sidebarItems.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon
             const isOpen = expanded.has(item.id)
 
@@ -123,6 +166,11 @@ export function Sidebar({ collapsed, onNavigate }) {
               (c) => location.pathname === c.path || location.pathname.startsWith(c.path + '/'),
             )
 
+            // Filter children by permission.
+            const visibleChildren = (item.children || []).filter((child) =>
+              hasPermission(item.id, 'view'),
+            )
+
             return (
               <li key={item.id}>
                 <button
@@ -160,7 +208,7 @@ export function Sidebar({ collapsed, onNavigate }) {
                     )}
                   >
                     <ul className="overflow-hidden space-y-0.5 pl-10 pr-1 pt-1">
-                      {item.children.map((child) => (
+                      {visibleChildren.map((child) => (
                         <li key={child.path}>
                           <NavLink
                             to={child.path}
@@ -205,12 +253,12 @@ export function Sidebar({ collapsed, onNavigate }) {
       <div className="border-t border-border/60 p-3">
         <div className={cn('flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent', collapsed && 'justify-center px-0')}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-            AM
+            {user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-tight">Alex Morgan</p>
-              <p className="truncate text-xs font-medium leading-tight text-muted-foreground">Super Admin</p>
+              <p className="truncate text-[13px] font-semibold leading-tight">{user?.name || 'User'}</p>
+              <p className="truncate text-xs font-medium leading-tight text-muted-foreground capitalize">{user?.role || 'Admin'}</p>
             </div>
           )}
         </div>

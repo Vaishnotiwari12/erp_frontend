@@ -3,77 +3,190 @@
 // Page: Notification Settings
 //
 // Purpose:
-// Configure which notifications the system sends.
+// Manage notification templates and their enabled status (CRUD table).
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: notification_type, template, enabled (Boolean)
 // ====================================================================
 
-import { useState, useEffect } from 'react'
-import { Bell, Save } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Bell, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
+import { SearchBar } from '@/components/SearchBar'
+import { FilterBar } from '@/components/FilterBar'
+import { DataTable } from '@/components/DataTable'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
-import { useNotificationSettings } from '@/hooks/useSettings'
+import { NoData } from '@/components/NoData'
+import { FormSection } from '@/components/FormSection'
+import { ActionDropdown } from '@/components/ActionDropdown'
+import { useNotifications } from '@/hooks/useSettings'
+import { formatDate } from '@/utils/format'
 
-const FIELDS = [
-  { key: 'email_notifications', label: 'Email Notifications', desc: 'Receive alerts via email' },
-  { key: 'sms_notifications', label: 'SMS Notifications', desc: 'Receive alerts via SMS' },
-  { key: 'push_notifications', label: 'Push Notifications', desc: 'Real-time browser push' },
-  { key: 'admission_alerts', label: 'Admission Alerts', desc: 'New admission submissions' },
-  { key: 'fee_payment_alerts', label: 'Fee Payment Alerts', desc: 'Successful fee payments' },
-  { key: 'attendance_alerts', label: 'Attendance Alerts', desc: 'Student absence notifications' },
-  { key: 'exam_result_alerts', label: 'Exam Result Alerts', desc: 'Results published notifications' },
-  { key: 'library_alerts', label: 'Library Alerts', desc: 'Book due and overdue reminders' },
+const EXPORT_COLS = [
+  { key: 'notification_type', label: 'Type' },
+  { key: 'template', label: 'Template' },
+  { key: 'enabled', label: 'Enabled' },
+  { key: 'createdAt', label: 'Created' },
 ]
 
 export default function NotificationSettingsPage() {
-  const { settings, isLoading, updateSettings } = useNotificationSettings()
-  const [form, setForm] = useState(settings)
+  const { rows, isLoading, search, setSearch, saveNotification, deleteNotification } = useNotifications()
 
-  useEffect(() => { setForm(settings) }, [settings])
+  const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
+  const [viewRow, setViewRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-  const handleSave = () => updateSettings(form)
+  const handleSave = async (payload, id) => {
+    await saveNotification(payload, id)
+    if (id) setEditRow(null)
+    else setAddOpen(false)
+  }
 
-  if (isLoading) return <LoadingSkeleton variant="cards" />
+  const columns = useMemo(() => [
+    { accessorKey: 'notification_type', header: 'Type' },
+    { accessorKey: 'template', header: 'Template', cell: ({ row }) => <span className="text-xs text-muted-foreground line-clamp-1">{row.original.template}</span> },
+    { accessorKey: 'enabled', header: 'Enabled', cell: ({ row }) => row.original.enabled ? <Badge>Enabled</Badge> : <span className="text-muted-foreground">Disabled</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
+  ], [])
+
+  const rowActions = (r) => [
+    { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { separator: true },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Settings' }, { label: 'Notifications' }]} />
       <PageHeader
         title="Notification Settings"
-        description="Choose which notifications the system sends."
+        description="Manage notification templates and their enabled status."
         icon={Bell}
+        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Notification</Button>}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notification Preferences</CardTitle>
-          <CardDescription>Toggle individual notification channels and alert types.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {FIELDS.map((f) => (
-            <div key={f.key} className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{f.label}</p>
-                <p className="text-xs text-muted-foreground">{f.desc}</p>
+      <FilterBar>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search notifications…" className="max-w-sm" />
+        <ExportButtons rows={rows} columns={EXPORT_COLS} filename="notifications" />
+      </FilterBar>
+
+      {isLoading ? (
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
+      ) : rows.length === 0 ? (
+        <NoData title="No notifications found" description="Add a new notification to get started." actionLabel="Add Notification" onAction={() => setAddOpen(true)} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={rows}
+          enableSelection
+          enableExport
+          exportFilename="notifications"
+          rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
+        />
+      )}
+
+      <NotificationFormDrawer
+        open={addOpen || !!editRow}
+        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
+        title={editRow ? 'Edit Notification' : 'Add Notification'}
+        initial={editRow}
+        onSubmit={(payload) => handleSave(payload, editRow?._id)}
+      />
+
+      <Drawer
+        open={!!viewRow}
+        onOpenChange={(o) => !o && setViewRow(null)}
+        title="Notification Details"
+        description={viewRow?.notification_type}
+        width="sm:max-w-md"
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
+      >
+        {viewRow && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {[
+              { label: 'Type', value: viewRow.notification_type },
+              { label: 'Enabled', value: viewRow.enabled ? 'Yes' : 'No' },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value || '—'}</dd>
               </div>
-              <Switch checked={!!form[f.key]} onCheckedChange={(v) => set(f.key, v)} />
+            ))}
+            <div className="col-span-2 space-y-0.5">
+              <dt className="text-xs font-medium text-muted-foreground">Template</dt>
+              <dd className="text-sm font-medium whitespace-pre-wrap">{viewRow.template || '—'}</dd>
             </div>
-          ))}
-        </CardContent>
-        <CardFooter className="justify-end">
-          <Button onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Changes</Button>
-        </CardFooter>
-      </Card>
+          </dl>
+        )}
+      </Drawer>
+
+      <DeleteDialog
+        open={!!deleteRow}
+        onOpenChange={(o) => !o && setDeleteRow(null)}
+        entityName={deleteRow?.notification_type}
+        onConfirm={() => deleteNotification(deleteRow._id)}
+      />
     </div>
+  )
+}
+
+function NotificationFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+  const [form, setForm] = useState({
+    notification_type: initial?.notification_type || '',
+    template: initial?.template || '',
+    enabled: initial?.enabled ?? true,
+  })
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+
+  return (
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description="Notification template configuration"
+      width="sm:max-w-md"
+      footer={
+        <DrawerFooter
+          onCancel={() => onOpenChange(false)}
+          submitLabel={initial ? 'Save Changes' : 'Add Notification'}
+          submitDisabled={!form.notification_type.trim()}
+          onSubmit={() => onSubmit(form)}
+        />
+      }
+    >
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+        <FormSection columns={1}>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Notification Type <span className="text-destructive">*</span></Label>
+            <Input value={form.notification_type} onChange={(e) => set('notification_type', e.target.value)} placeholder="e.g. admission_alert" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Template</Label>
+            <Textarea value={form.template} onChange={(e) => set('template', e.target.value)} placeholder="Dear {parent_name}…" rows={4} />
+          </div>
+        </FormSection>
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Enabled</p>
+            <p className="text-xs text-muted-foreground">Send this notification when triggered</p>
+          </div>
+          <Switch checked={!!form.enabled} onCheckedChange={(v) => set('enabled', v)} />
+        </div>
+        <button type="submit" className="hidden" />
+      </form>
+    </Drawer>
   )
 }

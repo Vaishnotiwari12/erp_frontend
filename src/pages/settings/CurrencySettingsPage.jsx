@@ -5,12 +5,8 @@
 // Purpose:
 // Manage supported currencies and exchange rates.
 //
-// Data Source:
-// settings.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Backend fields: currency_name, symbol, code, exchange_rate (Number),
+//                 is_base (Boolean), status (active|inactive)
 // ====================================================================
 
 import { useMemo, useState } from 'react'
@@ -33,18 +29,22 @@ import { FormSection } from '@/components/FormSection'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { useCurrencies } from '@/hooks/useSettings'
+import { formatDate } from '@/utils/format'
 
 const EXPORT_COLS = [
-  { key: 'currency_code', label: 'Code' },
+  { key: 'code', label: 'Code' },
   { key: 'currency_name', label: 'Name' },
   { key: 'symbol', label: 'Symbol' },
   { key: 'exchange_rate', label: 'Exchange Rate' },
-  { key: 'is_default', label: 'Default' },
+  { key: 'is_base', label: 'Base' },
   { key: 'status', label: 'Status' },
 ]
 
 export default function CurrencySettingsPage() {
-  const { rows, isLoading, search, setSearch, saveCurrency, deleteCurrency } = useCurrencies()
+  const {
+    rows, isLoading, search, setSearch,
+    saveCurrency, deleteCurrency, setBaseCurrency, updateCurrencyStatus,
+  } = useCurrencies()
 
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
@@ -58,17 +58,19 @@ export default function CurrencySettingsPage() {
   }
 
   const columns = useMemo(() => [
-    { accessorKey: 'currency_code', header: 'Code' },
     { accessorKey: 'currency_name', header: 'Name' },
     { accessorKey: 'symbol', header: 'Symbol' },
+    { accessorKey: 'code', header: 'Code' },
     { accessorKey: 'exchange_rate', header: 'Exchange Rate' },
-    { accessorKey: 'is_default', header: 'Default', cell: ({ row }) => row.original.is_default ? <Badge>Default</Badge> : <span className="text-muted-foreground">—</span> },
+    { accessorKey: 'is_base', header: 'Base', cell: ({ row }) => row.original.is_base ? <Badge>Base</Badge> : <span className="text-muted-foreground">—</span> },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   ], [])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
     { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: 'Set Base', icon: DollarSign, onClick: () => setBaseCurrency(r._id) },
+    { label: r.status === 'active' ? 'Deactivate' : 'Activate', onClick: () => updateCurrencyStatus(r._id, r.status === 'active' ? 'inactive' : 'active') },
     { separator: true },
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
@@ -122,11 +124,11 @@ export default function CurrencySettingsPage() {
         {viewRow && (
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
             {[
-              { label: 'Code', value: viewRow.currency_code },
+              { label: 'Code', value: viewRow.code },
               { label: 'Name', value: viewRow.currency_name },
               { label: 'Symbol', value: viewRow.symbol },
               { label: 'Exchange Rate', value: viewRow.exchange_rate },
-              { label: 'Default', value: viewRow.is_default ? 'Yes' : 'No' },
+              { label: 'Base', value: viewRow.is_base ? 'Yes' : 'No' },
               { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
             ].map((f) => (
               <div key={f.label} className="space-y-0.5">
@@ -141,7 +143,7 @@ export default function CurrencySettingsPage() {
       <DeleteDialog
         open={!!deleteRow}
         onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.currency_code}
+        entityName={deleteRow?.code}
         onConfirm={() => deleteCurrency(deleteRow._id)}
       />
     </div>
@@ -150,12 +152,10 @@ export default function CurrencySettingsPage() {
 
 function CurrencyFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
-    currency_code: initial?.currency_code || '',
     currency_name: initial?.currency_name || '',
     symbol: initial?.symbol || '',
+    code: initial?.code || '',
     exchange_rate: initial?.exchange_rate ?? 1,
-    is_default: initial?.is_default || false,
-    status: initial?.status || 'active',
   })
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
@@ -171,7 +171,7 @@ function CurrencyFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
         <DrawerFooter
           onCancel={() => onOpenChange(false)}
           submitLabel={initial ? 'Save Changes' : 'Add Currency'}
-          submitDisabled={!form.currency_code.trim()}
+          submitDisabled={!form.code.trim()}
           onSubmit={() => onSubmit(form)}
         />
       }
@@ -180,7 +180,7 @@ function CurrencyFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
         <FormSection columns={2}>
           <div className="space-y-1.5">
             <Label className="text-xs">Currency Code <span className="text-destructive">*</span></Label>
-            <Input value={form.currency_code} onChange={(e) => set('currency_code', e.target.value.toUpperCase())} placeholder="USD" required />
+            <Input value={form.code} onChange={(e) => set('code', e.target.value.toUpperCase())} placeholder="USD" required />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Symbol</Label>
@@ -195,21 +195,6 @@ function CurrencyFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
             <Input type="number" step="0.01" value={form.exchange_rate} onChange={(e) => set('exchange_rate', parseFloat(e.target.value) || 0)} />
           </div>
         </FormSection>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Default Currency</p>
-            <p className="text-xs text-muted-foreground">Use as the system default</p>
-          </div>
-          <input type="checkbox" checked={form.is_default} onChange={(e) => set('is_default', e.target.checked)} className="h-4 w-4" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Status</Label>
-          <select value={form.status} onChange={(e) => set('status', e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
         <button type="submit" className="hidden" />
       </form>
     </Drawer>

@@ -2,287 +2,120 @@
 // Certificate Service
 //
 // Service layer isolates all backend communication for the Certificate
-// module. Pages never call APIs directly — they call these methods,
-// which return the standard envelope: { success, message, data }.
+// module. Pages never call APIs directly — they call these methods.
 //
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
+// Backend routes (all mounted under /api/certificate):
+//   student-certificate     — CRUD for student certificate templates
+//   generate-certificate   — CRUD for generated certificates
+//   student-id-card        — CRUD for student ID card designs
+//   generate-id-card       — CRUD for generated student ID cards
+//   staff-id-card          — CRUD for staff ID card designs
+//   generate-staff-id-card — CRUD for generated staff ID cards
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  studentCertificates,
-  generatedCertificates,
-  studentIdCards,
-  generatedStudentIdCards,
-  staffIdCards,
-  generatedStaffIdCards,
-  certificateStats,
-} from '@/data/certificate.mock'
+import apiClient from './api'
 
 export const certificateService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
-
-  // Fetch Certificate Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /api/certificate/stats (derived)
-    // ====================================================================
-    return mockResponse(certificateStats)
-  },
-
   // ─── Student Certificates ────────────────────────────────────────────────────
-
-  // Fetch Student Certificates
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/student-certificate
   async getStudentCertificates() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/student-certificate
-    // ====================================================================
-    return mockResponse(studentCertificates)
+    return apiClient.get('/certificate/student-certificate')
   },
-
-  // Create Student Certificate
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/student-certificate
+  async getStudentCertificateById(id) {
+    return apiClient.get(`/certificate/student-certificate/${id}`)
+  },
   async createStudentCertificate(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/student-certificate
-    // ====================================================================
-    return mockResponse({ _id: `sc-${Date.now()}`, createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/student-certificate', payload)
   },
-
-  // Update Student Certificate
-  // TODO(BACKEND):
-  // Replace with PUT /api/certificate/student-certificate/:id
   async updateStudentCertificate(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/certificate/student-certificate/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/certificate/student-certificate/${id}`, payload)
   },
-
-  // Delete Student Certificate
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/student-certificate/:id
   async deleteStudentCertificate(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/student-certificate/:id
-    // ====================================================================
-    return mockResponse({ message: 'Student certificate deleted successfully' })
+    return apiClient.delete(`/certificate/student-certificate/${id}`)
   },
 
   // ─── Generated Certificates ──────────────────────────────────────────────────
-
-  // Fetch Generated Certificates
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/generate-certificate
   async getGeneratedCertificates() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/generate-certificate
-    // ====================================================================
-    return mockResponse(generatedCertificates)
+    return apiClient.get('/certificate/generate-certificate')
   },
-
-  // Create Generated Certificate
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/generate-certificate
+  async getGeneratedCertificateById(id) {
+    return apiClient.get(`/certificate/generate-certificate/${id}`)
+  },
   async createGeneratedCertificate(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/generate-certificate
-    // ====================================================================
-    return mockResponse({ _id: `gc-${Date.now()}`, status: 'generated', generated_at: new Date().toISOString(), createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/generate-certificate', payload)
   },
-
-  // Delete Generated Certificate
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/generate-certificate/:id
+  async updateGeneratedCertificate(id, payload) {
+    return apiClient.put(`/certificate/generate-certificate/${id}`, payload)
+  },
   async deleteGeneratedCertificate(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/generate-certificate/:id
-    // ====================================================================
-    return mockResponse({ message: 'Generated certificate deleted successfully' })
+    return apiClient.delete(`/certificate/generate-certificate/${id}`)
   },
 
-  // ─── Student ID Cards ──────────────────────────────────────────────────────────
-
-  // Fetch Student ID Cards
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/student-id-card
+  // ─── Student ID Card Designs ──────────────────────────────────────────────────
   async getStudentIdCards() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/student-id-card
-    // ====================================================================
-    return mockResponse(studentIdCards)
+    return apiClient.get('/certificate/student-id-card')
   },
-
-  // Create Student ID Card
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/student-id-card
+  async getStudentIdCardById(id) {
+    return apiClient.get(`/certificate/student-id-card/${id}`)
+  },
   async createStudentIdCard(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/student-id-card
-    // ====================================================================
-    return mockResponse({ _id: `sid-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/student-id-card', payload)
   },
-
-  // Update Student ID Card
-  // TODO(BACKEND):
-  // Replace with PUT /api/certificate/student-id-card/:id
   async updateStudentIdCard(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/certificate/student-id-card/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/certificate/student-id-card/${id}`, payload)
   },
-
-  // Delete Student ID Card
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/student-id-card/:id
   async deleteStudentIdCard(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/student-id-card/:id
-    // ====================================================================
-    return mockResponse({ message: 'Student ID card deleted successfully' })
+    return apiClient.delete(`/certificate/student-id-card/${id}`)
   },
 
   // ─── Generated Student ID Cards ──────────────────────────────────────────────
-
-  // Fetch Generated Student ID Cards
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/generate-id-card
   async getGeneratedStudentIdCards() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/generate-id-card
-    // ====================================================================
-    return mockResponse(generatedStudentIdCards)
+    return apiClient.get('/certificate/generate-id-card')
   },
-
-  // Create Generated Student ID Card
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/generate-id-card
+  async getGeneratedStudentIdCardById(id) {
+    return apiClient.get(`/certificate/generate-id-card/${id}`)
+  },
   async createGeneratedStudentIdCard(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/generate-id-card
-    // ====================================================================
-    return mockResponse({ _id: `gsid-${Date.now()}`, status: 'generated', generated_at: new Date().toISOString(), createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/generate-id-card', payload)
   },
-
-  // Delete Generated Student ID Card
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/generate-id-card/:id
+  async updateGeneratedStudentIdCard(id, payload) {
+    return apiClient.put(`/certificate/generate-id-card/${id}`, payload)
+  },
   async deleteGeneratedStudentIdCard(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/generate-id-card/:id
-    // ====================================================================
-    return mockResponse({ message: 'Generated student ID card deleted successfully' })
+    return apiClient.delete(`/certificate/generate-id-card/${id}`)
   },
 
-  // ─── Staff ID Cards ────────────────────────────────────────────────────────────
-
-  // Fetch Staff ID Cards
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/staff-id-card
+  // ─── Staff ID Card Designs ────────────────────────────────────────────────────
   async getStaffIdCards() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/staff-id-card
-    // ====================================================================
-    return mockResponse(staffIdCards)
+    return apiClient.get('/certificate/staff-id-card')
   },
-
-  // Create Staff ID Card
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/staff-id-card
+  async getStaffIdCardById(id) {
+    return apiClient.get(`/certificate/staff-id-card/${id}`)
+  },
   async createStaffIdCard(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/staff-id-card
-    // ====================================================================
-    return mockResponse({ _id: `stid-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/staff-id-card', payload)
   },
-
-  // Update Staff ID Card
-  // TODO(BACKEND):
-  // Replace with PUT /api/certificate/staff-id-card/:id
   async updateStaffIdCard(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /api/certificate/staff-id-card/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/certificate/staff-id-card/${id}`, payload)
   },
-
-  // Delete Staff ID Card
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/staff-id-card/:id
   async deleteStaffIdCard(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/staff-id-card/:id
-    // ====================================================================
-    return mockResponse({ message: 'Staff ID card deleted successfully' })
+    return apiClient.delete(`/certificate/staff-id-card/${id}`)
   },
 
   // ─── Generated Staff ID Cards ────────────────────────────────────────────────
-
-  // Fetch Generated Staff ID Cards
-  // TODO(BACKEND):
-  // Replace mock data with GET /api/certificate/generate-staff-id-card
   async getGeneratedStaffIdCards() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /api/certificate/generate-staff-id-card
-    // ====================================================================
-    return mockResponse(generatedStaffIdCards)
+    return apiClient.get('/certificate/generate-staff-id-card')
   },
-
-  // Create Generated Staff ID Card
-  // TODO(BACKEND):
-  // Replace with POST /api/certificate/generate-staff-id-card
+  async getGeneratedStaffIdCardById(id) {
+    return apiClient.get(`/certificate/generate-staff-id-card/${id}`)
+  },
   async createGeneratedStaffIdCard(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /api/certificate/generate-staff-id-card
-    // ====================================================================
-    return mockResponse({ _id: `gstid-${Date.now()}`, status: 'generated', generated_at: new Date().toISOString(), createdAt: new Date().toISOString(), ...payload })
+    return apiClient.post('/certificate/generate-staff-id-card', payload)
   },
-
-  // Delete Generated Staff ID Card
-  // TODO(BACKEND):
-  // Replace with DELETE /api/certificate/generate-staff-id-card/:id
+  async updateGeneratedStaffIdCard(id, payload) {
+    return apiClient.put(`/certificate/generate-staff-id-card/${id}`, payload)
+  },
   async deleteGeneratedStaffIdCard(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /api/certificate/generate-staff-id-card/:id
-    // ====================================================================
-    return mockResponse({ message: 'Generated staff ID card deleted successfully' })
+    return apiClient.delete(`/certificate/generate-staff-id-card/${id}`)
   },
 }
 

@@ -1,32 +1,28 @@
 // ====================================================================
-// AuthContext — Authentication State
+// AuthContext — Authentication + Tenant State
 //
 // Purpose:
-// Provides the authenticated user session to the entire app via React
-// Context so any component can read the current user/role without prop-drilling.
+// Provides the authenticated user session and tenant (school) info
+// to the entire app via React Context.
 //
 // State stored:
 //   - session: { token, user: { id, name, email, role } }
+//   - tenant: { school_name, logo, theme } from /api/settings
 //   - isLoading: true during login API call
 //
 // Consumed by:
 //   - ProtectedRoute / PublicRoute (route guards)
 //   - Navbar (user menu, role display)
-//   - Sidebar (role-based menu filtering)
-//   - Any page that needs the current user's role for conditional rendering
-//
-// INTEGRATION: swap the dev login/logout for real JWT calls in auth.service.js.
-// The backend returns { id, name, email, role, token }; we store that as the session.
+//   - Sidebar (tenant logo + name display, role-based menu filtering)
 // ====================================================================
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { authService } from '@/services/auth.service'
+import { settingsService } from '@/services/settings.service'
 import { STORAGE_KEYS } from '@/constants/navigation'
 
-// Single context instance — created once at module scope so consumers share the same provider.
 const AuthContext = createContext(null)
 
-// Reads the persisted session from localStorage on initial mount so a page refresh keeps the user logged in.
 function readStoredSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.AUTH)
@@ -36,13 +32,20 @@ function readStoredSession() {
   }
 }
 
+function readStoredTenant() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.TENANT)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }) {
-  // The session object (token + user) or null when logged out.
   const [session, setSession] = useState(() => readStoredSession())
-  // True only while the login request is in-flight; used to disable the submit button.
+  const [tenant, setTenant] = useState(() => readStoredTenant())
   const [isLoading, setIsLoading] = useState(false)
 
-  // Persist the session to localStorage on every change so refreshes don't lose auth state.
   useEffect(() => {
     if (session) {
       localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(session))
@@ -51,14 +54,34 @@ export function AuthProvider({ children }) {
     }
   }, [session])
 
-  // Calls authService.login, normalizes the response into { token, user }, and stores it.
+  useEffect(() => {
+    if (tenant) {
+      localStorage.setItem(STORAGE_KEYS.TENANT, JSON.stringify(tenant))
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TENANT)
+    }
+  }, [tenant])
+
+  // Fetch tenant settings (school_name, logo) after login.
+  const fetchTenant = useCallback(async (token) => {
+    try {
+      const settings = await settingsService.getGeneralSettings()
+      if (settings) {
+        setTenant({
+          school_name: settings.school_name || '',
+          logo: settings.logo || '',
+          theme: settings.theme || '',
+        })
+      }
+    } catch {
+      // Settings may not be configured yet — tenant stays empty.
+    }
+  }, [])
+
   const login = useCallback(async ({ email, password }) => {
     setIsLoading(true)
     try {
-      const res = await authService.login({ email, password })
-      // Unwrap the { success, data, message } envelope returned by services.
-      const data = res?.data !== undefined ? res.data : res
-      // Backend returns { id, name, email, role, token }.
+      const data = await authService.login({ email, password })
       const user = {
         id: data.id,
         name: data.name,
@@ -66,35 +89,39 @@ export function AuthProvider({ children }) {
         role: data.role,
       }
       setSession({ token: data.token, user })
+      await fetchTenant(data.token)
       return { token: data.token, user }
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [fetchTenant])
 
-  // Clears the session and notifies the backend to invalidate the token.
   const logout = useCallback(async () => {
-    await authService.logout()
+    try {
+      await authService.logout()
+    } catch {
+      // Ignore — clear local state regardless.
+    }
     setSession(null)
+    setTenant(null)
   }, [])
 
-  // Memoized value so consumers only re-render when session/loading actually change.
   const value = useMemo(
     () => ({
       user: session?.user ?? null,
       token: session?.token ?? null,
       isAuthenticated: Boolean(session),
       isLoading,
+      tenant,
       login,
       logout,
     }),
-    [session, isLoading, login, logout],
+    [session, tenant, isLoading, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// Convenience hook — throws if used outside AuthProvider to catch wiring mistakes early.
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
