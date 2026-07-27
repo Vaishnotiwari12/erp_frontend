@@ -26,7 +26,7 @@
 // - Top-level items with `path` are direct links (no expand/collapse).
 // - Top-level items with `children` become collapsible dropdowns.
 
-import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog, Bus, Route as RouteIcon, MapPin, UserPlus, DollarSign, ChartBar as FileBarChart, BedDouble, Building2 as BuildingIcon, DoorOpen as DoorOpenIcon, GraduationCap as GraduationCapIcon, CalendarDays as CalendarDaysIcon, Download as DownloadIcon, Video as VideoIcon, TrendingUp, TrendingDown, ClipboardList as ClipboardListIcon, Package, MonitorPlay } from 'lucide-react'
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, SquareUser as UserSquare, BookOpen, Layers, Library, CalendarClock, CalendarCheck, ClipboardCheck, CalendarDays, FileText, CalendarRange, Award, IdCard, Printer, FileBadge, ScrollText, ChartBar as BarChart3, IndianRupee, School, Building2, Globe, ShieldCheck, Crown, Settings, Briefcase, UsersRound, Star, Wallet, CalendarX, CalendarPlus, Tags, Ban, ConciergeBell, DoorOpen, PhoneCall, Send, Inbox, MessageSquare, Library as LibraryIcon, BookPlus, ArrowLeftRight, UserCog, Bus, Route as RouteIcon, MapPin, UserPlus, DollarSign, ChartBar as FileBarChart, BedDouble, Building2 as BuildingIcon, DoorOpen as DoorOpenIcon, GraduationCap as GraduationCapIcon, CalendarDays as CalendarDaysIcon, Download as DownloadIcon, Video as VideoIcon, TrendingUp, TrendingDown, ClipboardList as ClipboardListIcon, Package, MonitorPlay, LayoutTemplate, Image as ImageIcon, Newspaper, CalendarDays as EventIcon, Images, FolderOpen, FileText as PageIcon, Menu as MenuIcon, Bell, MessageSquare as SmsIcon, CreditCard, Languages, Shield as CaptchaIcon, Boxes, Globe as FrontCmsIcon, Boxes as CustomFieldIcon, FileCog, FileType } from 'lucide-react'
 
 export const sidebarItems = [
   {
@@ -266,6 +266,58 @@ export const sidebarItems = [
       { title: 'Student Attempts', path: '/online-exam/attempts' },
       { title: 'Results', path: '/online-exam/results' },
       { title: 'Reports', path: '/online-exam/reports' },
+    ],
+  },
+  {
+    id: 'certificate',
+    title: 'Certificate',
+    icon: Award,
+    children: [
+      { title: 'Dashboard', path: '/certificate' },
+      { title: 'Student Certificate', path: '/certificate/student' },
+      { title: 'Generate Certificate', path: '/certificate/generate' },
+      { title: 'Student ID Card', path: '/certificate/student-id-card' },
+      { title: 'Generate Student ID', path: '/certificate/generate-id-card' },
+      { title: 'Staff ID Card', path: '/certificate/staff-id-card' },
+      { title: 'Generate Staff ID', path: '/certificate/generate-staff-id-card' },
+    ],
+  },
+  {
+    id: 'front-cms',
+    title: 'Front CMS',
+    icon: LayoutTemplate,
+    children: [
+      { title: 'Dashboard', path: '/front-cms' },
+      { title: 'Banners', path: '/front-cms/banners' },
+      { title: 'News', path: '/front-cms/news' },
+      { title: 'Events', path: '/front-cms/events' },
+      { title: 'Gallery', path: '/front-cms/gallery' },
+      { title: 'Media Manager', path: '/front-cms/media' },
+      { title: 'Pages', path: '/front-cms/pages' },
+      { title: 'Menus', path: '/front-cms/menus' },
+    ],
+  },
+  {
+    id: 'settings-module',
+    title: 'Settings',
+    icon: Settings,
+    children: [
+      { title: 'Dashboard', path: '/settings/dashboard' },
+      { title: 'General', path: '/settings/general' },
+      { title: 'Session', path: '/settings/session' },
+      { title: 'Roles & Permissions', path: '/settings/roles' },
+      { title: 'Users', path: '/settings/users' },
+      { title: 'Notifications', path: '/settings/notifications' },
+      { title: 'SMS', path: '/settings/sms' },
+      { title: 'Payment', path: '/settings/payment' },
+      { title: 'Currency', path: '/settings/currency' },
+      { title: 'Language', path: '/settings/language' },
+      { title: 'Captcha', path: '/settings/captcha' },
+      { title: 'Modules', path: '/settings/modules' },
+      { title: 'Front CMS', path: '/settings/front-cms' },
+      { title: 'Custom Fields', path: '/settings/custom-fields' },
+      { title: 'System Fields', path: '/settings/system-fields' },
+      { title: 'File Types', path: '/settings/file-types' },
     ],
   },
   {

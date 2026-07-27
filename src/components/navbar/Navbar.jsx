@@ -4,6 +4,7 @@ import {
   Bell,
   ChevronsLeft,
   Command,
+  CornerDownLeft,
   LogOut,
   Menu,
   Moon,
@@ -30,7 +31,22 @@ import {
 import { useTheme } from '@/context/ThemeContext'
 import { useAuth } from '@/context/AuthContext'
 import Sidebar from '@/components/sidebar/Sidebar'
+import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 import { cn } from '@/lib/utils'
+
+// Highlights the matching portion of text within a result label.
+function HighlightMatch({ text, query }) {
+  if (!query) return <>{text}</>
+  const idx = text.toLowerCase().indexOf(query.toLowerCase())
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="rounded bg-primary/20 px-0.5 font-semibold text-primary">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
+  )
+}
 
 const NOTIFICATIONS = [
   { id: 1, title: 'New admission request', meta: 'Oakridge International', time: '2m ago' },
@@ -45,6 +61,10 @@ export function Navbar({ collapsed, onToggleCollapse, onOpenMobile }) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const {
+    query, results, activeIndex, isOpen, inputRef,
+    handleQueryChange, handleKeyDown, selectResult, open, close, setActiveIndex,
+  } = useGlobalSearch()
 
   const cycleTheme = () => {
     const order = ['light', 'dark', 'system']
@@ -77,22 +97,71 @@ export function Navbar({ collapsed, onToggleCollapse, onOpenMobile }) {
         <ChevronsLeft className={cn('h-5 w-5 transition-transform duration-300', collapsed && 'rotate-180')} />
       </Button>
 
-      {/* Global search + command palette trigger */}
+      {/* Global search with live suggestions and keyboard navigation */}
       <div className="relative hidden flex-1 max-w-lg sm:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search students, classes, exams…"
+          ref={inputRef}
+          value={query}
+          onChange={(e) => handleQueryChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={open}
+          placeholder="Search pages, modules, settings…"
           className="h-9 pl-10 pr-16 text-sm"
-          onFocus={(e) => e.target.blur()}
         />
         <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground md:inline-flex">
           <Command className="h-3 w-3" />K
         </kbd>
+
+        {/* Live search suggestions dropdown */}
+        {isOpen && query && (
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+            {results.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                No matching pages found
+              </div>
+            ) : (
+              <ul className="max-h-80 overflow-y-auto p-1.5">
+                {results.map((item, idx) => (
+                  <li key={item.path}>
+                    <button
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => selectResult(item)}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        idx === activeIndex
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-foreground hover:bg-accent',
+                      )}
+                    >
+                      <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <div className="flex flex-1 flex-col">
+                        <span className="font-medium">
+                          <HighlightMatch text={item.title} query={query} />
+                        </span>
+                        <span className="text-xs text-muted-foreground">{item.section}</span>
+                      </div>
+                      {idx === activeIndex && (
+                        <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* Backdrop to close search when clicking outside */}
+      {isOpen && query && (
+        <div className="fixed inset-0 z-40" onClick={close} />
+      )}
+
       <div className="ml-auto flex items-center gap-1.5">
-        {/* Command palette placeholder (mobile) */}
-        <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Search">
+        {/* Mobile search trigger */}
+        <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Search" onClick={open}>
           <Search className="h-5 w-5" />
         </Button>
 

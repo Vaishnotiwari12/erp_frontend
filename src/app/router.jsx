@@ -175,6 +175,43 @@ const StudentAttemptsPage = lazy(() => import('@/pages/online-exam/StudentAttemp
 const ExamResultsOnlinePage = lazy(() => import('@/pages/online-exam/ResultsPage'))
 const ExamReportsPage = lazy(() => import('@/pages/online-exam/ReportsPage'))
 
+// Certificate module — lazy-loaded so the bundle only downloads when a user visits Certificate pages
+const CertificateDashboardPage = lazy(() => import('@/pages/certificate/CertificateDashboardPage'))
+const StudentCertificatePage = lazy(() => import('@/pages/certificate/StudentCertificatePage'))
+const GenerateCertificatePage = lazy(() => import('@/pages/certificate/GenerateCertificatePage'))
+const StudentIdCardPage = lazy(() => import('@/pages/certificate/StudentIdCardPage'))
+const GenerateStudentIdCardPage = lazy(() => import('@/pages/certificate/GenerateStudentIdCardPage'))
+const StaffIdCardPage = lazy(() => import('@/pages/certificate/StaffIdCardPage'))
+const GenerateStaffIdCardPage = lazy(() => import('@/pages/certificate/GenerateStaffIdCardPage'))
+
+// Front CMS module — lazy-loaded so the bundle only downloads when a user visits Front CMS pages
+const FrontCmsDashboardPage = lazy(() => import('@/pages/front-cms/FrontCmsDashboardPage'))
+const BannerPage = lazy(() => import('@/pages/front-cms/BannerPage'))
+const NewsPage = lazy(() => import('@/pages/front-cms/NewsPage'))
+const EventPage = lazy(() => import('@/pages/front-cms/EventPage'))
+const GalleryPage = lazy(() => import('@/pages/front-cms/GalleryPage'))
+const MediaManagerPage = lazy(() => import('@/pages/front-cms/MediaManagerPage'))
+const PagePage = lazy(() => import('@/pages/front-cms/PagePage'))
+const MenuPage = lazy(() => import('@/pages/front-cms/MenuPage'))
+
+// Settings module — lazy-loaded so the bundle only downloads when a user visits Settings pages
+const SettingsDashboardPage = lazy(() => import('@/pages/settings/SettingsDashboardPage'))
+const GeneralSettingsPage = lazy(() => import('@/pages/settings/GeneralSettingsPage'))
+const SessionSettingsPage = lazy(() => import('@/pages/settings/SessionSettingsPage'))
+const RolePermissionPage = lazy(() => import('@/pages/settings/RolePermissionPage'))
+const UsersSettingsPage = lazy(() => import('@/pages/settings/UsersSettingsPage'))
+const NotificationSettingsPage = lazy(() => import('@/pages/settings/NotificationSettingsPage'))
+const SmsSettingsPage = lazy(() => import('@/pages/settings/SmsSettingsPage'))
+const PaymentSettingsPage = lazy(() => import('@/pages/settings/PaymentSettingsPage'))
+const CurrencySettingsPage = lazy(() => import('@/pages/settings/CurrencySettingsPage'))
+const LanguageSettingsPage = lazy(() => import('@/pages/settings/LanguageSettingsPage'))
+const CaptchaSettingsPage = lazy(() => import('@/pages/settings/CaptchaSettingsPage'))
+const ModulesPage = lazy(() => import('@/pages/settings/ModulesPage'))
+const FrontCmsSettingsPage = lazy(() => import('@/pages/settings/FrontCmsSettingsPage'))
+const CustomFieldPage = lazy(() => import('@/pages/settings/CustomFieldPage'))
+const SystemFieldPage = lazy(() => import('@/pages/settings/SystemFieldPage'))
+const FileTypePage = lazy(() => import('@/pages/settings/FileTypePage'))
+
 const NotFoundPage = lazy(() => import('@/pages/errors/NotFoundPage'))
 const ForbiddenPage = lazy(() => import('@/pages/errors/ForbiddenPage'))
 
@@ -347,6 +384,43 @@ export default function AppRouter() {
             <Route path="/online-exam/attempts" element={<StudentAttemptsPage />} />
             <Route path="/online-exam/results" element={<ExamResultsOnlinePage />} />
             <Route path="/online-exam/reports" element={<ExamReportsPage />} />
+
+            {/* ── Certificate ── */}
+            <Route path="/certificate" element={<CertificateDashboardPage />} />
+            <Route path="/certificate/student" element={<StudentCertificatePage />} />
+            <Route path="/certificate/generate" element={<GenerateCertificatePage />} />
+            <Route path="/certificate/student-id-card" element={<StudentIdCardPage />} />
+            <Route path="/certificate/generate-id-card" element={<GenerateStudentIdCardPage />} />
+            <Route path="/certificate/staff-id-card" element={<StaffIdCardPage />} />
+            <Route path="/certificate/generate-staff-id-card" element={<GenerateStaffIdCardPage />} />
+
+            {/* ── Front CMS ── */}
+            <Route path="/front-cms" element={<FrontCmsDashboardPage />} />
+            <Route path="/front-cms/banners" element={<BannerPage />} />
+            <Route path="/front-cms/news" element={<NewsPage />} />
+            <Route path="/front-cms/events" element={<EventPage />} />
+            <Route path="/front-cms/gallery" element={<GalleryPage />} />
+            <Route path="/front-cms/media" element={<MediaManagerPage />} />
+            <Route path="/front-cms/pages" element={<PagePage />} />
+            <Route path="/front-cms/menus" element={<MenuPage />} />
+
+            {/* ── Settings ── */}
+            <Route path="/settings/dashboard" element={<SettingsDashboardPage />} />
+            <Route path="/settings/general" element={<GeneralSettingsPage />} />
+            <Route path="/settings/session" element={<SessionSettingsPage />} />
+            <Route path="/settings/roles" element={<RolePermissionPage />} />
+            <Route path="/settings/users" element={<UsersSettingsPage />} />
+            <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+            <Route path="/settings/sms" element={<SmsSettingsPage />} />
+            <Route path="/settings/payment" element={<PaymentSettingsPage />} />
+            <Route path="/settings/currency" element={<CurrencySettingsPage />} />
+            <Route path="/settings/language" element={<LanguageSettingsPage />} />
+            <Route path="/settings/captcha" element={<CaptchaSettingsPage />} />
+            <Route path="/settings/modules" element={<ModulesPage />} />
+            <Route path="/settings/front-cms" element={<FrontCmsSettingsPage />} />
+            <Route path="/settings/custom-fields" element={<CustomFieldPage />} />
+            <Route path="/settings/system-fields" element={<SystemFieldPage />} />
+            <Route path="/settings/file-types" element={<FileTypePage />} />
           </Route>
 
           {/* Errors */}
