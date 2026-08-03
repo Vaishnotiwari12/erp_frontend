@@ -1,217 +1,109 @@
-// ====================================================================
-// Download Center Service
-//
-// Service layer isolates all backend communication for the Download Center module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
-//
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  contentTypes,
-  uploadShareContents,
-  contentShareLists,
-  videoTutorials,
-  downloadCenterStats,
-} from '@/data/downloadCenter.mock'
+import apiClient from "./api";
 
 export const downloadCenterService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  // ==========================================================
+  // Content Types
+  // ==========================================================
 
-  // Fetch Download Center Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /download-center/stats
-    // ====================================================================
-    return mockResponse(downloadCenterStats)
+  getContentTypes(params = {}) {
+    return apiClient.get("/download-center/content-type", {
+      params,
+    });
   },
 
-  // ─── Content Types ───────────────────────────────────────────────────────────
-
-  // Fetch Content Types
-  // TODO(BACKEND):
-  // Replace mock data with GET /download-center/content-types
-  async getContentTypes() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /download-center/content-types
-    // ====================================================================
-    return mockResponse(contentTypes)
+  getContentType(id) {
+    return apiClient.get(`/download-center/content-type/${id}`);
   },
 
-  // Create Content Type
-  // TODO(BACKEND):
-  // Replace with POST /download-center/content-types
-  async createContentType(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /download-center/content-types
-    // ====================================================================
-    return mockResponse({ _id: `ct-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  createContentType(payload) {
+    return apiClient.post("/download-center/content-type", payload);
   },
 
-  // Update Content Type
-  // TODO(BACKEND):
-  // Replace with PUT /download-center/content-types/:id
-  async updateContentType(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /download-center/content-types/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  updateContentType(id, payload) {
+    return apiClient.put(`/download-center/content-type/${id}`, payload);
   },
 
-  // Delete Content Type
-  // TODO(BACKEND):
-  // Replace with DELETE /download-center/content-types/:id
-  async deleteContentType(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /download-center/content-types/:id
-    // ====================================================================
-    return mockResponse({ message: 'Content type deleted successfully' })
+  deleteContentType(id) {
+    return apiClient.delete(`/download-center/content-type/${id}`);
   },
 
-  // ─── Upload / Share Content ───────────────────────────────────────────────────
+  // ==========================================================
+  // Upload / Share Content
+  // ==========================================================
 
-  // Fetch Upload Share Contents
-  // TODO(BACKEND):
-  // Replace mock data with GET /download-center/contents
-  async getContents() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /download-center/contents
-    // ====================================================================
-    return mockResponse(uploadShareContents)
+  getContents(params = {}) {
+    return apiClient.get("/download-center/upload-content", {
+      params,
+    });
   },
 
-  // Create Upload Share Content
-  // TODO(BACKEND):
-  // Replace with POST /download-center/contents
-  async createContent(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /download-center/contents
-    // ====================================================================
-    return mockResponse({ _id: `usc-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  getContent(id) {
+    return apiClient.get(`/download-center/upload-content/${id}`);
   },
 
-  // Update Upload Share Content
-  // TODO(BACKEND):
-  // Replace with PUT /download-center/contents/:id
-  async updateContent(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /download-center/contents/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  createContent(payload) {
+    return apiClient.post("/download-center/upload-content", payload);
   },
 
-  // Delete Upload Share Content
-  // TODO(BACKEND):
-  // Replace with DELETE /download-center/contents/:id
-  async deleteContent(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /download-center/contents/:id
-    // ====================================================================
-    return mockResponse({ message: 'Content deleted successfully' })
+  updateContent(id, payload) {
+    return apiClient.put(`/download-center/upload-content/${id}`, payload);
   },
 
-  // ─── Content Share Lists ──────────────────────────────────────────────────────
-
-  // Fetch Content Share Lists
-  // TODO(BACKEND):
-  // Replace mock data with GET /download-center/share-lists
-  async getShareLists() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /download-center/share-lists
-    // ====================================================================
-    return mockResponse(contentShareLists)
+  deleteContent(id) {
+    return apiClient.delete(`/download-center/upload-content/${id}`);
   },
 
-  // Create Content Share List
-  // TODO(BACKEND):
-  // Replace with POST /download-center/share-lists
-  async createShareList(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /download-center/share-lists
-    // ====================================================================
-    return mockResponse({ _id: `csl-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  // ==========================================================
+  // Content Share
+  // ==========================================================
+
+  getShareLists(params = {}) {
+    return apiClient.get("/download-center/content-share", {
+      params,
+    });
   },
 
-  // Delete Content Share List
-  // TODO(BACKEND):
-  // Replace with DELETE /download-center/share-lists/:id
-  async deleteShareList(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /download-center/share-lists/:id
-    // ====================================================================
-    return mockResponse({ message: 'Share list deleted successfully' })
+  getShareList(id) {
+    return apiClient.get(`/download-center/content-share/${id}`);
   },
 
-  // ─── Video Tutorials ──────────────────────────────────────────────────────────
-
-  // Fetch Video Tutorials
-  // TODO(BACKEND):
-  // Replace mock data with GET /download-center/video-tutorials
-  async getVideoTutorials() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /download-center/video-tutorials
-    // ====================================================================
-    return mockResponse(videoTutorials)
+  createShareList(payload) {
+    return apiClient.post("/download-center/content-share", payload);
   },
 
-  // Create Video Tutorial
-  // TODO(BACKEND):
-  // Replace with POST /download-center/video-tutorials
-  async createVideoTutorial(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /download-center/video-tutorials
-    // ====================================================================
-    return mockResponse({ _id: `vt-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  updateShareList(id, payload) {
+    return apiClient.put(`/download-center/content-share/${id}`, payload);
   },
 
-  // Update Video Tutorial
-  // TODO(BACKEND):
-  // Replace with PUT /download-center/video-tutorials/:id
-  async updateVideoTutorial(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /download-center/video-tutorials/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  deleteShareList(id) {
+    return apiClient.delete(`/download-center/content-share/${id}`);
   },
 
-  // Delete Video Tutorial
-  // TODO(BACKEND):
-  // Replace with DELETE /download-center/video-tutorials/:id
-  async deleteVideoTutorial(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /download-center/video-tutorials/:id
-    // ====================================================================
-    return mockResponse({ message: 'Video tutorial deleted successfully' })
-  },
-}
+  // ==========================================================
+  // Video Tutorials
+  // ==========================================================
 
-export default downloadCenterService
+  getVideoTutorials(params = {}) {
+    return apiClient.get("/download-center/video-tutorial", {
+      params,
+    });
+  },
+
+  getVideoTutorial(id) {
+    return apiClient.get(`/download-center/video-tutorial/${id}`);
+  },
+
+  createVideoTutorial(payload) {
+    return apiClient.post("/download-center/video-tutorial", payload);
+  },
+
+  updateVideoTutorial(id, payload) {
+    return apiClient.put(`/download-center/video-tutorial/${id}`, payload);
+  },
+
+  deleteVideoTutorial(id) {
+    return apiClient.delete(`/download-center/video-tutorial/${id}`);
+  },
+};
+
+export default downloadCenterService;

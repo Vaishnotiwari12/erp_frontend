@@ -1,261 +1,187 @@
-// ====================================================================
-// Service Layer
-//
-// Purpose:
-// Handles all backend communication for this module.
-//
-// Current State:
-// Uses mock data.
-//
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  admissionEnquiries,
-  visitors,
-  phoneCallLogs,
-  postalDispatches,
-  postalReceives,
-  complaints,
-  frontOfficeSetup,
-  frontOfficeStats,
-} from '@/data/frontOffice.mock'
+import apiClient from "./api";
 
 export const frontOfficeService = {
-  // ─── Admission Enquiries ────────────────────────────────────────────────────
+  // ==========================================================
+  // Admission Enquiry
+  // ==========================================================
 
-  // TODO(BACKEND)
-  // Replace with GET /front-office/enquiries
-  async getEnquiries() {
-    return mockResponse(admissionEnquiries)
+  getEnquiries(params = {}) {
+    return apiClient.get("/front-office/admission-enquiry", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/enquiries
-  async createEnquiry(payload) {
-    return mockResponse({
-      _id: `enq-${Date.now()}`,
-      status: 'pending',
-      enquiry_date: new Date().toISOString(),
-      follow_ups: [],
-      ...payload,
-    })
+  getEnquiry(id) {
+    return apiClient.get(`/front-office/admission-enquiry/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/enquiries/:id
-  async updateEnquiry(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  createEnquiry(payload) {
+    return apiClient.post("/front-office/admission-enquiry", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/enquiries/:id
-  async deleteEnquiry(id) {
-    return mockResponse({ message: 'Enquiry deleted successfully' })
+  updateEnquiry(id, payload) {
+    return apiClient.put(`/front-office/admission-enquiry/${id}`, payload);
   },
 
-  // Add a follow-up note to an existing enquiry — used by the timeline.
-  // TODO(BACKEND)
-  // Replace with POST /front-office/enquiries/:id/follow-ups
-  async addEnquiryFollowUp(id, payload) {
-    return mockResponse({ _id: `fu-${Date.now()}`, ...payload })
+  deleteEnquiry(id) {
+    return apiClient.delete(`/front-office/admission-enquiry/${id}`);
   },
 
-  // ─── Visitor Book ───────────────────────────────────────────────────────────
+  // ==========================================================
+  // Visitor
+  // ==========================================================
 
-  // TODO(BACKEND)
-  // Replace with GET /front-office/visitors
-  async getVisitors() {
-    return mockResponse(visitors)
+  getVisitors(params = {}) {
+    return apiClient.get("/front-office/visitor", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/visitors
-  async createVisitor(payload) {
-    return mockResponse({
-      _id: `vis-${Date.now()}`,
-      status: 'checked-in',
-      check_out: null,
-      ...payload,
-    })
+  getVisitor(id) {
+    return apiClient.get(`/front-office/visitor/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/visitors/:id
-  async updateVisitor(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  createVisitor(payload) {
+    return apiClient.post("/front-office/visitor", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/visitors/:id
-  async deleteVisitor(id) {
-    return mockResponse({ message: 'Visitor record deleted' })
+  updateVisitor(id, payload) {
+    return apiClient.put(`/front-office/visitor/${id}`, payload);
   },
 
-  // Check-out a visitor — flips status from checked-in to checked-out.
-  // TODO(BACKEND)
-  // Replace with PATCH /front-office/visitors/:id/checkout
-  async checkOutVisitor(id) {
-    return mockResponse({ _id: id, status: 'checked-out', check_out: new Date().toISOString() })
+  deleteVisitor(id) {
+    return apiClient.delete(`/front-office/visitor/${id}`);
   },
 
-  // ─── Phone Call Log ─────────────────────────────────────────────────────────
+  // ==========================================================
+  // Phone Call Log
+  // ==========================================================
 
-  // TODO(BACKEND)
-  // Replace with GET /front-office/call-logs
-  async getCallLogs() {
-    return mockResponse(phoneCallLogs)
+  getCallLogs(params = {}) {
+    return apiClient.get("/front-office/phone-call-log", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/call-logs
-  async createCallLog(payload) {
-    return mockResponse({ _id: `pcl-${Date.now()}`, status: 'pending', ...payload })
+  getCallLog(id) {
+    return apiClient.get(`/front-office/phone-call-log/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/call-logs/:id
-  async updateCallLog(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  createCallLog(payload) {
+    return apiClient.post("/front-office/phone-call-log", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/call-logs/:id
-  async deleteCallLog(id) {
-    return mockResponse({ message: 'Call log deleted' })
+  updateCallLog(id, payload) {
+    return apiClient.put(`/front-office/phone-call-log/${id}`, payload);
   },
 
-  // ─── Postal Dispatch ────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /front-office/dispatches
-  async getDispatches() {
-    return mockResponse(postalDispatches)
+  deleteCallLog(id) {
+    return apiClient.delete(`/front-office/phone-call-log/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/dispatches
-  async createDispatch(payload) {
-    return mockResponse({ _id: `pdc-${Date.now()}`, ...payload })
+  // ==========================================================
+  // Postal Dispatch
+  // ==========================================================
+
+  getDispatches(params = {}) {
+    return apiClient.get("/front-office/postal-dispatch", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/dispatches/:id
-  async updateDispatch(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  getDispatch(id) {
+    return apiClient.get(`/front-office/postal-dispatch/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/dispatches/:id
-  async deleteDispatch(id) {
-    return mockResponse({ message: 'Dispatch record deleted' })
+  createDispatch(payload) {
+    return apiClient.post("/front-office/postal-dispatch", payload);
   },
 
-  // ─── Postal Receive ─────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /front-office/receives
-  async getReceives() {
-    return mockResponse(postalReceives)
+  updateDispatch(id, payload) {
+    return apiClient.put(`/front-office/postal-dispatch/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/receives
-  async createReceive(payload) {
-    return mockResponse({ _id: `prc-${Date.now()}`, ...payload })
+  deleteDispatch(id) {
+    return apiClient.delete(`/front-office/postal-dispatch/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/receives/:id
-  async updateReceive(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  // ==========================================================
+  // Postal Receive
+  // ==========================================================
+
+  getReceives(params = {}) {
+    return apiClient.get("/front-office/postal-receive", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/receives/:id
-  async deleteReceive(id) {
-    return mockResponse({ message: 'Receive record deleted' })
+  getReceive(id) {
+    return apiClient.get(`/front-office/postal-receive/${id}`);
   },
 
-  // ─── Complaints ───────────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /front-office/complaints
-  async getComplaints() {
-    return mockResponse(complaints)
+  createReceive(payload) {
+    return apiClient.post("/front-office/postal-receive", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/complaints
-  async createComplaint(payload) {
-    return mockResponse({
-      _id: `cmp-${Date.now()}`,
-      status: 'open',
-      created_date: new Date().toISOString(),
-      resolved_date: null,
-      follow_ups: [],
-      ...payload,
-    })
+  updateReceive(id, payload) {
+    return apiClient.put(`/front-office/postal-receive/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/complaints/:id
-  async updateComplaint(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  deleteReceive(id) {
+    return apiClient.delete(`/front-office/postal-receive/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/complaints/:id
-  async deleteComplaint(id) {
-    return mockResponse({ message: 'Complaint deleted' })
+  // ==========================================================
+  // Complaints
+  // ==========================================================
+
+  getComplaints(params = {}) {
+    return apiClient.get("/front-office/complaint", {
+      params,
+    });
   },
 
-  // Add a follow-up / progress note to a complaint — powers the timeline.
-  // TODO(BACKEND)
-  // Replace with POST /front-office/complaints/:id/follow-ups
-  async addComplaintFollowUp(id, payload) {
-    return mockResponse({ _id: `fu-${Date.now()}`, ...payload })
+  getComplaint(id) {
+    return apiClient.get(`/front-office/complaint/${id}`);
   },
 
-  // ─── Front Office Setup ─────────────────────────────────────────────────────
-  // Setup items are grouped by category. Each category is a small CRUD list.
-
-  // TODO(BACKEND)
-  // Replace with GET /front-office/setup
-  async getSetup() {
-    return mockResponse(frontOfficeSetup)
+  createComplaint(payload) {
+    return apiClient.post("/front-office/complaint", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /front-office/setup/:category
-  async createSetupItem(category, payload) {
-    return mockResponse({ _id: `${category}-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  updateComplaint(id, payload) {
+    return apiClient.put(`/front-office/complaint/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /front-office/setup/:category/:id
-  async updateSetupItem(category, id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  deleteComplaint(id) {
+    return apiClient.delete(`/front-office/complaint/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /front-office/setup/:category/:id
-  async deleteSetupItem(category, id) {
-    return mockResponse({ message: 'Setup item deleted' })
+  // ==========================================================
+  // Front Office Setup
+  // ==========================================================
+
+  getSetup(params = {}) {
+    return apiClient.get("/front-office/setup", {
+      params,
+    });
   },
 
-  // ─── Dashboard Stats ─────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /front-office/stats
-  async getStats() {
-    return mockResponse(frontOfficeStats)
+  getSetupItem(id) {
+    return apiClient.get(`/front-office/setup/${id}`);
   },
-}
 
-export default frontOfficeService
+  createSetupItem(payload) {
+    return apiClient.post("/front-office/setup", payload);
+  },
+
+  updateSetupItem(id, payload) {
+    return apiClient.put(`/front-office/setup/${id}`, payload);
+  },
+
+  deleteSetupItem(id) {
+    return apiClient.delete(`/front-office/setup/${id}`);
+  },
+};
+
+export default frontOfficeService;

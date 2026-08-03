@@ -26,9 +26,9 @@ import { StatCard } from '@/components/StatCard'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { academicsService } from '@/services/academics.service'
-import {
-  teachers, TIME_SLOTS, WEEK_DAYS, SUBJECT_COLORS, getTeacherTimetable,
-} from '@/services/mockData'
+// import {
+//   teachers, TIME_SLOTS, WEEK_DAYS, SUBJECT_COLORS, getTeacherTimetable,
+// } from '@/services/mockData'
 import { initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 

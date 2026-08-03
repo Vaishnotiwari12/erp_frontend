@@ -1,85 +1,189 @@
 // ====================================================================
-// Service Layer
+// Student Service
 //
-// Purpose:
-// Handles all backend communication for this module.
+// Backend Integrated
 //
-// Current State:
-// Uses mock data.
-//
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
+// All Student Information APIs are centralized here.
+// Components should never call Axios directly.
 // ====================================================================
 
 import apiClient from './api'
-import { mockResponse } from './mockData'
-import { students as mockStudents, admissions as mockAdmissions, studentCategories, studentHouses } from '@/data/students.mock'
 
 export const studentService = {
-  // TODO(BACKEND)
-  // Replace with GET /student/details
+  // ==========================================================
+  // Student Details
+  // ==========================================================
+
   async list(params = {}) {
-    return mockResponse(mockStudents)
+    return apiClient.get('/student/details', {
+      params,
+    })
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /student/details/:id
   async get(id) {
-    const found = mockStudents.find((s) => s._id === id)
-    return found
-      ? mockResponse(found)
-      : Promise.reject({ message: 'Student not found' })
+    return apiClient.get(`/student/details/${id}`)
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /student/details
   async create(payload) {
-    return mockResponse({ _id: `stu-${Date.now()}`, ...payload, status: 'active' })
+    return apiClient.post('/student/details', payload)
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /student/details/:id
   async update(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+    return apiClient.put(`/student/details/${id}`, payload)
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /student/details/:id
   async remove(id) {
-    return mockResponse({ message: 'Student deleted successfully' })
+    return apiClient.delete(`/student/details/${id}`)
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /student/bulk-delete
+  // ==========================================================
+  // Bulk Delete
+  // ==========================================================
+
   async bulkDelete(ids) {
-    return mockResponse({ message: `${ids.length} students deleted` })
+    return apiClient.post('/student/bulk-delete/students', {
+      ids,
+    })
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /student/disabled
+  // ==========================================================
+  // Disabled Students
+  // ==========================================================
+
   async disabled(params = {}) {
-    return mockResponse(mockStudents.filter((s) => s.status === 'disabled' || s.status === 'inactive'))
+    return apiClient.get('/student/disabled', {
+      params,
+    })
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /student/online-admission
+  // ==========================================================
+  // Online Admissions
+  // ==========================================================
+
   async admissions(params = {}) {
-    return mockResponse(mockAdmissions)
+    return apiClient.get('/student/online-admission/all', {
+      params,
+    })
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /student/category
+  async getAdmission(id) {
+    return apiClient.get(`/student/online-admission/${id}`)
+  },
+
+  async createAdmission(payload) {
+    return apiClient.post('/student/online-admission/add', payload)
+  },
+
+  async updateAdmission(id, payload) {
+    return apiClient.put(`/student/online-admission/${id}`, payload)
+  },
+
+  async deleteAdmission(id) {
+    return apiClient.delete(`/student/online-admission/${id}`)
+  },
+
+  // ==========================================================
+  // Student Categories
+  // ==========================================================
+
   async categories(params = {}) {
-    return mockResponse(studentCategories)
+    return apiClient.get('/student/category', {
+      params,
+    })
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /student/house
+  async getCategory(id) {
+    return apiClient.get(`/student/category/${id}`)
+  },
+
+  async createCategory(payload) {
+    return apiClient.post('/student/category', payload)
+  },
+
+  async updateCategory(id, payload) {
+    return apiClient.put(`/student/category/${id}`, payload)
+  },
+
+  async deleteCategory(id) {
+    return apiClient.delete(`/student/category/${id}`)
+  },
+
+  // ==========================================================
+  // Student Houses
+  // ==========================================================
+
   async houses(params = {}) {
-    return mockResponse(studentHouses)
+    return apiClient.get('/student/house', {
+      params,
+    })
+  },
+
+  async getHouse(id) {
+    return apiClient.get(`/student/house/${id}`)
+  },
+
+  async createHouse(payload) {
+    return apiClient.post('/student/house', payload)
+  },
+
+  async updateHouse(id, payload) {
+    return apiClient.put(`/student/house/${id}`, payload)
+  },
+
+  async deleteHouse(id) {
+    return apiClient.delete(`/student/house/${id}`)
+  },
+
+  // ==========================================================
+  // Disable Reasons
+  // ==========================================================
+
+  async disableReasons(params = {}) {
+    return apiClient.get('/student/disable-reason', {
+      params,
+    })
+  },
+
+  async getDisableReason(id) {
+    return apiClient.get(`/student/disable-reason/${id}`)
+  },
+
+  async createDisableReason(payload) {
+    return apiClient.post('/student/disable-reason', payload)
+  },
+
+  async updateDisableReason(id, payload) {
+    return apiClient.put(`/student/disable-reason/${id}`, payload)
+  },
+
+  async deleteDisableReason(id) {
+    return apiClient.delete(`/student/disable-reason/${id}`)
+  },
+
+  // ==========================================================
+  // Multi Class Students
+  // ==========================================================
+
+  async multiClassStudents(params = {}) {
+    return apiClient.get('/student/multi-class', {
+      params,
+    })
+  },
+
+  async getMultiClassStudent(id) {
+    return apiClient.get(`/student/multi-class/${id}`)
+  },
+
+  async createMultiClassStudent(payload) {
+    return apiClient.post('/student/multi-class', payload)
+  },
+
+  async updateMultiClassStudent(id, payload) {
+    return apiClient.put(`/student/multi-class/${id}`, payload)
+  },
+
+  async deleteMultiClassStudent(id) {
+    return apiClient.delete(`/student/multi-class/${id}`)
   },
 }
 

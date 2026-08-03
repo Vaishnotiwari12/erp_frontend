@@ -1,134 +1,57 @@
-// ====================================================================
-// Income Service
-//
-// Service layer isolates all backend communication for the Income module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
-//
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  incomeHeads,
-  incomes,
-  incomeStats,
-} from '@/data/income.mock'
+import apiClient from "./api";
 
 export const incomeService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  // ==============================
+  // Income Heads
+  // ==============================
 
-  // Fetch Income Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /income/stats
-    // ====================================================================
-    return mockResponse(incomeStats)
+  getIncomeHeads(params = {}) {
+    return apiClient.get("/income/income-head", {
+      params,
+    });
   },
 
-  // ─── Income Heads ────────────────────────────────────────────────────────────
-
-  // Fetch Income Heads
-  // TODO(BACKEND):
-  // Replace mock data with GET /income/heads
-  async getIncomeHeads() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /income/heads
-    // ====================================================================
-    return mockResponse(incomeHeads)
+  getIncomeHead(id) {
+    return apiClient.get(`/income/income-head/${id}`);
   },
 
-  // Create Income Head
-  // TODO(BACKEND):
-  // Replace with POST /income/heads
-  async createIncomeHead(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /income/heads
-    // ====================================================================
-    return mockResponse({ _id: `ih-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  createIncomeHead(payload) {
+    return apiClient.post("/income/income-head", payload);
   },
 
-  // Update Income Head
-  // TODO(BACKEND):
-  // Replace with PUT /income/heads/:id
-  async updateIncomeHead(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /income/heads/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  updateIncomeHead(id, payload) {
+    return apiClient.put(`/income/income-head/${id}`, payload);
   },
 
-  // Delete Income Head
-  // TODO(BACKEND):
-  // Replace with DELETE /income/heads/:id
-  async deleteIncomeHead(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /income/heads/:id
-    // ====================================================================
-    return mockResponse({ message: 'Income head deleted successfully' })
+  deleteIncomeHead(id) {
+    return apiClient.delete(`/income/income-head/${id}`);
   },
 
-  // ─── Income Records ──────────────────────────────────────────────────────────
+  // ==============================
+  // Income
+  // ==============================
 
-  // Fetch Incomes
-  // TODO(BACKEND):
-  // Replace mock data with GET /income
-  async getIncomes() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /income
-    // ====================================================================
-    return mockResponse(incomes)
+  getIncomes(params = {}) {
+    return apiClient.get("/income/income", {
+      params,
+    });
   },
 
-  // Create Income
-  // TODO(BACKEND):
-  // Replace with POST /income
-  async createIncome(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /income
-    // ====================================================================
-    return mockResponse({ _id: `inc-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  getIncome(id) {
+    return apiClient.get(`/income/income/${id}`);
   },
 
-  // Update Income
-  // TODO(BACKEND):
-  // Replace with PUT /income/:id
-  async updateIncome(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /income/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  createIncome(payload) {
+    return apiClient.post("/income/income", payload);
   },
 
-  // Delete Income
-  // TODO(BACKEND):
-  // Replace with DELETE /income/:id
-  async deleteIncome(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /income/:id
-    // ====================================================================
-    return mockResponse({ message: 'Income deleted successfully' })
+  updateIncome(id, payload) {
+    return apiClient.put(`/income/income/${id}`, payload);
   },
-}
 
-export default incomeService
+  deleteIncome(id) {
+    return apiClient.delete(`/income/income/${id}`);
+  },
+};
+
+export default incomeService;

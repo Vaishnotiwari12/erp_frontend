@@ -13,7 +13,7 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Plus, Layers, Pencil, Trash2, Eye, DoorOpen, CircleCheck as CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,7 +35,7 @@ import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { academicsService } from '@/services/academics.service'
-import { academicClasses } from '@/services/mockData'
+// import { academicClasses } from '@/services/mockData'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
@@ -47,7 +47,7 @@ const EXPORT_COLS = [
   { key: 'status', label: 'Status' },
 ]
 
-const CLASS_OPTIONS = academicClasses.map((c) => c.name)
+// const CLASS_OPTIONS = academicClasses.map((c) => c.name)
 
 export default function SectionsPage() {
   const { toast } = useToast()
@@ -59,6 +59,13 @@ export default function SectionsPage() {
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
+  const [classOptions, setClassOptions] = useState([])
+
+  useEffect(() => {
+    academicsService.classes().then((data) => {
+      setClassOptions(data.map((c) => c.name))
+    })
+  }, [])
 
   const rows = data || []
   const filtered = useMemo(
@@ -139,7 +146,7 @@ export default function SectionsPage() {
           <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
             <option value="all">All classes</option>
-            {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {/* {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)} */}
           </select>
           <select value={status} onChange={(e) => setStatus(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
@@ -218,7 +225,7 @@ function SectionDrawer({ open, onOpenChange, title, initial, onSubmit }) {
             <select value={form.class} onChange={(e) => setForm((f) => ({ ...f, class: e.target.value }))}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
               <option value="">Select class</option>
-              {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              {/* {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)} */}
             </select>
           </div>
           <div className="space-y-1.5">

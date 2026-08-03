@@ -8,11 +8,19 @@
 // permissions deny access.
 // ====================================================================
 
+<<<<<<< HEAD
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useModules } from '@/context/ModuleContext'
 
 const SECTION_TO_MODULE = {
+=======
+  import { Navigate, useLocation } from 'react-router-dom'
+  import { useAuth } from '@/context/AuthContext'
+  import { useModules } from '@/context/ModuleContext'
+
+  const SECTION_TO_MODULE = {
+>>>>>>> e863ed6 (Updated  files)
   dashboard: 'Dashboard',
   students: 'Students',
   academics: 'Academics',
@@ -31,16 +39,23 @@ const SECTION_TO_MODULE = {
   users: 'Users',
   schools: 'Schools',
   domains: 'Domains',
+<<<<<<< HEAD
 }
 
 export function ProtectedRoute({ children, moduleId }) {
+=======
+  }
+
+  export function ProtectedRoute({ children, moduleId }) {
+>>>>>>> e863ed6 (Updated  files)
   const { isAuthenticated } = useAuth()
   const { isModuleEnabled, hasPermission, isLoading } = useModules()
   const location = useLocation()
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+  return <Navigate to="/login" state={{ from: location }} replace />
   }
+<<<<<<< HEAD
 
   // While modules are loading, allow access to avoid flicker.
   if (isLoading) return children
@@ -57,5 +72,23 @@ export function ProtectedRoute({ children, moduleId }) {
 
   return children
 }
+=======
+>>>>>>> e863ed6 (Updated  files)
 
-export default ProtectedRoute
+  // While modules are loading, allow access to avoid flicker.
+  if (isLoading) return children
+
+  // Block access to disabled modules.
+  if (moduleId && !isModuleEnabled(moduleId)) {
+  return <Navigate to="/dashboard" replace />
+  }
+
+  // Block access if role permissions deny it.
+  if (moduleId && !hasPermission(moduleId, 'view')) {
+  return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+  }
+
+  export default ProtectedRoute

@@ -1,160 +1,79 @@
-// ====================================================================
-// Homework Service
-//
-// Service layer isolates all backend communication for the Homework module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
-//
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  homeworks,
-  dailyAssignments,
-  homeworkStats,
-  academicClasses,
-  subjects,
-  teachers,
-} from '@/data/homework.mock'
+import apiClient from "./api";
 
 export const homeworkService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  // ==========================================================
+  // Homework
+  // ==========================================================
 
-  // Fetch Homework Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /homework/stats
-    // ====================================================================
-    return mockResponse(homeworkStats)
+  getHomeworks(params = {}) {
+    return apiClient.get("/homework/homework", {
+      params,
+    });
   },
 
-  // ─── Homework ────────────────────────────────────────────────────────────────
-
-  // Fetch Homework List
-  // TODO(BACKEND):
-  // Replace mock data with GET /homework
-  async getHomeworks() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /homework
-    // ====================================================================
-    return mockResponse(homeworks)
+  getHomework(id) {
+    return apiClient.get(`/homework/homework/${id}`);
   },
 
-  // Create Homework
-  // TODO(BACKEND):
-  // Replace with POST /homework
-  async createHomework(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /homework
-    // ====================================================================
-    return mockResponse({ _id: `hw-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  createHomework(payload) {
+    return apiClient.post("/homework/homework", payload);
   },
 
-  // Update Homework
-  // TODO(BACKEND):
-  // Replace with PUT /homework/:id
-  async updateHomework(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /homework/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  updateHomework(id, payload) {
+    return apiClient.put(`/homework/homework/${id}`, payload);
   },
 
-  // Delete Homework
-  // TODO(BACKEND):
-  // Replace with DELETE /homework/:id
-  async deleteHomework(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /homework/:id
-    // ====================================================================
-    return mockResponse({ message: 'Homework deleted successfully' })
+  deleteHomework(id) {
+    return apiClient.delete(`/homework/homework/${id}`);
   },
 
-  // ─── Daily Assignments ───────────────────────────────────────────────────────
+  // ==========================================================
+  // Daily Assignments
+  // ==========================================================
 
-  // Fetch Daily Assignments
-  // TODO(BACKEND):
-  // Replace mock data with GET /homework/daily-assignments
-  async getDailyAssignments() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // GET /homework/daily-assignments
-    // ====================================================================
-    return mockResponse(dailyAssignments)
+  getDailyAssignments(params = {}) {
+    return apiClient.get("/homework/daily-assignment", {
+      params,
+    });
   },
 
-  // Create Daily Assignment
-  // TODO(BACKEND):
-  // Replace with POST /homework/daily-assignments
-  async createDailyAssignment(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /homework/daily-assignments
-    // ====================================================================
-    return mockResponse({ _id: `da-${Date.now()}`, status: 'pending', createdAt: new Date().toISOString(), ...payload })
+  getDailyAssignment(id) {
+    return apiClient.get(`/homework/daily-assignment/${id}`);
   },
 
-  // Update Daily Assignment
-  // TODO(BACKEND):
-  // Replace with PUT /homework/daily-assignments/:id
-  async updateDailyAssignment(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /homework/daily-assignments/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  createDailyAssignment(payload) {
+    return apiClient.post("/homework/daily-assignment", payload);
   },
 
-  // Delete Daily Assignment
-  // TODO(BACKEND):
-  // Replace with DELETE /homework/daily-assignments/:id
-  async deleteDailyAssignment(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /homework/daily-assignments/:id
-    // ====================================================================
-    return mockResponse({ message: 'Daily assignment deleted successfully' })
+  updateDailyAssignment(id, payload) {
+    return apiClient.put(`/homework/daily-assignment/${id}`, payload);
   },
 
-  // ─── Reference Data (dropdown options) ──────────────────────────────────────
-
-  // Fetch Classes for dropdowns
-  // TODO(BACKEND):
-  // Replace with GET /academics/classes
-  async getClasses() {
-    return mockResponse(academicClasses)
+  deleteDailyAssignment(id) {
+    return apiClient.delete(`/homework/daily-assignment/${id}`);
   },
 
-  // Fetch Subjects for dropdowns
-  // TODO(BACKEND):
-  // Replace with GET /academics/subjects
-  async getSubjects() {
-    return mockResponse(subjects)
+  // ==========================================================
+  // Reference Data
+  // ==========================================================
+
+  getClasses(params = {}) {
+    return apiClient.get("/academic/class", {
+      params,
+    });
   },
 
-  // Fetch Teachers for dropdowns
-  // TODO(BACKEND):
-  // Replace with GET /hr/staff
-  async getTeachers() {
-    return mockResponse(teachers)
+  getSubjects(params = {}) {
+    return apiClient.get("/academic/subjects", {
+      params,
+    });
   },
-}
 
-export default homeworkService
+  getTeachers(params = {}) {
+    return apiClient.get("/hr/staff-directory", {
+      params,
+    });
+  },
+};
+
+export default homeworkService;

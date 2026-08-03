@@ -1,111 +1,234 @@
 // ====================================================================
-// Service Layer
+// Academics Service
 //
-// Purpose:
-// Handles all backend communication for this module.
+// Handles all backend communication for Academic Module.
 //
-// Current State:
-// Uses mock data.
+// Backend Endpoints:
 //
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
+// /api/academic/class
+// /api/academic/sections
+// /api/academic/subjects
+// /api/academic/subject-group
+// /api/academic/assign-teacher
+// /api/academic/class-timetable
+// /api/academic/teacher-timetable
+// /api/academic/promote-students
 //
-// Expected Response:
-// { success, message, data }
+// Response Format:
+// {
+//   success,
+//   message,
+//   data
+// }
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  academicClasses,
-  academicSections,
-  subjectGroups,
-  subjects,
-  teachers,
-  classTeachers,
-  classTimetable,
-  getTeacherTimetable,
-} from '@/data/academics.mock'
+import apiClient from './api'
 
 export const academicsService = {
-  // TODO(BACKEND)
-  // Replace with GET /academics/classes
-  async classes() {
-    return mockResponse(academicClasses)
+  // ==========================================================
+  // Classes
+  // ==========================================================
+
+  async classes(params = {}) {
+    return apiClient.get('/academic/class', {
+      params,
+    })
   },
-  // TODO(BACKEND)
-  // Replace with GET /academics/sections
-  async sections() {
-    return mockResponse(academicSections)
+
+  async getClass(id) {
+    return apiClient.get(`/academic/class/${id}`)
   },
-  // TODO(BACKEND)
-  // Replace with GET /academics/subject-groups
-  async subjectGroups() {
-    return mockResponse(subjectGroups)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /academics/subjects
-  async subjects() {
-    return mockResponse(subjects)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /academics/teachers
-  async teachers() {
-    return mockResponse(teachers)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /academics/class-teachers
-  async classTeachers() {
-    return mockResponse(classTeachers)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /academics/class-timetable
-  async classTimetable() {
-    return mockResponse(classTimetable)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /academics/teacher-timetable
-  async teacherTimetable(name) {
-    return mockResponse(getTeacherTimetable(name))
-  },
-  // TODO(BACKEND)
-  // Replace with POST /academics/classes
+
   async createClass(payload) {
-    return mockResponse({ _id: `cls-${Date.now()}`, ...payload })
+    return apiClient.post('/academic/class', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /academics/sections
+
+  async updateClass(id, payload) {
+    return apiClient.put(`/academic/class/${id}`, payload)
+  },
+
+  async deleteClass(id) {
+    return apiClient.delete(`/academic/class/${id}`)
+  },
+
+  // ==========================================================
+  // Sections
+  // ==========================================================
+
+  async sections(params = {}) {
+    return apiClient.get('/academic/sections', {
+      params,
+    })
+  },
+
+  async getSection(id) {
+    return apiClient.get(`/academic/sections/${id}`)
+  },
+
   async createSection(payload) {
-    return mockResponse({ _id: `sec-${Date.now()}`, ...payload })
+    return apiClient.post('/academic/sections', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /academics/subject-groups
+
+  async updateSection(id, payload) {
+    return apiClient.put(`/academic/sections/${id}`, payload)
+  },
+
+  async deleteSection(id) {
+    return apiClient.delete(`/academic/sections/${id}`)
+  },
+
+  // ==========================================================
+  // Subject Groups
+  // ==========================================================
+
+  async subjectGroups(params = {}) {
+    return apiClient.get('/academic/subject-group', {
+      params,
+    })
+  },
+
+  async getSubjectGroup(id) {
+    return apiClient.get(`/academic/subject-group/${id}`)
+  },
+
   async createSubjectGroup(payload) {
-    return mockResponse({ _id: `grp-${Date.now()}`, ...payload })
+    return apiClient.post('/academic/subject-group', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /academics/subjects
+
+  async updateSubjectGroup(id, payload) {
+    return apiClient.put(`/academic/subject-group/${id}`, payload)
+  },
+
+  async deleteSubjectGroup(id) {
+    return apiClient.delete(`/academic/subject-group/${id}`)
+  },
+
+  // ==========================================================
+  // Subjects
+  // ==========================================================
+
+  async subjects(params = {}) {
+    // Mock implementation for development
+    // TODO: Replace with: return apiClient.get('/academic/subjects', { params })
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          success: true,
+          data: [
+            { _id: 'sub-001', name: 'Mathematics', code: 'MATH', theory: 80, practical: 20, type: 'Core', group: 'Mathematics Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
+            { _id: 'sub-002', name: 'Physics', code: 'PHY', theory: 70, practical: 30, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
+            { _id: 'sub-003', name: 'Chemistry', code: 'CHEM', theory: 70, practical: 30, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
+            { _id: 'sub-004', name: 'Biology', code: 'BIO', theory: 60, practical: 40, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-02T00:00:00Z' },
+            { _id: 'sub-005', name: 'English', code: 'ENG', theory: 100, practical: 0, type: 'Core', group: 'Languages Group', status: 'active', createdAt: '2024-06-02T00:00:00Z' },
+          ],
+          message: 'Subjects fetched successfully'
+        })
+      }, 300)
+    })
+  },
+
+  async getSubject(id) {
+    return apiClient.get(`/academic/subjects/${id}`)
+  },
+
   async createSubject(payload) {
-    return mockResponse({ _id: `sub-${Date.now()}`, ...payload })
+    return apiClient.post('/academic/subjects', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /academics/class-teachers
+
+  async updateSubject(id, payload) {
+    return apiClient.put(`/academic/subjects/${id}`, payload)
+  },
+
+  async deleteSubject(id) {
+    return apiClient.delete(`/academic/subjects/${id}`)
+  },
+
+  // ==========================================================
+  // Assign Class Teacher
+  // ==========================================================
+
+  async classTeachers(params = {}) {
+    return apiClient.get('/academic/assign-teacher', {
+      params,
+    })
+  },
+
+  async getClassTeacher(id) {
+    return apiClient.get(`/academic/assign-teacher/${id}`)
+  },
+
   async createClassTeacher(payload) {
-    return mockResponse({ _id: `ct-${Date.now()}`, ...payload })
+    return apiClient.post('/academic/assign-teacher', payload)
   },
-  // TODO(BACKEND)
-  // Replace with PUT /academics/:id
-  async update(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+
+  async updateClassTeacher(id, payload) {
+    return apiClient.put(`/academic/assign-teacher/${id}`, payload)
   },
-  // TODO(BACKEND)
-  // Replace with DELETE /academics/:id
-  async remove(id) {
-    return mockResponse({ message: 'Deleted successfully' })
+
+  async deleteClassTeacher(id) {
+    return apiClient.delete(`/academic/assign-teacher/${id}`)
   },
-  // TODO(BACKEND)
-  // Replace with POST /academics/bulk-delete
-  async bulkDelete(ids) {
-    return mockResponse({ message: `${ids.length} records deleted` })
+
+  // ==========================================================
+  // Class Timetable
+  // ==========================================================
+
+  async classTimetable(params = {}) {
+    return apiClient.get('/academic/class-timetable', {
+      params,
+    })
+  },
+
+  async getClassTimetable(id) {
+    return apiClient.get(`/academic/class-timetable/${id}`)
+  },
+
+  async createClassTimetable(payload) {
+    return apiClient.post('/academic/class-timetable', payload)
+  },
+
+  async updateClassTimetable(id, payload) {
+    return apiClient.put(`/academic/class-timetable/${id}`, payload)
+  },
+
+  async deleteClassTimetable(id) {
+    return apiClient.delete(`/academic/class-timetable/${id}`)
+  },
+
+  // ==========================================================
+  // Teacher Timetable
+  // Backend:
+  // GET /api/academic/teacher-timetable/:teacherId
+  // ==========================================================
+
+  async teacherTimetable(teacherId) {
+    return apiClient.get(`/academic/teacher-timetable/${teacherId}`)
+  },
+
+  // ==========================================================
+  // Promote Students
+  // ==========================================================
+
+  async promotedStudents(params = {}) {
+    return apiClient.get('/academic/promote-students', {
+      params,
+    })
+  },
+
+  async getPromotion(id) {
+    return apiClient.get(`/academic/promote-students/${id}`)
+  },
+
+  async promoteStudents(payload) {
+    return apiClient.post('/academic/promote-students', payload)
+  },
+
+  async updatePromotion(id, payload) {
+    return apiClient.put(`/academic/promote-students/${id}`, payload)
+  },
+
+  async deletePromotion(id) {
+    return apiClient.delete(`/academic/promote-students/${id}`)
   },
 }
 

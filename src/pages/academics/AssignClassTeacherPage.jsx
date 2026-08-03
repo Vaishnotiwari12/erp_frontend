@@ -34,7 +34,7 @@ import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { academicsService } from '@/services/academics.service'
-import { academicClasses, academicSections, teachers, ACADEMIC_YEARS } from '@/services/mockData'
+// import { academicClasses, academicSections, teachers, ACADEMIC_YEARS } from '@/services/mockData'
 import { formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 

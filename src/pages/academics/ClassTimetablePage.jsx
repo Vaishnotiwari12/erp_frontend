@@ -26,10 +26,10 @@ import { StatCard } from '@/components/StatCard'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { academicsService } from '@/services/academics.service'
-import {
-  academicClasses, academicSections, TIME_SLOTS, WEEK_DAYS,
-  SUBJECT_COLORS, ACADEMIC_YEARS, classTimetable,
-} from '@/services/mockData'
+// import {
+//   academicClasses, academicSections, TIME_SLOTS, WEEK_DAYS,
+//   SUBJECT_COLORS, ACADEMIC_YEARS, classTimetable,
+// } from '@/services/mockData'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 

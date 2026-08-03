@@ -35,3 +35,56 @@ export const authService = {
 }
 
 export default authService
+
+
+
+
+
+
+//mock data
+
+// export const authService = {
+//   async login({ email, password }) {
+//     if (!email || !password) {
+//       return Promise.reject({ message: 'Email and password are required.' })
+//     }
+//     // Mock response - replace with actual API call later
+//     return Promise.resolve({
+//       success: true,
+//       data: {
+//         id: '64dcb488ec4e893925e16752',
+//         name: 'Super Admin',
+//         email: 'superadmin@erp.com',
+//         role: 'superadmin',
+//         token: 'dummy-jwt-token'
+//       }
+//     })
+//   },
+
+//   async signup({ name, email, password }) {
+//     if (!name || !email || !password) {
+//       return Promise.reject({ message: 'Name, email and password are required.' })
+//     }
+//     // Mock response - replace with actual API call later
+//     return Promise.resolve({
+//       success: true,
+//       data: {
+//         id: '64dcb488ec4e893925e16753',
+//         name,
+//         email,
+//         role: 'superadmin',
+//         token: 'dummy-jwt-token'
+//       }
+//     })
+//   },
+
+//   async logout() {
+//     // Mock response - replace with actual API call later
+//     return Promise.resolve({
+//       success: true,
+//       message: 'Logged out successfully'
+//     })
+//   },
+// }
+
+// export default authService

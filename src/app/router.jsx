@@ -31,6 +31,7 @@ import ProtectedRoute from '@/routes/ProtectedRoute'
 import PublicRoute from '@/routes/PublicRoute'
 import PageLoader from '@/components/loaders/PageLoader'
 
+
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'))
 const SchoolsPage = lazy(() => import('@/pages/schools/SchoolsPage'))
@@ -78,6 +79,21 @@ const FeesGroupPage = lazy(() => import('@/pages/fees/FeesGroup'))
 const FeesTypePage = lazy(() => import('@/pages/fees/FeesType'))
 const FeesDiscountPage = lazy(() => import('@/pages/fees/FeesDiscount'))
 const FeesCarryForwardPage = lazy(() => import('@/pages/fees/FeesCarryForward'))
+const MultiClassStudentsPage = lazy(() => import('@/pages/students/MultiClassStudentsPage')) 
+
+const DisableReasonsPage = lazy(() =>
+  import('@/pages/students/DisableReasonsPage')
+)
+
+
+const BulkDeletePage = lazy(() =>
+  import('@/pages/students/BulkDeletePage')
+)
+
+
+
+
+
 
 // HR module — lazy-loaded so the bundle only downloads when a user visits HR pages
 const StaffDirectoryPage = lazy(() => import('@/pages/hr/StaffDirectoryPage'))
@@ -251,6 +267,25 @@ export default function AppRouter() {
             <Route path="/students/categories" element={<StudentCategoriesPage />} />
             <Route path="/students/houses" element={<StudentHousesPage />} />
             <Route path="/students/disabled" element={<DisabledStudentsPage />} />
+            <Route path="/students/multi-class" element={<MultiClassStudentsPage />} />
+             
+            
+            <Route
+            path="/students/disable-reasons"
+            element={<DisableReasonsPage />}
+            />
+
+            
+
+            <Route
+            path="/students/bulk-delete"
+            element={<BulkDeletePage />}
+            />
+
+
+
+            
+
             <Route path="/academics/classes" element={<ClassesPage />} />
             <Route path="/academics/sections" element={<SectionsPage />} />
             <Route path="/academics/subjects" element={<SubjectsPage />} />

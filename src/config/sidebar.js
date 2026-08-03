@@ -46,6 +46,22 @@ export const sidebarItems = [
       { title: 'Student Categories', path: '/students/categories' },
       { title: 'Student House', path: '/students/houses' },
       { title: 'Disabled Students', path: '/students/disabled' },
+      {
+        title: 'Disable Reasons',
+        path: '/students/disable-reasons',
+      },
+
+      {
+        title: 'Multi Class Students',
+        path: '/students/multi-class',
+      },
+
+
+
+      {
+        title: 'Bulk Delete',
+        path: '/students/bulk-delete',
+      },
     ],
   },
   {

@@ -1,68 +1,57 @@
-// ====================================================================
-// Service Layer
-//
-// Purpose:
-// Handles all backend communication for this module.
-//
-// Current State:
-// Uses mock data.
-//
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
-// ====================================================================
-
-import apiClient from './api'
-import { mockResponse, users as mockUsers, roles as mockRoles } from './mockData'
+import apiClient from "./api";
 
 export const usersService = {
-  // TODO(BACKEND)
-  // Replace with GET /users
-  async list(params = {}) {
-    return mockResponse(mockUsers)
+  // ==========================================================
+  // Users
+  // ==========================================================
+
+  list(params = {}) {
+    return apiClient.get("/users", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /users/:id
-  async get(id) {
-    const found = mockUsers.find((u) => u._id === id)
-    return found
-      ? mockResponse(found)
-      : Promise.reject({ message: 'User not found' })
+  get(id) {
+    return apiClient.get(`/users/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /users/admin/signup
-  async create(payload) {
-    return mockResponse({ _id: `usr-${Date.now()}`, ...payload, status: 'active' })
+  create(payload) {
+    return apiClient.post("/users/admin/signup", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /users/:id
-  async update(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  update(id, payload) {
+    return apiClient.put(`/users/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /users/:id
-  async remove(id) {
-    return mockResponse({ message: 'User deleted successfully' })
+  remove(id) {
+    return apiClient.delete(`/users/${id}`);
   },
 
-  // Roles via /api/role-permission
-  // TODO(BACKEND)
-  // Replace with GET /role-permission
-  async roles(params = {}) {
-    return mockResponse(mockRoles)
+  // ==========================================================
+  // Roles & Permissions
+  // ==========================================================
+
+  roles(params = {}) {
+    return apiClient.get("/role-permission", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /role-permission/:id
-  async updateRole(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  getRole(id) {
+    return apiClient.get(`/role-permission/${id}`);
   },
-}
 
-export default usersService
+  createRole(payload) {
+    return apiClient.post("/role-permission", payload);
+  },
+
+  updateRole(id, payload) {
+    return apiClient.put(`/role-permission/${id}`, payload);
+  },
+
+  deleteRole(id) {
+    return apiClient.delete(`/role-permission/${id}`);
+  },
+};
+
+export default usersService;

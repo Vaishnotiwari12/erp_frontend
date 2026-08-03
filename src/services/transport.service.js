@@ -1,211 +1,149 @@
-// ====================================================================
-// Service Layer
-//
-// Purpose:
-// Handles all backend communication for this module.
-//
-// Current State:
-// Uses mock data.
-//
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  drivers,
-  transportRoutes,
-  vehicles,
-  pickupPoints,
-  vehicleAssignments,
-  transportFees,
-  transportStats,
-  routeSummary,
-  vehicleOccupancy,
-  feeBreakdown,
-} from '@/data/transport.mock'
+import apiClient from "./api";
 
 export const transportService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  // ==========================================================
+  // Routes
+  // ==========================================================
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/stats
-  async getStats() {
-    return mockResponse(transportStats)
+  getRoutes(params = {}) {
+    return apiClient.get("/transport/route", { params });
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/route-summary
-  async getRouteSummary() {
-    return mockResponse(routeSummary)
+  getRoute(id) {
+    return apiClient.get(`/transport/route/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/vehicle-occupancy
-  async getVehicleOccupancy() {
-    return mockResponse(vehicleOccupancy)
+  createRoute(payload) {
+    return apiClient.post("/transport/route", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/fee-breakdown
-  async getFeeBreakdown() {
-    return mockResponse(feeBreakdown)
+  updateRoute(id, payload) {
+    return apiClient.put(`/transport/route/${id}`, payload);
   },
 
-  // ─── Routes ──────────────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/routes
-  async getRoutes() {
-    return mockResponse(transportRoutes)
+  deleteRoute(id) {
+    return apiClient.delete(`/transport/route/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /transport/routes
-  async createRoute(payload) {
-    return mockResponse({ _id: `rte-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  // ==========================================================
+  // Vehicles
+  // ==========================================================
+
+  getVehicles(params = {}) {
+    return apiClient.get("/transport/vehicle", { params });
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /transport/routes/:id
-  async updateRoute(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  getVehicle(id) {
+    return apiClient.get(`/transport/vehicle/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /transport/routes/:id
-  async deleteRoute(id) {
-    return mockResponse({ message: 'Route deleted successfully' })
+  createVehicle(payload) {
+    return apiClient.post("/transport/vehicle", payload);
   },
 
-  // ─── Vehicles ────────────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/vehicles
-  async getVehicles() {
-    return mockResponse(vehicles)
+  updateVehicle(id, payload) {
+    return apiClient.put(`/transport/vehicle/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /transport/vehicles
-  async createVehicle(payload) {
-    return mockResponse({ _id: `veh-${Date.now()}`, occupied: 0, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  deleteVehicle(id) {
+    return apiClient.delete(`/transport/vehicle/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /transport/vehicles/:id
-  async updateVehicle(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  // ==========================================================
+  // Drivers
+  // ==========================================================
+
+  getDrivers(params = {}) {
+    return apiClient.get("/transport/driver", { params });
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /transport/vehicles/:id
-  async deleteVehicle(id) {
-    return mockResponse({ message: 'Vehicle deleted successfully' })
+  getDriver(id) {
+    return apiClient.get(`/transport/driver/${id}`);
   },
 
-  // ─── Drivers ──────────────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/drivers
-  async getDrivers() {
-    return mockResponse(drivers)
+  createDriver(payload) {
+    return apiClient.post("/transport/driver", payload);
   },
 
-  // ─── Pickup Points ───────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/pickup-points
-  async getPickupPoints() {
-    return mockResponse(pickupPoints)
+  updateDriver(id, payload) {
+    return apiClient.put(`/transport/driver/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /transport/pickup-points
-  async createPickupPoint(payload) {
-    return mockResponse({ _id: `pp-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  deleteDriver(id) {
+    return apiClient.delete(`/transport/driver/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /transport/pickup-points/:id
-  async updatePickupPoint(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  // ==========================================================
+  // Pickup Points
+  // ==========================================================
+
+  getPickupPoints(params = {}) {
+    return apiClient.get("/transport/pickup-point", { params });
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /transport/pickup-points/:id
-  async deletePickupPoint(id) {
-    return mockResponse({ message: 'Pickup point deleted successfully' })
+  getPickupPoint(id) {
+    return apiClient.get(`/transport/pickup-point/${id}`);
   },
 
-  // ─── Vehicle Assignments ─────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/assignments
-  async getVehicleAssignments() {
-    return mockResponse(vehicleAssignments)
+  createPickupPoint(payload) {
+    return apiClient.post("/transport/pickup-point", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /transport/assignments
-  async assignVehicle(payload) {
-    return mockResponse({ _id: `vas-${Date.now()}`, status: 'active', assigned_at: new Date().toISOString(), ...payload })
+  updatePickupPoint(id, payload) {
+    return apiClient.put(`/transport/pickup-point/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with PUT /transport/assignments/:id
-  async updateAssignment(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  deletePickupPoint(id) {
+    return apiClient.delete(`/transport/pickup-point/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /transport/assignments/:id
-  async deleteAssignment(id) {
-    return mockResponse({ message: 'Assignment removed' })
+  // ==========================================================
+  // Vehicle Assignment
+  // ==========================================================
+
+  getAssignments(params = {}) {
+    return apiClient.get("/transport/assign-vehicle", { params });
   },
 
-  // ─── Transport Fees ──────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/fees
-  async getTransportFees() {
-    return mockResponse(transportFees)
+  getAssignment(id) {
+    return apiClient.get(`/transport/assign-vehicle/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /transport/fees/:id/collect
-  async collectFee(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+  assignVehicle(payload) {
+    return apiClient.post("/transport/assign-vehicle", payload);
   },
 
-  // ─── Reports ──────────────────────────────────────────────────────────────────
-
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/student-wise
-  async getStudentReport() {
-    return mockResponse(vehicleAssignments)
+  updateAssignment(id, payload) {
+    return apiClient.put(`/transport/assign-vehicle/${id}`, payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/route-wise
-  async getRouteReport() {
-    return mockResponse(transportRoutes)
+  deleteAssignment(id) {
+    return apiClient.delete(`/transport/assign-vehicle/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/vehicle-wise
-  async getVehicleReport() {
-    return mockResponse(vehicles)
+  // ==========================================================
+  // Transport Fees
+  // ==========================================================
+
+  getTransportFees(params = {}) {
+    return apiClient.get("/transport/fees", { params });
   },
 
-  // TODO(BACKEND)
-  // Replace with GET /transport/reports/fee-collection
-  async getFeeCollectionReport() {
-    return mockResponse(transportFees)
+  getTransportFee(id) {
+    return apiClient.get(`/transport/fees/${id}`);
   },
-}
 
-export default transportService
+  createTransportFee(payload) {
+    return apiClient.post("/transport/fees", payload);
+  },
+
+  updateTransportFee(id, payload) {
+    return apiClient.put(`/transport/fees/${id}`, payload);
+  },
+
+  deleteTransportFee(id) {
+    return apiClient.delete(`/transport/fees/${id}`);
+  },
+};
+
+export default transportService;

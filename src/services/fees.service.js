@@ -1,189 +1,257 @@
 // ====================================================================
-// Service Layer
+// Fees Service
 //
-// Purpose:
-// Handles all backend communication for this module.
+// Backend Endpoints:
 //
-// Current State:
-// Uses mock data.
+// /api/fees/type
+// /api/fees/group
+// /api/fees/master
+// /api/fees/collect
+// /api/fees/discount
+// /api/fees/carry-forward
+// /api/fees/reminder
+// /api/fees/offline-payment
+// /api/fees/search-due
+// /api/fees/search-payment
 //
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
+// Response Format:
+// {
+//   success,
+//   message,
+//   data,
+//   pagination
+// }
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  feesGroups,
-  feesTypes,
-  feesMaster,
-  feesDiscounts,
-  feesCarryForward,
-  offlinePayments,
-  feePayments,
-  dueFees,
-  feesStats,
-  feesReport,
-  searchableStudents,
-  getFeeBreakdown,
-  getPaymentHistory,
-} from '@/data/fees.mock'
+import apiClient from './api'
 
 export const feesService = {
-  // TODO(BACKEND)
-  // Replace with GET /fees/collection
-  async getFeesCollection() {
-    return mockResponse({ stats: feesStats, students: searchableStudents })
+  // ==========================================================
+  // Fees Type
+  // ==========================================================
+
+  async getFeesTypes(params = {}) {
+    return apiClient.get('/fees/type', { params })
   },
-  // TODO(BACKEND)
-  // Replace with GET /fees/students/search
-  async searchStudents(query) {
-    const q = (query || '').toLowerCase()
-    const result = q
-      ? searchableStudents.filter(
-          (s) =>
-            s.name.toLowerCase().includes(q) ||
-            s.admission_no.toLowerCase().includes(q) ||
-            s.class.toLowerCase().includes(q),
-        )
-      : searchableStudents
-    return mockResponse(result)
+
+  async getFeesType(id) {
+    return apiClient.get(`/fees/type/${id}`)
   },
-  // TODO(BACKEND)
-  // Replace with GET /fees/student/:id/summary
-  async getStudentFeeSummary(studentId) {
-    const breakdown = getFeeBreakdown(studentId)
-    const total = breakdown.reduce((a, b) => a + b.amount, 0)
-    const paid = breakdown.reduce((a, b) => a + b.paid, 0)
-    const discount = breakdown.reduce((a, b) => a + b.discount, 0)
-    const balance = total - paid - discount
-    return mockResponse({
-      studentId,
-      breakdown,
-      total,
-      paid,
-      discount,
-      balance,
-      history: getPaymentHistory(studentId),
-    })
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/collect
-  async collectPayment(payload) {
-    return mockResponse({
-      _id: `pay-${Date.now()}`,
-      receipt_no: `RCP-2025-${String(Math.floor(Math.random() * 900) + 100)}`,
-      date: new Date().toISOString().slice(0, 10),
-      ...payload,
-      status: 'Paid',
-    })
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/offline-payments
-  async getOfflinePayments() {
-    return mockResponse(offlinePayments)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/bank-payments
-  async getBankPayments() {
-    return mockResponse(offlinePayments)
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/offline-payments
-  async createOfflinePayment(payload) {
-    return mockResponse({ _id: `op-${Date.now()}`, ...payload })
-  },
-  // TODO(BACKEND)
-  // Replace with PATCH /fees/offline-payments/:id/approve
-  async approveOfflinePayment(id) {
-    return mockResponse({ _id: id, status: 'Approved' })
-  },
-  // TODO(BACKEND)
-  // Replace with PATCH /fees/offline-payments/:id/reject
-  async rejectOfflinePayment(id) {
-    return mockResponse({ _id: id, status: 'Rejected' })
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/payments
-  async getFeesPayments() {
-    return mockResponse(feePayments)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/due
-  async getDueFees() {
-    return mockResponse(dueFees)
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/:id/reminder
-  async sendReminder(id) {
-    return mockResponse({ _id: id, reminder_sent: true, message: 'Reminder sent successfully' })
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/report
-  async getFeesReport() {
-    return mockResponse(feesReport)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/master
-  async getFeesMaster() {
-    return mockResponse(feesMaster)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/groups
-  async getFeesGroups() {
-    return mockResponse(feesGroups)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/types
-  async getFeesTypes() {
-    return mockResponse(feesTypes)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/discounts
-  async getFeesDiscounts() {
-    return mockResponse(feesDiscounts)
-  },
-  // TODO(BACKEND)
-  // Replace with GET /fees/carry-forward
-  async getCarryForward() {
-    return mockResponse(feesCarryForward)
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/master
-  async createFeesMaster(payload) {
-    return mockResponse({ _id: `fm-${Date.now()}`, ...payload })
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/groups
-  async createFeesGroup(payload) {
-    return mockResponse({ _id: `fg-${Date.now()}`, ...payload })
-  },
-  // TODO(BACKEND)
-  // Replace with POST /fees/types
+
   async createFeesType(payload) {
-    return mockResponse({ _id: `ft-${Date.now()}`, ...payload })
+    return apiClient.post('/fees/type', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /fees/discounts
+
+  async updateFeesType(id, payload) {
+    return apiClient.put(`/fees/type/${id}`, payload)
+  },
+
+  async deleteFeesType(id) {
+    return apiClient.delete(`/fees/type/${id}`)
+  },
+
+  // ==========================================================
+  // Fees Group
+  // ==========================================================
+
+  async getFeesGroups(params = {}) {
+    return apiClient.get('/fees/group', { params })
+  },
+
+  async getFeesGroup(id) {
+    return apiClient.get(`/fees/group/${id}`)
+  },
+
+  async createFeesGroup(payload) {
+    return apiClient.post('/fees/group', payload)
+  },
+
+  async updateFeesGroup(id, payload) {
+    return apiClient.put(`/fees/group/${id}`, payload)
+  },
+
+  async deleteFeesGroup(id) {
+    return apiClient.delete(`/fees/group/${id}`)
+  },
+
+  // ==========================================================
+  // Fees Master
+  // ==========================================================
+
+  async getFeesMaster(params = {}) {
+    return apiClient.get('/fees/master', { params })
+  },
+
+  async getFeesMasterById(id) {
+    return apiClient.get(`/fees/master/${id}`)
+  },
+
+  async createFeesMaster(payload) {
+    return apiClient.post('/fees/master', payload)
+  },
+
+  async updateFeesMaster(id, payload) {
+    return apiClient.put(`/fees/master/${id}`, payload)
+  },
+
+  async deleteFeesMaster(id) {
+    return apiClient.delete(`/fees/master/${id}`)
+  },
+
+  // ==========================================================
+  // Collect Fees
+  // ==========================================================
+
+  async getCollectedFees(params = {}) {
+    return apiClient.get('/fees/collect', { params })
+  },
+
+  async getCollectedFee(id) {
+    return apiClient.get(`/fees/collect/${id}`)
+  },
+
+  async collectPayment(payload) {
+    return apiClient.post('/fees/collect', payload)
+  },
+
+  async updateCollectedFee(id, payload) {
+    return apiClient.put(`/fees/collect/${id}`, payload)
+  },
+
+  async deleteCollectedFee(id) {
+    return apiClient.delete(`/fees/collect/${id}`)
+  },
+
+  // ==========================================================
+  // Fees Discount
+  // ==========================================================
+
+  async getFeesDiscounts(params = {}) {
+    return apiClient.get('/fees/discount', { params })
+  },
+
+  async getFeesDiscount(id) {
+    return apiClient.get(`/fees/discount/${id}`)
+  },
+
   async createFeesDiscount(payload) {
-    return mockResponse({ _id: `fd-${Date.now()}`, ...payload })
+    return apiClient.post('/fees/discount', payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /fees/carry-forward
+
+  async updateFeesDiscount(id, payload) {
+    return apiClient.put(`/fees/discount/${id}`, payload)
+  },
+
+  async deleteFeesDiscount(id) {
+    return apiClient.delete(`/fees/discount/${id}`)
+  },
+
+  // ==========================================================
+  // Carry Forward
+  // ==========================================================
+
+  async getCarryForward(params = {}) {
+    return apiClient.get('/fees/carry-forward', { params })
+  },
+
+  async getCarryForwardById(id) {
+    return apiClient.get(`/fees/carry-forward/${id}`)
+  },
+
   async createCarryForward(payload) {
-    return mockResponse({ _id: `cf-${Date.now()}`, ...payload })
+    return apiClient.post('/fees/carry-forward', payload)
   },
-  // TODO(BACKEND)
-  // Replace with PUT /fees/:id
-  async update(id, payload) {
-    return mockResponse({ _id: id, ...payload })
+
+  async updateCarryForward(id, payload) {
+    return apiClient.put(`/fees/carry-forward/${id}`, payload)
   },
-  // TODO(BACKEND)
-  // Replace with DELETE /fees/:id
-  async remove(id) {
-    return mockResponse({ message: 'Deleted successfully' })
+
+  async deleteCarryForward(id) {
+    return apiClient.delete(`/fees/carry-forward/${id}`)
+  },
+
+  // ==========================================================
+  // Fees Reminder
+  // ==========================================================
+
+  async getReminders(params = {}) {
+    return apiClient.get('/fees/reminder', { params })
+  },
+
+  async getReminder(id) {
+    return apiClient.get(`/fees/reminder/${id}`)
+  },
+
+  async createReminder(payload) {
+    return apiClient.post('/fees/reminder', payload)
+  },
+
+  async updateReminder(id, payload) {
+    return apiClient.put(`/fees/reminder/${id}`, payload)
+  },
+
+  async deleteReminder(id) {
+    return apiClient.delete(`/fees/reminder/${id}`)
+  },
+
+  // ==========================================================
+  // Offline Bank Payment
+  // ==========================================================
+
+  async getOfflinePayments(params = {}) {
+    return apiClient.get('/fees/offline-payment', { params })
+  },
+
+  async getOfflinePayment(id) {
+    return apiClient.get(`/fees/offline-payment/${id}`)
+  },
+
+  async createOfflinePayment(payload) {
+    return apiClient.post('/fees/offline-payment', payload)
+  },
+
+  async updateOfflinePayment(id, payload) {
+    return apiClient.put(`/fees/offline-payment/${id}`, payload)
+  },
+
+  async deleteOfflinePayment(id) {
+    return apiClient.delete(`/fees/offline-payment/${id}`)
+  },
+
+  // ==========================================================
+  // Search Due Fees
+  //
+  // params:
+  // class_id
+  // section
+  // session
+  // page
+  // limit
+  // ==========================================================
+
+  async searchDueFees(params = {}) {
+    return apiClient.get('/fees/search-due', {
+      params,
+    })
+  },
+
+  // ==========================================================
+  // Search Fee Payments
+  //
+  // body:
+  // {
+  //   keyword
+  // }
+  //
+  // params:
+  // page
+  // limit
+  // ==========================================================
+
+  async searchFeesPayment(payload, params = {}) {
+    return apiClient.post('/fees/search-payment', payload, {
+      params,
+    })
   },
 }
 

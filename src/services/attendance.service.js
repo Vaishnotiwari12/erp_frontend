@@ -1,56 +1,93 @@
 // ====================================================================
-// Service Layer
+// Attendance Service
 //
-// Purpose:
-// Handles all backend communication for this module.
+// Handles all backend communication for Attendance Module.
 //
-// Current State:
-// Uses mock data.
+// Backend Endpoints:
+//   /api/attendance/student
+//   /api/attendance/by-date
+//   /api/attendance/approve-leave
 //
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
+// Response Format:
+// {
+//   success,
+//   message,
+//   data,
+//   pagination
+// }
 // ====================================================================
 
-import { mockResponse } from './mockData'
-import {
-  studentAttendance,
-  getAttendanceByDate,
-  leaveApplications,
-} from '@/data/attendance.mock'
+import apiClient from './api'
 
 export const attendanceService = {
-  // TODO(BACKEND)
-  // Replace with GET /attendance
-  async list() {
-    return mockResponse(studentAttendance)
+  // ==========================================================
+  // Student Attendance
+  // ==========================================================
+
+  async list(params = {}) {
+    return apiClient.get('/attendance/student', {
+      params,
+    })
   },
-  // TODO(BACKEND)
-  // Replace with GET /attendance/by-date
-  async byDate(date) {
-    return mockResponse(getAttendanceByDate(date))
+
+  async get(id) {
+    return apiClient.get(`/attendance/student/${id}`)
   },
-  // TODO(BACKEND)
-  // Replace with GET /attendance/leaves
-  async leaves() {
-    return mockResponse(leaveApplications)
+
+  async create(payload) {
+    return apiClient.post('/attendance/student', payload)
   },
-  // TODO(BACKEND)
-  // Replace with PATCH /attendance/:id
-  async markAttendance(id, status) {
-    return mockResponse({ _id: id, status, message: 'Attendance updated' })
+
+  async update(id, payload) {
+    return apiClient.put(`/attendance/student/${id}`, payload)
   },
-  // TODO(BACKEND)
-  // Replace with POST /attendance/bulk-mark
-  async bulkMark(ids, status) {
-    return mockResponse({ message: `${ids.length} students marked ${status}` })
+
+  async remove(id) {
+    return apiClient.delete(`/attendance/student/${id}`)
   },
-  // TODO(BACKEND)
-  // Replace with PATCH /attendance/leaves/:id
-  async updateLeave(id, status) {
-    return mockResponse({ _id: id, status, message: `Leave ${status}` })
+
+  // ==========================================================
+  // Attendance By Date
+  // Backend expects:
+  // {
+  //   attendanceDate: "2026-07-28"
+  // }
+  //
+  // Optional Query Params:
+  // page
+  // limit
+  // ==========================================================
+
+  async byDate(payload, params = {}) {
+    return apiClient.post('/attendance/by-date', payload, {
+      params,
+    })
+  },
+
+  // ==========================================================
+  // Leave Approval
+  // ==========================================================
+
+  async getLeaves(params = {}) {
+    return apiClient.get('/attendance/approve-leave', {
+      params,
+    })
+  },
+
+  async getLeave(id) {
+    return apiClient.get(`/attendance/approve-leave/${id}`)
+  },
+
+  async createLeave(payload) {
+    return apiClient.post('/attendance/approve-leave', payload)
+  },
+
+  async updateLeave(id, payload) {
+    return apiClient.put(`/attendance/approve-leave/${id}`, payload)
+  },
+
+  async deleteLeave(id) {
+    return apiClient.delete(`/attendance/approve-leave/${id}`)
   },
 }
 

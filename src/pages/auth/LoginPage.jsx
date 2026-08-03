@@ -32,7 +32,12 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ defaultValues: { email: 'admin@scholaria.io', password: 'demo1234' } })
+  } = useForm({ 
+    defaultValues: { 
+      email: '', 
+      password: '' 
+    } 
+  })
 
   const onSubmit = async (values) => {
     setServerError('')

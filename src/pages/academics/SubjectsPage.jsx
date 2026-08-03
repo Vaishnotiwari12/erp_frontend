@@ -35,7 +35,7 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { useSubjects } from '@/hooks/useAcademics'
-import { subjectGroups, SUBJECT_COLORS } from '@/services/mockData'
+// import { subjectGroups, SUBJECT_COLORS } from '@/services/mockData'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 

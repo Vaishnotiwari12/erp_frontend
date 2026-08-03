@@ -44,6 +44,8 @@ export const NAV_GROUPS = [
       { title: 'Students', to: '/students', icon: 'GraduationCap' },
       { title: 'Student Profile', to: '/students/profile', icon: 'UserSquare' },
       { title: 'Admissions', to: '/students/admissions', icon: 'ClipboardList' },
+      { title: 'Multi Class Students', to: '/students/multi-class', icon: 'Users' },
+      
     ],
   },
   {
@@ -125,7 +127,7 @@ export const NAV_GROUPS = [
   },
 ]
 
-export const APP_NAME = 'Scholaria ERP'
+export const APP_NAME = 'School-ERP'
 export const APP_VERSION = '1.0.0'
 
 export const STORAGE_KEYS = {

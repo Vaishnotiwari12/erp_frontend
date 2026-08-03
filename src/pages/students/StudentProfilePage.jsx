@@ -23,7 +23,7 @@ import ChartCard from '@/components/charts/ChartCard'
 import TrendAreaChart from '@/components/charts/TrendAreaChart'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { studentService } from '@/services/student.service'
-import { mockResponse } from '@/services/mockData'
+// import { mockResponse } from '@/services/mockData'
 import { formatDate, fullName, initials } from '@/utils/format'
 
 // Placeholder profile — uses first mock student.

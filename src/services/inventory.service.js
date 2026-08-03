@@ -1,332 +1,149 @@
-// ====================================================================
-// Inventory Service
-//
-// Service layer isolates all backend communication for the Inventory module.
-// Pages never call APIs directly — they call these methods, which return
-// the standard envelope: { success, message, data }.
-//
-// Currently uses mock data. When the backend is ready, replace each
-// mockResponse() call with the corresponding Axios API call. The UI
-// does not need to change because the return shape stays the same.
-// ====================================================================
-// BACKEND INTEGRATION
-// Replace this mock implementation with Axios API call.
-// UI components should never call APIs directly.
-// Only modify this service when backend APIs become available.
-// ====================================================================
-
-import { mockResponse } from './mockData'
-import {
-  itemCategories,
-  items,
-  itemStores,
-  itemSuppliers,
-  itemStocks,
-  issueItems,
-  inventoryStats,
-} from '@/data/inventory.mock'
+import apiClient from "./api";
 
 export const inventoryService = {
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
+  // ==========================================================
+  // Item Categories
+  // ==========================================================
 
-  // Fetch Inventory Dashboard Stats
-  // TODO(BACKEND):
-  // Replace mock service with backend API.
-  // Expected Response: { success, message, data }
-  async getStats() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/stats
-    // ====================================================================
-    return mockResponse(inventoryStats)
+  getItemCategories(params = {}) {
+    return apiClient.get("/inventory/item-category", { params });
   },
 
-  // ─── Item Categories ──────────────────────────────────────────────────────────
-
-  // Fetch Item Categories
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/item-categories
-  async getItemCategories() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/item-categories
-    // ====================================================================
-    return mockResponse(itemCategories)
+  getItemCategory(id) {
+    return apiClient.get(`/inventory/item-category/${id}`);
   },
 
-  // Create Item Category
-  // TODO(BACKEND):
-  // Replace with POST /inventory/item-categories
-  async createItemCategory(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/item-categories
-    // ====================================================================
-    return mockResponse({ _id: `ic-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  createItemCategory(payload) {
+    return apiClient.post("/inventory/item-category", payload);
   },
 
-  // Update Item Category
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/item-categories/:id
-  async updateItemCategory(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/item-categories/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  updateItemCategory(id, payload) {
+    return apiClient.put(`/inventory/item-category/${id}`, payload);
   },
 
-  // Delete Item Category
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/item-categories/:id
-  async deleteItemCategory(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/item-categories/:id
-    // ====================================================================
-    return mockResponse({ message: 'Item category deleted successfully' })
+  deleteItemCategory(id) {
+    return apiClient.delete(`/inventory/item-category/${id}`);
   },
 
-  // ─── Items ────────────────────────────────────────────────────────────────────
+  // ==========================================================
+  // Items
+  // ==========================================================
 
-  // Fetch Items
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/items
-  async getItems() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/items
-    // ====================================================================
-    return mockResponse(items)
+  getItems(params = {}) {
+    return apiClient.get("/inventory/item", { params });
   },
 
-  // Create Item
-  // TODO(BACKEND):
-  // Replace with POST /inventory/items
-  async createItem(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/items
-    // ====================================================================
-    return mockResponse({ _id: `itm-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  getItem(id) {
+    return apiClient.get(`/inventory/item/${id}`);
   },
 
-  // Update Item
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/items/:id
-  async updateItem(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/items/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  createItem(payload) {
+    return apiClient.post("/inventory/item", payload);
   },
 
-  // Delete Item
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/items/:id
-  async deleteItem(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/items/:id
-    // ====================================================================
-    return mockResponse({ message: 'Item deleted successfully' })
+  updateItem(id, payload) {
+    return apiClient.put(`/inventory/item/${id}`, payload);
   },
 
-  // ─── Item Stores ──────────────────────────────────────────────────────────────
-
-  // Fetch Item Stores
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/stores
-  async getItemStores() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/stores
-    // ====================================================================
-    return mockResponse(itemStores)
+  deleteItem(id) {
+    return apiClient.delete(`/inventory/item/${id}`);
   },
 
-  // Create Item Store
-  // TODO(BACKEND):
-  // Replace with POST /inventory/stores
-  async createItemStore(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/stores
-    // ====================================================================
-    return mockResponse({ _id: `is-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  // ==========================================================
+  // Item Stores
+  // ==========================================================
+
+  getItemStores(params = {}) {
+    return apiClient.get("/inventory/item-store", { params });
   },
 
-  // Update Item Store
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/stores/:id
-  async updateItemStore(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/stores/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  getItemStore(id) {
+    return apiClient.get(`/inventory/item-store/${id}`);
   },
 
-  // Delete Item Store
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/stores/:id
-  async deleteItemStore(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/stores/:id
-    // ====================================================================
-    return mockResponse({ message: 'Item store deleted successfully' })
+  createItemStore(payload) {
+    return apiClient.post("/inventory/item-store", payload);
   },
 
-  // ─── Item Suppliers ───────────────────────────────────────────────────────────
-
-  // Fetch Item Suppliers
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/suppliers
-  async getItemSuppliers() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/suppliers
-    // ====================================================================
-    return mockResponse(itemSuppliers)
+  updateItemStore(id, payload) {
+    return apiClient.put(`/inventory/item-store/${id}`, payload);
   },
 
-  // Create Item Supplier
-  // TODO(BACKEND):
-  // Replace with POST /inventory/suppliers
-  async createItemSupplier(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/suppliers
-    // ====================================================================
-    return mockResponse({ _id: `sup-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), ...payload })
+  deleteItemStore(id) {
+    return apiClient.delete(`/inventory/item-store/${id}`);
   },
 
-  // Update Item Supplier
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/suppliers/:id
-  async updateItemSupplier(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/suppliers/:id
-    // ====================================================================
-    return mockResponse({ _id: id, ...payload })
+  // ==========================================================
+  // Item Suppliers
+  // ==========================================================
+
+  getItemSuppliers(params = {}) {
+    return apiClient.get("/inventory/item-supplier", { params });
   },
 
-  // Delete Item Supplier
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/suppliers/:id
-  async deleteItemSupplier(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/suppliers/:id
-    // ====================================================================
-    return mockResponse({ message: 'Item supplier deleted successfully' })
+  getItemSupplier(id) {
+    return apiClient.get(`/inventory/item-supplier/${id}`);
   },
 
-  // ─── Item Stock ───────────────────────────────────────────────────────────────
-
-  // Fetch Item Stocks
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/stock
-  async getItemStocks() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/stock
-    // ====================================================================
-    return mockResponse(itemStocks)
+  createItemSupplier(payload) {
+    return apiClient.post("/inventory/item-supplier", payload);
   },
 
-  // Create Item Stock
-  // TODO(BACKEND):
-  // Replace with POST /inventory/stock
-  async createItemStock(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/stock
-    // ====================================================================
-    const quantity = Number(payload.quantity) || 0
-    const unit_price = Number(payload.unit_price) || 0
-    return mockResponse({ _id: `stk-${Date.now()}`, status: 'active', createdAt: new Date().toISOString(), total_value: quantity * unit_price, ...payload })
+  updateItemSupplier(id, payload) {
+    return apiClient.put(`/inventory/item-supplier/${id}`, payload);
   },
 
-  // Update Item Stock
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/stock/:id
-  async updateItemStock(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/stock/:id
-    // ====================================================================
-    const quantity = Number(payload.quantity) || 0
-    const unit_price = Number(payload.unit_price) || 0
-    return mockResponse({ _id: id, total_value: quantity * unit_price, ...payload })
+  deleteItemSupplier(id) {
+    return apiClient.delete(`/inventory/item-supplier/${id}`);
   },
 
-  // Delete Item Stock
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/stock/:id
-  async deleteItemStock(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/stock/:id
-    // ====================================================================
-    return mockResponse({ message: 'Item stock deleted successfully' })
+  // ==========================================================
+  // Item Stock
+  // ==========================================================
+
+  getItemStocks(params = {}) {
+    return apiClient.get("/inventory/item-stock", { params });
   },
 
-  // ─── Issue Items ──────────────────────────────────────────────────────────────
-
-  // Fetch Issue Items
-  // TODO(BACKEND):
-  // Replace mock data with GET /inventory/issue
-  async getIssueItems() {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // Replace this mock implementation with Axios API call.
-    // GET /inventory/issue
-    // ====================================================================
-    return mockResponse(issueItems)
+  getItemStock(id) {
+    return apiClient.get(`/inventory/item-stock/${id}`);
   },
 
-  // Create Issue Item
-  // TODO(BACKEND):
-  // Replace with POST /inventory/issue
-  async createIssueItem(payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // POST /inventory/issue
-    // ====================================================================
-    return mockResponse({ _id: `iss-${Date.now()}`, status: 'issued', return_date: null, createdAt: new Date().toISOString(), ...payload })
+  createItemStock(payload) {
+    return apiClient.post("/inventory/item-stock", payload);
   },
 
-  // Return Item
-  // TODO(BACKEND):
-  // Replace with PUT /inventory/issue/:id/return
-  async returnItem(id, payload) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // PUT /inventory/issue/:id/return
-    // ====================================================================
-    return mockResponse({ _id: id, status: 'returned', return_date: payload?.return_date || new Date().toISOString().slice(0, 10), ...payload })
+  updateItemStock(id, payload) {
+    return apiClient.put(`/inventory/item-stock/${id}`, payload);
   },
 
-  // Delete Issue Item
-  // TODO(BACKEND):
-  // Replace with DELETE /inventory/issue/:id
-  async deleteIssueItem(id) {
-    // ====================================================================
-    // BACKEND INTEGRATION
-    // DELETE /inventory/issue/:id
-    // ====================================================================
-    return mockResponse({ message: 'Issue item deleted successfully' })
+  deleteItemStock(id) {
+    return apiClient.delete(`/inventory/item-stock/${id}`);
   },
-}
 
-export default inventoryService
+  // ==========================================================
+  // Item Issue
+  // ==========================================================
+
+  getIssueItems(params = {}) {
+    return apiClient.get("/inventory/item-issue", { params });
+  },
+
+  getIssueItem(id) {
+    return apiClient.get(`/inventory/item-issue/${id}`);
+  },
+
+  createIssueItem(payload) {
+    return apiClient.post("/inventory/item-issue", payload);
+  },
+
+  updateIssueItem(id, payload) {
+    return apiClient.put(`/inventory/item-issue/${id}`, payload);
+  },
+
+  deleteIssueItem(id) {
+    return apiClient.delete(`/inventory/item-issue/${id}`);
+  },
+};
+
+export default inventoryService;

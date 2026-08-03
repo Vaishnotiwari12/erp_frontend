@@ -1,46 +1,27 @@
-// ====================================================================
-// Service Layer
-//
-// Purpose:
-// Handles all backend communication for this module.
-//
-// Current State:
-// Uses mock data.
-//
-// TODO(BACKEND):
-// Replace mock implementation with Axios API calls.
-//
-// Expected Response:
-// { success, message, data }
-// ====================================================================
-
-import apiClient from './api'
-import { mockResponse, domains as mockDomains } from './mockData'
+import apiClient from "./api";
 
 export const domainService = {
-  // TODO(BACKEND)
-  // Replace with GET /schools
-  async list(params = {}) {
-    return mockResponse(mockDomains)
+  list(params = {}) {
+    return apiClient.get("/domain", {
+      params,
+    });
   },
 
-  // TODO(BACKEND)
-  // Replace with POST /schools
-  async create(payload) {
-    return mockResponse({ _id: `dom-${Date.now()}`, ...payload, status: 'active', verified: false, ssl: 'Pending' })
+  get(id) {
+    return apiClient.get(`/domain/${id}`);
   },
 
-  // TODO(BACKEND)
-  // Replace with PATCH /domains/:id/verify
-  async verify(id) {
-    return mockResponse({ _id: id, verified: true, ssl: 'Active', status: 'active' })
+  create(payload) {
+    return apiClient.post("/domain", payload);
   },
 
-  // TODO(BACKEND)
-  // Replace with DELETE /schools/:id
-  async remove(id) {
-    return mockResponse({ message: 'Domain removed successfully' })
+  update(id, payload) {
+    return apiClient.put(`/domain/${id}`, payload);
   },
-}
 
-export default domainService
+  remove(id) {
+    return apiClient.delete(`/domain/${id}`);
+  },
+};
+
+export default domainService;
