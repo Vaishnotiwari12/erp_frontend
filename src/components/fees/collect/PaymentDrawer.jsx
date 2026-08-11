@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { PAYMENT_MODES } from '@/data/fees.mock'
+import { PAYMENT_MODES } from '@/constants/fees'
 
 export function PaymentDrawer({ open, onOpenChange, summary, onCollect }) {
   const [form, setForm] = useState({

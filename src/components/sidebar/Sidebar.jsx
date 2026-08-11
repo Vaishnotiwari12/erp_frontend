@@ -6,6 +6,7 @@ import { APP_NAME } from '@/constants/navigation'
 import { sidebarItems } from '@/config/sidebar'
 import { useAuth } from '@/context/AuthContext'
 import { useModules } from '@/context/ModuleContext'
+import { ROLE_SIDEBAR } from '@/constants/navigation'
 
 const EXPANDED_KEY = 'scholaria.sidebar.expanded'
 
@@ -45,11 +46,43 @@ const SECTION_TO_MODULE = {
   domains: 'Domains',
 }
 
+const getDisplayName = (name) => {
+  if (typeof name === 'string') return name
+
+  if (name && typeof name === 'object') {
+    return [name.first, name.last].filter(Boolean).join(' ')
+  }
+
+  return 'User'
+}
+
+
 export function Sidebar({ collapsed, onNavigate }) {
   const location = useLocation()
-  const { tenant, user } = useAuth()
+  const { tenant, user, role } = useAuth()
+
+  const displayName = getDisplayName(user?.name)
+
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
   const { isModuleEnabled, hasPermission } = useModules()
   const [expanded, setExpanded] = useState(readExpanded)
+
+  // Role-based sidebar: only show sections allowed for the current role.
+  const allowedSections = useMemo(() => {
+  if (!role) return null
+
+  if (role === "superadmin") {
+    return null
+  }
+
+  return new Set(ROLE_SIDEBAR[role] || [])
+}, [role])
 
   // Persist the single expanded section across reloads.
   useEffect(() => {
@@ -83,15 +116,17 @@ export function Sidebar({ collapsed, onNavigate }) {
       return new Set([id])
     })
 
-  // Filter sidebar items by enabled modules + role permissions.
+  // Filter sidebar items by enabled modules + role permissions + role visibility.
   const visibleItems = useMemo(() => {
     return sidebarItems.filter((item) => {
+      // Role filter: skip sections not allowed for this role.
+      if (allowedSections && !allowedSections.has(item.id)) return false
       const moduleName = SECTION_TO_MODULE[item.id]
-      if (moduleName && !isModuleEnabled(item.id)) return false
-      if (!hasPermission(item.id, 'view')) return false
+      if (moduleName && !isModuleEnabled(moduleName)) return false
+     if (moduleName && !hasPermission(moduleName, "view")) return false
       return true
     })
-  }, [isModuleEnabled, hasPermission])
+  }, [isModuleEnabled, hasPermission, allowedSections])
 
   // Tenant display: logo + school name from backend settings.
   const tenantName = tenant?.school_name || APP_NAME
@@ -250,19 +285,31 @@ export function Sidebar({ collapsed, onNavigate }) {
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-border/60 p-3">
-        <div className={cn('flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent', collapsed && 'justify-center px-0')}>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-            {user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-tight">{user?.name || 'User'}</p>
-              <p className="truncate text-xs font-medium leading-tight text-muted-foreground capitalize">{user?.role || 'Admin'}</p>
-            </div>
-          )}
-        </div>
+      {/* User footer */}
+<div className="border-t border-border/60 p-3">
+  <div
+    className={cn(
+      'flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent',
+      collapsed && 'justify-center px-0'
+    )}
+  >
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+      {initials || 'U'}
+    </div>
+
+    {!collapsed && (
+      <div className="min-w-0">
+        <p className="truncate text-[13px] font-semibold leading-tight">
+          {displayName}
+        </p>
+
+        <p className="truncate text-xs font-medium leading-tight text-muted-foreground capitalize">
+          {user?.role || 'Admin'}
+        </p>
       </div>
+    )}
+  </div>
+</div>
     </aside>
   )
 }

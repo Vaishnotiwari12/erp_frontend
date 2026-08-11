@@ -60,13 +60,13 @@ export function Drawer({
   )
 }
 
-export function DrawerFooter({ onCancel, onSubmit, cancelLabel = 'Cancel', submitLabel = 'Save', submitDisabled }) {
+export function DrawerFooter({ onCancel, onSubmit, cancelLabel = 'Cancel', submitLabel = 'Save', submitDisabled, formId }) {
   return (
     <>
       <Button variant="outline" onClick={onCancel} type="button">
         {cancelLabel}
       </Button>
-      <Button onClick={onSubmit} disabled={submitDisabled} type="submit">
+      <Button onClick={onSubmit} disabled={submitDisabled} type="submit" form={formId}>
         {submitLabel}
       </Button>
     </>

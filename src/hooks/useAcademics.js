@@ -35,31 +35,30 @@ export function useClasses() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || r.name.toLowerCase().includes(q)
+        const matchSearch = (r.class_name || "")
+          .toLowerCase()
+          .includes(q)
         const matchStatus = status === 'all' || r.status === status
         return matchSearch && matchStatus
       }),
     [rows, search, status],
   )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      active: rows.filter((r) => r.status === 'active').length,
-      sections: rows.reduce((s, r) => s + (r.sections_count || 0), 0),
-      inactive: rows.filter((r) => r.status !== 'active').length,
-    }),
-    [rows],
-  )
+const stats = {
+  total: rows.length,
+}
 
   const saveClass = useCallback(
     async (payload, id) => {
       if (id) {
-        await academicsService.update(id, payload)
-        toast({ title: 'Class updated', description: payload.name })
+        await academicsService.updateClass(id, {
+          class_name: payload.class_name,
+        })
+        toast({ title: 'Class updated', description: payload.class_name })
       } else {
-        await academicsService.createClass(payload)
-        toast({ title: 'Class added', description: payload.name })
+        await academicsService.createClass({
+          class_name: payload.class_name,
+        })
+        toast({ title: 'Class added', description: payload.class_name })
       }
       refetch()
     },
@@ -68,9 +67,13 @@ export function useClasses() {
 
   const deleteClass = useCallback(
     async (id) => {
-      await academicsService.remove(id)
-      toast({ title: 'Class deleted' })
-      refetch()
+      try {
+        await academicsService.deleteClass(id)
+        toast({ title: 'Class deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting class', description: error.message, variant: 'destructive' })
+      }
     },
     [refetch, toast],
   )
@@ -104,7 +107,6 @@ export function useSections() {
   const { data, isLoading, refetch } = useAsyncData(() => academicsService.sections(), [])
 
   const [search, setSearch] = useState('')
-  const [classFilter, setClassFilter] = useState('all')
 
   const rows = data || []
 
@@ -112,29 +114,31 @@ export function useSections() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || (r.name || '').toLowerCase().includes(q)
-        const matchClass = classFilter === 'all' || r.class === classFilter
-        return matchSearch && matchClass
+        const matchSearch = !q || (r.section_name || '').toLowerCase().includes(q) || (r.class_name || '').toLowerCase().includes(q)
+        return matchSearch
       }),
-    [rows, search, classFilter],
+    [rows, search],
   )
 
   const stats = useMemo(
     () => ({
       total: rows.length,
-      classes: new Set(rows.map((r) => r.class)).size,
     }),
     [rows],
   )
 
   const saveSection = useCallback(
     async (payload, id) => {
+      const data = {
+        class_id: payload.class_id,
+        section_name: payload.section_name,
+      }
       if (id) {
-        await academicsService.update(id, payload)
-        toast({ title: 'Section updated', description: payload.name })
+        await academicsService.updateSection(id, data)
+        toast({ title: 'Section updated', description: payload.section_name })
       } else {
-        await academicsService.createSection(payload)
-        toast({ title: 'Section added', description: payload.name })
+        await academicsService.createSection(data)
+        toast({ title: 'Section added', description: payload.section_name })
       }
       refetch()
     },
@@ -143,9 +147,13 @@ export function useSections() {
 
   const deleteSection = useCallback(
     async (id) => {
-      await academicsService.remove(id)
-      toast({ title: 'Section deleted' })
-      refetch()
+      try {
+        await academicsService.deleteSection(id)
+        toast({ title: 'Section deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting section', description: error.message, variant: 'destructive' })
+      }
     },
     [refetch, toast],
   )
@@ -156,7 +164,6 @@ export function useSections() {
     stats,
     isLoading,
     search, setSearch,
-    classFilter, setClassFilter,
     saveSection,
     deleteSection,
   }
@@ -169,43 +176,38 @@ export function useSubjects() {
   const { data, isLoading, refetch } = useAsyncData(() => academicsService.subjects(), [])
 
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
 
   const rows = data || []
 
-  // useMemo prevents recalculating filtered subjects
-  // unless subject list or filters change.
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q)
-        const matchStatus = status === 'all' || r.status === status
-        const matchType = typeFilter === 'all' || r.type === typeFilter
-        return matchSearch && matchStatus && matchType
+        const matchSearch = !q || (r.subject_name || '').toLowerCase().includes(q) || (r.subject_code || '').toLowerCase().includes(q)
+        return matchSearch
       }),
-    [rows, search, status, typeFilter],
+    [rows, search],
   )
 
   const stats = useMemo(
     () => ({
       total: rows.length,
-      active: rows.filter((r) => r.status === 'active').length,
-      core: rows.filter((r) => r.type === 'Core').length,
-      elective: rows.filter((r) => r.type === 'Elective').length,
     }),
     [rows],
   )
 
   const saveSubject = useCallback(
     async (payload, id) => {
+      const data = {
+        subject_name: payload.subject_name,
+        subject_code: payload.subject_code,
+      }
       if (id) {
-        await academicsService.update(id, payload)
-        toast({ title: 'Subject updated', description: payload.name })
+        await academicsService.updateSubject(id, data)
+        toast({ title: 'Subject updated', description: payload.subject_name })
       } else {
-        await academicsService.createSubject(payload)
-        toast({ title: 'Subject added', description: payload.name })
+        await academicsService.createSubject(data)
+        toast({ title: 'Subject added', description: payload.subject_name })
       }
       refetch()
     },
@@ -214,16 +216,20 @@ export function useSubjects() {
 
   const deleteSubject = useCallback(
     async (id) => {
-      await academicsService.remove(id)
-      toast({ title: 'Subject deleted' })
-      refetch()
+      try {
+        await academicsService.deleteSubject(id)
+        toast({ title: 'Subject deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting subject', description: error.message, variant: 'destructive' })
+      }
     },
     [refetch, toast],
   )
 
   const bulkDelete = useCallback(
     async (ids) => {
-      await academicsService.bulkDelete(ids)
+      await Promise.all(ids.map(id => academicsService.deleteSubject(id)))
       toast({ title: 'Subjects deleted' })
       refetch()
     },
@@ -236,8 +242,6 @@ export function useSubjects() {
     stats,
     isLoading,
     search, setSearch,
-    status, setStatus,
-    typeFilter, setTypeFilter,
     saveSubject,
     deleteSubject,
     bulkDelete,
@@ -254,23 +258,31 @@ export function useSubjectGroups() {
 
   const rows = data || []
 
+  const stats = useMemo(() => ({
+    total: rows.length,
+  }), [rows])
+
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        return !q || (r.name || '').toLowerCase().includes(q)
+        return !q || (r.group_name || '').toLowerCase().includes(q) || (r.group_code || '').toLowerCase().includes(q)
       }),
     [rows, search],
   )
 
   const saveSubjectGroup = useCallback(
     async (payload, id) => {
+      const data = {
+        group_name: payload.group_name,
+        group_code: payload.group_code,
+      }
       if (id) {
-        await academicsService.update(id, payload)
-        toast({ title: 'Subject group updated', description: payload.name })
+        await academicsService.updateSubjectGroup(id, data)
+        toast({ title: 'Subject group updated', description: payload.group_name })
       } else {
-        await academicsService.createSubjectGroup(payload)
-        toast({ title: 'Subject group added', description: payload.name })
+        await academicsService.createSubjectGroup(data)
+        toast({ title: 'Subject group added', description: payload.group_name })
       }
       refetch()
     },
@@ -279,9 +291,13 @@ export function useSubjectGroups() {
 
   const deleteSubjectGroup = useCallback(
     async (id) => {
-      await academicsService.remove(id)
-      toast({ title: 'Subject group deleted' })
-      refetch()
+      try {
+        await academicsService.deleteSubjectGroup(id)
+        toast({ title: 'Subject group deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting subject group', description: error.message, variant: 'destructive' })
+      }
     },
     [refetch, toast],
   )
@@ -289,6 +305,7 @@ export function useSubjectGroups() {
   return {
     rows: filtered,
     allSubjectGroups: rows,
+    stats,
     isLoading,
     search, setSearch,
     saveSubjectGroup,
@@ -303,7 +320,6 @@ export function useClassTeachers() {
   const { data, isLoading, refetch } = useAsyncData(() => academicsService.classTeachers(), [])
 
   const [search, setSearch] = useState('')
-  const [classFilter, setClassFilter] = useState('all')
 
   const rows = data || []
 
@@ -311,20 +327,31 @@ export function useClassTeachers() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || (r.teacher_name || '').toLowerCase().includes(q) || (r.class || '').toLowerCase().includes(q)
-        const matchClass = classFilter === 'all' || r.class === classFilter
-        return matchSearch && matchClass
+        const matchSearch = !q || (r.teacher_name || '').toLowerCase().includes(q) || (r.class_name || '').toLowerCase().includes(q)
+        return matchSearch
       }),
-    [rows, search, classFilter],
+    [rows, search],
+  )
+
+  const stats = useMemo(
+    () => ({
+      total: rows.length,
+    }),
+    [rows],
   )
 
   const saveClassTeacher = useCallback(
     async (payload, id) => {
+      const data = {
+        teacher_id: payload.teacher_id,
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+      }
       if (id) {
-        await academicsService.update(id, payload)
+        await academicsService.updateClassTeacher(id, data)
         toast({ title: 'Class teacher updated' })
       } else {
-        await academicsService.createClassTeacher(payload)
+        await academicsService.createClassTeacher(data)
         toast({ title: 'Class teacher assigned' })
       }
       refetch()
@@ -334,9 +361,13 @@ export function useClassTeachers() {
 
   const deleteClassTeacher = useCallback(
     async (id) => {
-      await academicsService.remove(id)
-      toast({ title: 'Class teacher removed' })
-      refetch()
+      try {
+        await academicsService.deleteClassTeacher(id)
+        toast({ title: 'Class teacher removed' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error removing class teacher', description: error.message, variant: 'destructive' })
+      }
     },
     [refetch, toast],
   )
@@ -344,72 +375,176 @@ export function useClassTeachers() {
   return {
     rows: filtered,
     allClassTeachers: rows,
+    stats,
     isLoading,
     search, setSearch,
-    classFilter, setClassFilter,
     saveClassTeacher,
     deleteClassTeacher,
   }
 }
 
 // ─── useClassTimetable ──────────────────────────────────────────────────────────
-// Manages class timetable grid, filter state, and stats.
+// Manages class timetable entries and CRUD operations.
 export function useClassTimetable() {
   const { toast } = useToast()
-  const { data, isLoading } = useAsyncData(() => academicsService.classTimetable(), [])
+  const { data, isLoading, refetch } = useAsyncData(() => academicsService.classTimetable(), [])
 
-  const [classFilter, setClassFilter] = useState('')
-  const [sectionFilter, setSectionFilter] = useState('')
-  const [year, setYear] = useState('')
+  const [search, setSearch] = useState('')
 
-  const grid = data || {}
+  const rows = data || []
 
-  const stats = useMemo(() => {
-    const entries = Object.values(grid).filter((e) => !e.isBreak && !e.isFree)
-    return {
-      total: entries.length,
-      subjects: new Set(entries.map((e) => e.subject)).size,
-      teachers: new Set(entries.map((e) => e.teacher)).size,
-    }
-  }, [grid])
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        const q = search.toLowerCase()
+        const matchSearch = !q || (r.class_name || '').toLowerCase().includes(q) || (r.subject_name || '').toLowerCase().includes(q) || (r.teacher_name || '').toLowerCase().includes(q)
+        return matchSearch
+      }),
+    [rows, search],
+  )
 
-  const exportPdf = useCallback(() => {
-    toast({ title: 'Exporting PDF', description: 'The timetable PDF will download shortly.' })
-  }, [toast])
+  const stats = useMemo(
+    () => ({
+      total: rows.length,
+    }),
+    [rows],
+  )
+
+  const saveTimetable = useCallback(
+    async (payload, id) => {
+      const data = {
+        class_id: payload.class_id,
+        section_id: payload.section_id,
+        subject_id: payload.subject_id,
+        teacher_id: payload.teacher_id,
+        day: payload.day,
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        room: payload.room,
+      }
+      if (id) {
+        await academicsService.updateClassTimetable(id, data)
+        toast({ title: 'Timetable updated', description: payload.day })
+      } else {
+        await academicsService.createClassTimetable(data)
+        toast({ title: 'Timetable entry added', description: payload.day })
+      }
+      refetch()
+    },
+    [refetch, toast],
+  )
+
+  const deleteTimetable = useCallback(
+    async (id) => {
+      try {
+        await academicsService.deleteClassTimetable(id)
+        toast({ title: 'Timetable entry deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting timetable entry', description: error.message, variant: 'destructive' })
+      }
+    },
+    [refetch, toast],
+  )
 
   return {
-    grid,
+    rows: filtered,
     stats,
     isLoading,
-    classFilter, setClassFilter,
-    sectionFilter, setSectionFilter,
-    year, setYear,
-    exportPdf,
+    search, setSearch,
+    saveTimetable,
+    deleteTimetable,
   }
 }
 
 // ─── useTeacherTimetable ────────────────────────────────────────────────────────
-// Manages teacher timetable grid for a given teacher name.
-export function useTeacherTimetable(teacherName) {
+// Manages teacher timetable for a given teacher ID (read-only).
+export function useTeacherTimetable(teacherId) {
   const { data, isLoading } = useAsyncData(
-    () => academicsService.teacherTimetable(teacherName),
-    [teacherName],
+    () => academicsService.teacherTimetable(teacherId),
+    [teacherId],
   )
 
-  const grid = data || {}
+  const rows = data || []
 
-  const stats = useMemo(() => {
-    const entries = Object.values(grid).filter((e) => !e.isBreak && !e.isFree)
-    return {
-      total: entries.length,
-      subjects: new Set(entries.map((e) => e.subject)).size,
-      classes: new Set(entries.map((e) => e.class)).size,
-    }
-  }, [grid])
+  const stats = useMemo(() => ({
+    total: rows.length,
+  }), [rows])
 
   return {
-    grid,
+    rows,
     stats,
     isLoading,
+  }
+}
+
+// ─── usePromotions ────────────────────────────────────────────────────────
+// Manages student promotions list, filtering, and CRUD operations.
+export function usePromotions() {
+  const { toast } = useToast()
+  const { data, isLoading, refetch } = useAsyncData(() => academicsService.promotedStudents(), [])
+
+  const [search, setSearch] = useState('')
+
+  const rows = data || []
+
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        const q = search.toLowerCase()
+        const studentName = r.name?.first ? `${r.name?.first} ${r.name?.last}`.toLowerCase() : ''
+        const matchSearch = !q || studentName.includes(q) || (r.from_class || '').toLowerCase().includes(q) || (r.to_class || '').toLowerCase().includes(q)
+        return matchSearch
+      }),
+    [rows, search],
+  )
+
+  const stats = useMemo(
+    () => ({
+      total: rows.length,
+    }),
+    [rows],
+  )
+
+  const savePromotion = useCallback(
+    async (payload, id) => {
+      const data = {
+        student_id: payload.student_id,
+        from_class: payload.from_class,
+        to_class: payload.to_class,
+        session: payload.session,
+      }
+      if (id) {
+        await academicsService.updatePromotion(id, data)
+        toast({ title: 'Promotion updated', description: payload.student_id })
+      } else {
+        await academicsService.promoteStudents(data)
+        toast({ title: 'Student promoted', description: payload.student_id })
+      }
+      refetch()
+    },
+    [refetch, toast],
+  )
+
+  const deletePromotion = useCallback(
+    async (id) => {
+      try {
+        await academicsService.deletePromotion(id)
+        toast({ title: 'Promotion deleted' })
+        refetch()
+      } catch (error) {
+        toast({ title: 'Error deleting promotion', description: error.message, variant: 'destructive' })
+      }
+    },
+    [refetch, toast],
+  )
+
+  return {
+    rows: filtered,
+    stats,
+    isLoading,
+    search, setSearch,
+    savePromotion,
+    deletePromotion,
   }
 }

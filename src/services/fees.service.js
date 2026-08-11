@@ -253,6 +253,64 @@ export const feesService = {
       params,
     })
   },
-}
+
+  // ==========================================================
+  // Alias methods used by hooks/pages
+  // ==========================================================
+
+  // useFeesCollection hook calls getFeesCollection
+  async getFeesCollection(params = {}) {
+    return apiClient.get('/fees/collect', { params })
+  },
+
+  // CollectFees page calls getStudentFeeSummary
+  async getStudentFeeSummary(studentId) {
+    return apiClient.get(`/fees/collect/student/${studentId}`)
+  },
+
+  // useFeesReminder hook calls getFeesReminder
+  async getFeesReminder(params = {}) {
+    return apiClient.get('/fees/reminder', { params })
+  },
+
+  // useDueFees hook calls getDueFees
+  async getDueFees(params = {}) {
+    return apiClient.get('/fees/search-due', { params })
+  },
+
+  // useFeesPayments hook calls getFeesPayments
+ async getFeesPayments(keyword = "", params = {}) {
+  return apiClient.post(
+    "/fees/search-payment",
+    {
+      keyword,
+    },
+    {
+      params,
+    }
+  )
+},
+
+
+  // useOfflinePayments hook calls approveOfflinePayment / rejectOfflinePayment
+  async approveOfflinePayment(id) {
+    return apiClient.put(`/fees/offline-payment/${id}/approve`)
+  },
+
+  async rejectOfflinePayment(id) {
+    return apiClient.put(`/fees/offline-payment/${id}/reject`)
+  },
+
+  // useFeesCollection hook calls searchStudents
+  async searchStudents(query) {
+    const students = await apiClient.get('/student/details/all', { params: { page: 1, limit: 100 } })
+    const term = String(query || '').trim().toLowerCase()
+    return (Array.isArray(students) ? students : students?.data || []).filter((student) => {
+      const name = [student.name?.first, student.name?.last].filter(Boolean).join(' ')
+      return !term || [name, student.email, student.mobile, student.roll_number, student.class_name]
+        .some((field) => String(field || '').toLowerCase().includes(term))
+    })
+  },
+} 
 
 export default feesService

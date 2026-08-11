@@ -34,6 +34,17 @@ import Sidebar from '@/components/sidebar/Sidebar'
 import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 import { cn } from '@/lib/utils'
 
+
+const getDisplayName = (name) => {
+  if (typeof name === 'string') return name
+
+  if (name && typeof name === 'object') {
+    return [name.first, name.last].filter(Boolean).join(' ')
+  }
+
+  return 'User'
+}
+
 // Highlights the matching portion of text within a result label.
 function HighlightMatch({ text, query }) {
   if (!query) return <>{text}</>
@@ -65,6 +76,16 @@ export function Navbar({ collapsed, onToggleCollapse, onOpenMobile }) {
     query, results, activeIndex, isOpen, inputRef,
     handleQueryChange, handleKeyDown, selectResult, open, close, setActiveIndex,
   } = useGlobalSearch()
+
+  const displayName = getDisplayName(user?.name)
+
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
   const cycleTheme = () => {
     const order = ['light', 'dark', 'system']
@@ -202,15 +223,15 @@ export function Navbar({ collapsed, onToggleCollapse, onOpenMobile }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 px-1.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {(user?.name || 'AM').split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                {initials || 'U'}
               </div>
-              <span className="hidden text-sm font-medium md:inline-block">{user?.name || 'Alex Morgan'}</span>
+              <span className="hidden text-sm font-medium md:inline-block">{displayName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{user?.name || 'Alex Morgan'}</span>
+                <span className="text-sm font-medium">{displayName}</span>
                 <span className="text-xs font-normal text-muted-foreground">{user?.email || 'alex@scholaria.io'}</span>
               </div>
             </DropdownMenuLabel>
@@ -222,7 +243,7 @@ export function Navbar({ collapsed, onToggleCollapse, onOpenMobile }) {
               <Settings className="h-4 w-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => { logout(); navigate('/login') }}>
+            <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={async () => { await logout(); navigate('/login') }}>
               <LogOut className="h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

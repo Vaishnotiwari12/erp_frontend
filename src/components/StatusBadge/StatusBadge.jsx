@@ -16,6 +16,7 @@ const DOT_STYLES = {
   inactive: 'bg-muted-foreground',
   pending: 'bg-warning',
   suspended: 'bg-destructive',
+  disabled: 'bg-destructive',
 }
 
 export function StatusBadge({ status, className, variant = 'pill' }) {

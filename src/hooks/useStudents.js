@@ -1,575 +1,219 @@
-// ====================================================================
-// Custom Hook
-//
-// Purpose:
-// Contains business logic for this module.
-//
-// Responsibilities:
-// - Search
-// - Filter
-// - Sorting
-// - CRUD orchestration
-//
-// Keeps page components focused on UI.
-// ====================================================================
-
-import { useMemo, useState, useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { studentService } from '@/services/student.service'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { useToast } from '@/hooks/use-toast'
 import { fullName } from '@/utils/format'
 
-// ─── useStudents ───────────────────────────────────────────────────────────────
-// Manages student list state, filtering, stats, and CRUD operations.
+const listValue = (data) => (Array.isArray(data) ? data : data?.data || [])
+const displayName = (student) => fullName(student?.name || {
+  first: student?.first_name,
+  last: student?.last_name,
+}) || 'Unnamed student'
+
 export function useStudents() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.list(), [])
-
+  const { data, isLoading, error, refetch } = useAsyncData(
+    () => studentService.list({ page: 1, limit: 100 }),
+    [],
+  )
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [classFilter, setClassFilter] = useState('all')
 
-  const rows = data || []
+  const allStudents = listValue(data)
+  const classOptions = useMemo(() => [
+    { value: 'all', label: 'All classes' },
+    ...Array.from(new Set(allStudents.map((student) => student.class_name).filter(Boolean)))
+      .map((item) => ({ value: item, label: item })),
+  ], [allStudents])
 
-  const classOptions = useMemo(
-    () => [
-      { value: 'all', label: 'All classes' },
-      ...Array.from(new Set(rows.map((r) => r.class))).map((c) => ({ value: c, label: c })),
-    ],
-    [rows],
-  )
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return allStudents.filter((student) => {
+      const matchesSearch = !query || [
+        displayName(student),
+        student.email,
+        student.mobile,
+        student.roll_number,
+        student.class_name,
+        student.guardian?.name,
+      ].some((field) => String(field || '').toLowerCase().includes(query))
+      const matchesStatus = status === 'all' || student.status === status
+      const matchesClass = classFilter === 'all' || student.class_name === classFilter
+      return matchesSearch && matchesStatus && matchesClass
+    })
+  }, [allStudents, classFilter, search, status])
 
-  // useMemo prevents recalculating filtered students
-  // unless student list or filters change.
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const name = fullName(r.name)
-        const q = search.toLowerCase()
-        const matchSearch =
-          !q ||
-          name.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q) ||
-          (r.admission_no || '').toLowerCase().includes(q)
-        const matchStatus = status === 'all' || r.status === status
-        const matchClass = classFilter === 'all' || r.class === classFilter
-        return matchSearch && matchStatus && matchClass
-      }),
-    [rows, search, status, classFilter],
-  )
+  const stats = useMemo(() => ({
+    total: allStudents.length,
+    active: allStudents.filter((student) => student.status === 'active').length,
+    inactive: allStudents.filter((student) => student.status === 'inactive').length,
+    disabled: allStudents.filter((student) => student.status === 'disabled').length,
+  }), [allStudents])
 
-  const stats = useMemo(() => {
-    const active = rows.filter((r) => r.status === 'active').length
-    const inactive = rows.filter((r) => r.status === 'inactive').length
-    const suspended = rows.filter((r) => r.status === 'suspended' || r.status === 'disabled').length
-    return { total: rows.length, active, inactive, suspended }
-  }, [rows])
+  const saveStudent = useCallback(async (payload, id) => {
+    if (id) {
+      await studentService.update(id, payload)
+      toast({ title: 'Student updated', description: `${displayName(payload)} was updated.` })
+    } else {
+      await studentService.create(payload)
+      toast({ title: 'Student created', description: `${displayName(payload)} was enrolled.` })
+    }
+    await refetch()
+  }, [refetch, toast])
 
-  const saveStudent = useCallback(
-    async (payload, id) => {
-      if (id) {
-        await studentService.update(id, payload)
-        toast({ title: 'Student updated', description: `${fullName(payload.name)} has been updated.` })
-      } else {
-        await studentService.create(payload)
-        toast({ title: 'Student added', description: `${fullName(payload.name)} has been enrolled.` })
-      }
-      refetch()
-    },
-    [refetch, toast],
-  )
+  const deleteStudent = useCallback(async (id, student) => {
+    await studentService.remove(id)
+    toast({ title: 'Student deleted', description: `${displayName(student)} was removed.` })
+    await refetch()
+  }, [refetch, toast])
 
-  const deleteStudent = useCallback(
-    async (id, name) => {
-      await studentService.remove(id)
-      toast({ title: 'Student deleted', description: `${fullName(name)} has been removed.` })
-      refetch()
-    },
-    [refetch, toast],
-  )
-
-  const bulkDelete = useCallback(
-    async (selected) => {
-      await studentService.bulkDelete(selected.map((s) => s._id))
-      toast({ title: `${selected.length} students deleted` })
-      refetch()
-    },
-    [refetch, toast],
-  )
+  const bulkDelete = useCallback(async (selected) => {
+    await studentService.bulkDelete(selected.map((student) => student._id))
+    toast({ title: 'Students deleted', description: `${selected.length} student record(s) were removed.` })
+    await refetch()
+  }, [refetch, toast])
 
   return {
-    rows: filtered,
-    allStudents: rows,
+    rows,
+    allStudents,
     classOptions,
     stats,
     isLoading,
+    error,
     search, setSearch,
     status, setStatus,
     classFilter, setClassFilter,
     saveStudent,
     deleteStudent,
     bulkDelete,
+    refetch,
   }
 }
 
-// ─── useAdmissions ─────────────────────────────────────────────────────────────
-// Manages online admission applications list, filtering, stats, and approve/reject.
 export function useAdmissions() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.admissions(), [])
-
+  const { data, isLoading, error, refetch } = useAsyncData(
+    () => studentService.admissions({ page: 1, limit: 100 }),
+    [],
+  )
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
+  const allAdmissions = listValue(data)
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return allAdmissions.filter((admission) => {
+      const name = fullName(admission.name)
+      return (!query || [name, admission.email, admission.mobile, admission.class_name, admission.guardian?.name]
+        .some((field) => String(field || '').toLowerCase().includes(query))) &&
+        (status === 'all' || admission.status === status)
+    })
+  }, [allAdmissions, search, status])
+  const stats = useMemo(() => ({
+    total: allAdmissions.length,
+    pending: allAdmissions.filter((item) => item.status === 'pending').length,
+    approved: allAdmissions.filter((item) => item.status === 'approved').length,
+    rejected: allAdmissions.filter((item) => item.status === 'rejected').length,
+  }), [allAdmissions])
 
-  const rows = data || []
+  const saveAdmission = useCallback(async (payload, id) => {
+    if (id) await studentService.updateAdmission(id, payload)
+    else await studentService.createAdmission(payload)
+    toast({ title: id ? 'Admission updated' : 'Admission submitted' })
+    await refetch()
+  }, [refetch, toast])
 
-  // useMemo prevents recalculating filtered applications
-  // unless list or filters change.
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const name = `${r.first_name} ${r.last_name}`
-        const q = search.toLowerCase()
-        const matchSearch = !q || name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)
-        const matchStatus = status === 'all' || r.status === status
-        return matchSearch && matchStatus
-      }),
-    [rows, search, status],
-  )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      pending: rows.filter((r) => r.status === 'pending').length,
-      approved: rows.filter((r) => r.status === 'approved').length,
-      rejected: rows.filter((r) => r.status === 'rejected').length,
-    }),
-    [rows],
-  )
-
-  const approveAdmission = useCallback(
-    async (app) => {
-      toast({ title: 'Application approved', description: `${app.first_name} ${app.last_name} has been admitted.` })
-      refetch()
-    },
-    [refetch, toast],
-  )
-
-  const rejectAdmission = useCallback(
-    async (app) => {
-      toast({ title: 'Application rejected', description: `${app.first_name} ${app.last_name} was rejected.` })
-      refetch()
-    },
-    [refetch, toast],
-  )
-
-  const deleteAdmission = useCallback(
-    async (id) => {
-      toast({ title: 'Application deleted' })
-      refetch()
-    },
-    [refetch, toast],
-  )
+  const deleteAdmission = useCallback(async (id) => {
+    await studentService.deleteAdmission(id)
+    toast({ title: 'Admission deleted' })
+    await refetch()
+  }, [refetch, toast])
 
   return {
-    rows: filtered,
-    allAdmissions: rows,
-    stats,
-    isLoading,
-    search, setSearch,
-    status, setStatus,
-    approveAdmission,
-    rejectAdmission,
-    deleteAdmission,
+    rows, allAdmissions, stats, isLoading, error,
+    search, setSearch, status, setStatus,
+    saveAdmission, deleteAdmission, refetch,
   }
 }
 
-// ─── useStudentCategories ──────────────────────────────────────────────────────
-// Manages student categories list.
 export function useStudentCategories() {
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.categories(), [])
-
-  const [search, setSearch] = useState('')
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-        return !q || (r.name || '').toLowerCase().includes(q)
-      }),
-    [rows, search],
-  )
-
-  return {
-    rows: filtered,
-    allCategories: rows,
-    isLoading,
-    search, setSearch,
-    refetch,
-  }
+  const result = useAsyncData(() => studentService.categories({ page: 1, limit: 100 }), [])
+  return { ...result, rows: listValue(result.data), allCategories: listValue(result.data) }
 }
 
-// ─── useStudentHouses ──────────────────────────────────────────────────────────
-// Manages student houses list.
 export function useStudentHouses() {
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.houses(), [])
-
-  const [search, setSearch] = useState('')
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-        return !q || (r.name || '').toLowerCase().includes(q)
-      }),
-    [rows, search],
-  )
-
-  return {
-    rows: filtered,
-    allHouses: rows,
-    isLoading,
-    search, setSearch,
-    refetch,
-  }
-
+  const result = useAsyncData(() => studentService.houses({ page: 1, limit: 100 }), [])
+  return { ...result, rows: listValue(result.data), allHouses: listValue(result.data) }
 }
-
-
-// ─── useDisableReasons ────────────────────────────────────────────────────────
-// Manages disable reasons list, search, stats, and CRUD operations.
 
 export function useDisableReasons() {
   const { toast } = useToast()
-
-  const { data, isLoading, refetch } = useAsyncData(
-    () => studentService.disableReasons(),
-    [],
-  )
-
+  const result = useAsyncData(() => studentService.disableReasons({ page: 1, limit: 100 }), [])
   const [search, setSearch] = useState('')
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-
-        return (
-          !q ||
-          (r.reason || '').toLowerCase().includes(q) ||
-          (r.description || '').toLowerCase().includes(q)
-        )
-      }),
-    [rows, search],
-  )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      active: rows.filter((r) => r.status === 'active').length,
-      inactive: rows.filter((r) => r.status === 'inactive').length,
-    }),
-    [rows],
-  )
-
-  const saveReason = useCallback(
-    async (payload, id) => {
-      if (id) {
-        await studentService.updateDisableReason(id, payload)
-
-        toast({
-          title: 'Disable reason updated',
-        })
-      } else {
-        await studentService.createDisableReason(payload)
-
-        toast({
-          title: 'Disable reason created',
-        })
-      }
-
-      refetch()
-    },
-    [toast, refetch],
-  )
-
-  const deleteReason = useCallback(
-    async (id) => {
-      await studentService.deleteDisableReason(id)
-
-      toast({
-        title: 'Disable reason deleted',
-      })
-
-      refetch()
-    },
-    [toast, refetch],
-  )
-
-  return {
-    rows: filtered,
-    allReasons: rows,
-
-    stats,
-
-    isLoading,
-
-    search,
-    setSearch,
-
-    saveReason,
-
-    deleteReason,
-
-    refetch,
-  }
+  const allReasons = listValue(result.data)
+  const rows = allReasons.filter((item) => !search.trim() || String(item.reason || '').toLowerCase().includes(search.trim().toLowerCase()))
+  const saveReason = useCallback(async (payload, id) => {
+    if (id) await studentService.updateDisableReason(id, payload)
+    else await studentService.createDisableReason(payload)
+    toast({ title: id ? 'Disable reason updated' : 'Disable reason created' })
+    await result.refetch()
+  }, [result.refetch, toast])
+  const deleteReason = useCallback(async (id) => {
+    await studentService.deleteDisableReason(id)
+    toast({ title: 'Disable reason deleted' })
+    await result.refetch()
+  }, [result.refetch, toast])
+  return { ...result, rows, allReasons, search, setSearch, saveReason, deleteReason }
 }
-
-// ─── useMultiClassStudents ────────────────────────────────────────────────────
-// Manages multi class students list, search, stats, and CRUD operations.
 
 export function useMultiClassStudents() {
   const { toast } = useToast()
-
-  const { data, isLoading, refetch } = useAsyncData(
-    () => studentService.multiClassStudents(),
-    [],
-  )
-
+  const result = useAsyncData(() => studentService.multiClassStudents({ page: 1, limit: 100 }), [])
+  const allAssignments = listValue(result.data)
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-
-        const matchSearch =
-          !q ||
-          (r.student_name || '').toLowerCase().includes(q) ||
-          (r.admission_no || '').toLowerCase().includes(q)
-
-        const matchStatus =
-          status === 'all' || r.status === status
-
-        return matchSearch && matchStatus
-      }),
-    [rows, search, status],
-  )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-
-      active: rows.filter(
-        (r) => r.status === 'active',
-      ).length,
-
-      inactive: rows.filter(
-        (r) => r.status === 'inactive',
-      ).length,
-
-      assignments: rows.reduce(
-        (total, student) =>
-          total +
-          (student.assigned_classes?.length || 0),
-        0,
-      ),
-    }),
-    [rows],
-  )
-
-  const saveAssignment = useCallback(
-    async (payload, id) => {
-      if (id) {
-        await studentService.updateMultiClassStudent(
-          id,
-          payload,
-        )
-
-        toast({
-          title: 'Assignment updated',
-          description:
-            'Student class assignment updated successfully.',
-        })
-      } else {
-        await studentService.createMultiClassStudent(
-          payload,
-        )
-
-        toast({
-          title: 'Assignment created',
-          description:
-            'Student assigned to multiple classes.',
-        })
-      }
-
-      refetch()
-    },
-    [toast, refetch],
-  )
-
-  const removeAssignment = useCallback(
-    async (id) => {
-      await studentService.deleteMultiClassStudent(
-        id,
-      )
-
-      toast({
-        title: 'Assignment removed',
-        description:
-          'Student class assignment removed.',
-      })
-
-      refetch()
-    },
-    [toast, refetch],
-  )
-
-  return {
-    rows: filtered,
-    allStudents: rows,
-
-    stats,
-
-    isLoading,
-
-    search,
-    setSearch,
-
-    status,
-    setStatus,
-
-    saveAssignment,
-
-    removeAssignment,
-
-    refetch,
-  }
+  const rows = allAssignments.filter((item) => !search.trim() || [item.student_id, item.class_id]
+    .some((field) => String(field || '').toLowerCase().includes(search.trim().toLowerCase())))
+  const saveAssignment = useCallback(async (payload, id) => {
+    if (id) await studentService.updateMultiClassStudent(id, payload)
+    else await studentService.createMultiClassStudent(payload)
+    toast({ title: id ? 'Assignment updated' : 'Assignment created' })
+    await result.refetch()
+  }, [result.refetch, toast])
+  const removeAssignment = useCallback(async (id) => {
+    await studentService.deleteMultiClassStudent(id)
+    toast({ title: 'Assignment deleted' })
+    await result.refetch()
+  }, [result.refetch, toast])
+  return { ...result, rows, allAssignments, search, setSearch, saveAssignment, removeAssignment }
 }
-
-
-// ─── useBulkDelete ────────────────────────────────────────────────────────────
-// Manages bulk delete operations for students.
 
 export function useBulkDelete() {
   const { toast } = useToast()
-
-  const { data, isLoading, refetch } = useAsyncData(
-    () => studentService.list(),
-    [],
-  )
-
+  const result = useAsyncData(() => studentService.list({ page: 1, limit: 100 }), [])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState([])
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-
-        return (
-          !q ||
-          fullName(r.name)
-            .toLowerCase()
-            .includes(q) ||
-          (r.admission_no || '')
-            .toLowerCase()
-            .includes(q) ||
-          (r.email || '')
-            .toLowerCase()
-            .includes(q)
-        )
-      }),
-    [rows, search],
-  )
-
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      selected: selected.length,
-      remaining: rows.length - selected.length,
-    }),
-    [rows, selected],
-  )
-
-  const toggleSelection = useCallback((student) => {
-    setSelected((prev) => {
-      const exists = prev.find(
-        (s) => s._id === student._id,
-      )
-
-      if (exists) {
-        return prev.filter(
-          (s) => s._id !== student._id,
-        )
-      }
-
-      return [...prev, student]
-    })
-  }, [])
-
-  const selectAll = useCallback(() => {
-    setSelected(filtered)
-  }, [filtered])
-
-  const clearSelection = useCallback(() => {
+  const allStudents = listValue(result.data)
+  const rows = allStudents.filter((student) => !search.trim() || [displayName(student), student.roll_number, student.email]
+    .some((field) => String(field || '').toLowerCase().includes(search.trim().toLowerCase())))
+  const toggleSelection = useCallback((student) => setSelected((current) => current.some((item) => item._id === student._id)
+    ? current.filter((item) => item._id !== student._id)
+    : [...current, student]), [])
+  const selectAll = useCallback(() => setSelected(rows), [rows])
+  const clearSelection = useCallback(() => setSelected([]), [])
+  const deleteSelected = useCallback(async () => {
+    if (!selected.length) return
+    await studentService.bulkDelete(selected.map((student) => student._id))
+    toast({ title: 'Students deleted', description: `${selected.length} record(s) were removed.` })
     setSelected([])
-  }, [])
-
-  const deleteSelected = useCallback(
-    async () => {
-      if (!selected.length) return
-
-      await studentService.bulkDelete(
-        selected.map((s) => s._id),
-      )
-
-      toast({
-        title: 'Students Deleted',
-        description: `${selected.length} students deleted successfully.`,
-      })
-
-      setSelected([])
-
-      refetch()
-    },
-    [selected, toast, refetch],
-  )
-
+    await result.refetch()
+  }, [result.refetch, selected, toast])
   return {
-    rows: filtered,
-    allStudents: rows,
-
-    stats,
-
-    isLoading,
-
-    search,
-    setSearch,
-
+    ...result,
+    rows,
+    allStudents,
+    search, setSearch,
     selected,
-
-    toggleSelection,
-
-    selectAll,
-
-    clearSelection,
-
-    deleteSelected,
-
-    refetch,
+    toggleSelection, selectAll, clearSelection, deleteSelected,
   }
 }
-
 

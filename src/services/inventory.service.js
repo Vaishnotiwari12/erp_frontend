@@ -122,27 +122,27 @@ export const inventoryService = {
   },
 
   // ==========================================================
-  // Item Issue
+  // Issue Item
   // ==========================================================
 
   getIssueItems(params = {}) {
-    return apiClient.get("/inventory/item-issue", { params });
+    return apiClient.get("/inventory/issue-item", { params });
   },
 
   getIssueItem(id) {
-    return apiClient.get(`/inventory/item-issue/${id}`);
+    return apiClient.get(`/inventory/issue-item/${id}`);
   },
 
   createIssueItem(payload) {
-    return apiClient.post("/inventory/item-issue", payload);
+    return apiClient.post("/inventory/issue-item", payload);
   },
 
   updateIssueItem(id, payload) {
-    return apiClient.put(`/inventory/item-issue/${id}`, payload);
+    return apiClient.put(`/inventory/issue-item/${id}`, payload);
   },
 
   deleteIssueItem(id) {
-    return apiClient.delete(`/inventory/item-issue/${id}`);
+    return apiClient.delete(`/inventory/issue-item/${id}`);
   },
 };
 

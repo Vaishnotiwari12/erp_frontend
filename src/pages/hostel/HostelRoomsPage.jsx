@@ -3,7 +3,7 @@
 // Page: Hostel Rooms
 //
 // Purpose:
-// Manage hostel rooms, blocks, floors, and occupancy.
+// Manage hostel rooms.
 //
 // Data Source:
 // hostel.service.js
@@ -14,17 +14,10 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  BedDouble,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
+import { DoorOpen, Plus, Eye, Pencil, Trash2, Building2, BedDouble } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -33,71 +26,89 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { RoomStatusBadge } from '@/components/RoomStatusBadge'
-import { OccupancyIndicator } from '@/components/OccupancyIndicator'
-import { useHostelRooms } from '@/hooks/useHostel'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { hostelService } from '@/services/hostel.service'
 import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'room_number', label: 'Room Number' },
-  { key: 'block', label: 'Block' },
-  { key: 'floor', label: 'Floor' },
+  { key: 'hostel_name', label: 'Hostel' },
   { key: 'room_type_name', label: 'Room Type' },
+  { key: 'room_no', label: 'Room Number' },
+  { key: 'floor', label: 'Floor' },
   { key: 'capacity', label: 'Capacity' },
   { key: 'occupied', label: 'Occupied' },
-  { key: 'room_status', label: 'Room Status' },
-  { key: 'status', label: 'Status' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function HostelRoomsPage() {
-  const {
-    rows, roomTypes, blocks, stats, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
-    blockFilter, setBlockFilter, saveRoom, deleteRoom,
-  } = useHostelRooms()
-
+  const { toast } = useToast()
+  const { data: hostelRooms, isLoading, refetch } = useAsyncData(() => hostelService.getHostelRooms(), [])
+  const { data: hostels, isLoading: hostelsLoading } = useAsyncData(() => hostelService.getHostels(), [])
+  const { data: roomTypes, isLoading: roomTypesLoading } = useAsyncData(() => hostelService.getRoomTypes(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveRoom(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const rows = hostelRooms || []
+  const allHostels = hostels || []
+  const allRoomTypes = roomTypes || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const hostel = allHostels.find(h => h._id === r.hostel_id)
+    const roomType = allRoomTypes.find(rt => rt._id === r.room_type_id)
+    return !q || 
+      (hostel?.hostel_name || '').toLowerCase().includes(q) ||
+      (roomType?.room_type_name || '').toLowerCase().includes(q) ||
+      (r.room_no || '').toLowerCase().includes(q)
+  }), [rows, search, allHostels, allRoomTypes])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    totalCapacity: rows.reduce((sum, r) => sum + (r.capacity || 0), 0),
+    totalOccupied: rows.reduce((sum, r) => sum + (r.occupied || 0), 0),
+    available: rows.reduce((sum, r) => sum + ((r.capacity || 0) - (r.occupied || 0)), 0),
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'room_number',
+      accessorKey: 'room_no',
       header: 'Room',
       cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <BedDouble className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.room_number}</span>
-            <span className="text-xs text-muted-foreground">{row.original.block} · {row.original.floor}</span>
-          </div>
+        <button className="flex flex-col text-left" onClick={() => setViewRow(row.original)}>
+          <span className="font-medium hover:underline">{row.original.room_no || 'Unknown'}</span>
+          <span className="text-xs text-muted-foreground">Floor {row.original.floor || '—'}</span>
         </button>
       ),
     },
-    { accessorKey: 'room_type_name', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.room_type_name}</Badge> },
     {
-      accessorKey: 'capacity',
-      header: 'Occupancy',
-      cell: ({ row }) => <OccupancyIndicator occupied={row.original.occupied} capacity={row.original.capacity} className="w-28" />,
+      accessorKey: 'hostel_id',
+      header: 'Hostel',
+      cell: ({ row }) => {
+        const hostel = allHostels.find(h => h._id === row.original.hostel_id)
+        return hostel?.hostel_name || 'Unknown'
+      },
     },
-    { accessorKey: 'room_status', header: 'Room Status', cell: ({ row }) => <RoomStatusBadge status={row.original.room_status} /> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-  ], [])
+    {
+      accessorKey: 'room_type_id',
+      header: 'Room Type',
+      cell: ({ row }) => {
+        const roomType = allRoomTypes.find(rt => rt._id === row.original.room_type_id)
+        return roomType?.room_type_name || 'Unknown'
+      },
+    },
+    { accessorKey: 'capacity', header: 'Capacity', cell: ({ row }) => `${row.original.capacity || 0} beds` },
+    { accessorKey: 'occupied', header: 'Occupied', cell: ({ row }) => `${row.original.occupied || 0} beds` },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [allHostels, allRoomTypes])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
@@ -106,201 +117,267 @@ export default function HostelRoomsPage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await hostelService.updateHostelRoom(id, payload)
+        toast({ title: 'Room updated successfully' })
+        setEditRow(null)
+      } else {
+        await hostelService.createHostelRoom(payload)
+        toast({ title: 'Room created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save room:', error)
+      toast({ title: 'Failed to save room', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await hostelService.deleteHostelRoom(id)
+      toast({ title: 'Room deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete room:', error)
+      toast({ title: 'Failed to delete room', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Hostel' }, { label: 'Rooms' }]} />
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Hostel' }, { label: 'Hostel Rooms' }]} />
       <PageHeader
         title="Hostel Rooms"
-        description="Manage hostel rooms, blocks, floors, and occupancy."
-        icon={BedDouble}
+        description="Manage hostel rooms and occupancy."
+        icon={DoorOpen}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Room</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Rooms" value={stats.total} icon={BedDouble} accent="primary" />
-        <StatCard label="Available" value={stats.available} icon={BedDouble} accent="success" />
-        <StatCard label="Occupied" value={stats.occupied} icon={BedDouble} accent="chart2" />
-        <StatCard label="Maintenance" value={stats.maintenance} icon={BedDouble} accent="destructive" />
+        <StatCard label="Total Rooms" value={stats.total} icon={DoorOpen} accent="primary" />
+        <StatCard label="Total Capacity" value={`${stats.totalCapacity} beds`} icon={BedDouble} accent="success" />
+        <StatCard label="Occupied" value={`${stats.totalOccupied} beds`} icon={Building2} accent="warning" />
+        <StatCard label="Available" value={`${stats.available} beds`} icon={DoorOpen} accent="chart2" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by room number, block, or type…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by hostel, room type, or room number…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="hostel-rooms" />
-          <select value={blockFilter} onChange={(e) => setBlockFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All blocks</option>
-            {blocks.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="available">Available</option>
-            <option value="occupied">Occupied</option>
-            <option value="partial">Partial</option>
-            <option value="maintenance">Maintenance</option>
-          </select>
+          <ExportButtons 
+            rows={filtered.map(r => ({
+              ...r,
+              hostel_name: allHostels.find(h => h._id === r.hostel_id)?.hostel_name || 'Unknown',
+              room_type_name: allRoomTypes.find(rt => rt._id === r.room_type_id)?.room_type_name || 'Unknown',
+            }))} 
+            columns={EXPORT_COLS} 
+            filename="hostel-rooms" 
+          />
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={5} />
-      ) : rows.length === 0 ? (
-        <NoData title="No rooms found" description="Add a new room to get started." actionLabel="Add Room" onAction={() => setAddOpen(true)} />
+        <LoadingSkeleton variant="table" rows={5} cols={6} />
+      ) : filtered.length === 0 ? (
+        <NoData title="No rooms found" description="Add a room to get started." actionLabel="Add Room" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="hostel-rooms"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Room Form Drawer used for both Add and Edit. */}
-      <RoomFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Room' : 'Add Room'}
-        initial={editRow}
-        roomTypes={roomTypes}
-        blocks={blocks}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Room' : 'Add Room'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update room details' : 'Add a new room'}</DialogDescription>
+          </DialogHeader>
+          <HostelRoomForm 
+            initial={editRow} 
+            hostels={allHostels}
+            roomTypes={allRoomTypes}
+            hostelsLoading={hostelsLoading}
+            roomTypesLoading={roomTypesLoading}
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Room Details"
-        description={viewRow?.room_number}
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <BedDouble className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.room_number}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.block} · {viewRow.floor}</p>
-              </div>
-              <RoomStatusBadge status={viewRow.room_status} />
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {viewRow && (() => {
+          const hostel = allHostels.find(h => h._id === viewRow.hostel_id)
+          const roomType = allRoomTypes.find(rt => rt._id === viewRow.room_type_id)
+          return (
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               {[
-                { label: 'Room Type', value: viewRow.room_type_name },
-                { label: 'Block', value: viewRow.block },
-                { label: 'Floor', value: viewRow.floor },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
+                { label: 'Room Number', value: viewRow.room_no || 'Unknown' },
+                { label: 'Hostel', value: hostel?.hostel_name || 'Unknown' },
+                { label: 'Room Type', value: roomType?.room_type_name || 'Unknown' },
+                { label: 'Floor', value: viewRow.floor || '—' },
+                { label: 'Capacity', value: `${viewRow.capacity || 0} beds` },
+                { label: 'Occupied', value: `${viewRow.occupied || 0} beds` },
+                { label: 'Available', value: `${(viewRow.capacity || 0) - (viewRow.occupied || 0)} beds` },
+                { label: 'Created', value: formatDate(viewRow.createdAt) },
+                { label: 'Updated', value: formatDate(viewRow.updatedAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
+                  <dd className="text-sm font-medium">{f.value}</dd>
                 </div>
               ))}
             </dl>
-
-            <OccupancyIndicator occupied={viewRow.occupied} capacity={viewRow.capacity} />
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.room_number}
-        onConfirm={() => deleteRoom(deleteRow._id)}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Room</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this room? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Room Form Drawer (shared by Add and Edit) ──────────────────────────────
-function RoomFormDrawer({ open, onOpenChange, title, initial, roomTypes, blocks, onSubmit }) {
-  const [form, setForm] = useState({
-    room_number: initial?.room_number || '',
-    block: initial?.block || '',
-    floor: initial?.floor || '',
-    room_type_id: initial?.room_type_id || '',
-    capacity: initial?.capacity || 1,
-    status: initial?.status || 'active',
+function HostelRoomForm({ initial, hostels, roomTypes, hostelsLoading, roomTypesLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    hostel_id: '',
+    room_type_id: '',
+    room_no: '',
+    floor: '',
+    capacity: '',
+    occupied: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        hostel_id: initial.hostel_id || '',
+        room_type_id: initial.room_type_id || '',
+        room_no: initial.room_no || '',
+        floor: initial.floor || '',
+        capacity: initial.capacity || '',
+        occupied: initial.occupied || '',
+      })
+    } else {
+      setFormData({
+        hostel_id: hostels[0]?._id || '',
+        room_type_id: roomTypes[0]?._id || '',
+        room_no: '',
+        floor: '',
+        capacity: '',
+        occupied: '0',
+      })
+    }
+  }, [initial, hostels, roomTypes])
 
-  // When a room type is selected, auto-fill capacity from the room type.
-  const handleRoomTypeChange = (typeId) => {
-    const rt = roomTypes.find((t) => t._id === typeId)
-    setForm((f) => ({ ...f, room_type_id: typeId, room_type_name: rt?.name || '', capacity: rt?.capacity || 1 }))
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      capacity: Number(formData.capacity) || 0,
+      occupied: Number(formData.occupied) || 0,
+    })
   }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Room information and configuration"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Room'}
-          submitDisabled={!form.room_number.trim() || !form.room_type_id}
-          onSubmit={() => onSubmit(form)}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="hostel_id">Hostel *</Label>
+        <select
+          id="hostel_id"
+          value={formData.hostel_id}
+          onChange={(e) => setFormData({ ...formData, hostel_id: e.target.value })}
+          disabled={hostelsLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select hostel</option>
+          {hostels.map((h) => (
+            <option key={h._id} value={h._id}>{h.hostel_name || 'Unnamed'}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="room_type_id">Room Type *</Label>
+        <select
+          id="room_type_id"
+          value={formData.room_type_id}
+          onChange={(e) => setFormData({ ...formData, room_type_id: e.target.value })}
+          disabled={roomTypesLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select room type</option>
+          {roomTypes.map((rt) => (
+            <option key={rt._id} value={rt._id}>{rt.room_type_name || 'Unnamed'}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="room_no">Room Number *</Label>
+        <Input
+          id="room_no"
+          value={formData.room_no}
+          onChange={(e) => setFormData({ ...formData, room_no: e.target.value })}
+          required
         />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Room Number <span className="text-destructive">*</span></Label>
-              <Input value={form.room_number} onChange={(e) => set('room_number', e.target.value)} placeholder="e.g. A-101" required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Block</Label>
-              <Input value={form.block} onChange={(e) => set('block', e.target.value)} placeholder="e.g. Block A" list="block-list" />
-              <datalist id="block-list">
-                {blocks.map((b) => <option key={b} value={b} />)}
-              </datalist>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Floor</Label>
-              <Input value={form.floor} onChange={(e) => set('floor', e.target.value)} placeholder="e.g. 1st Floor" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Capacity</Label>
-              <Input type="number" min="1" value={form.capacity} onChange={(e) => set('capacity', parseInt(e.target.value) || 1)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Room Type <span className="text-destructive">*</span></Label>
-            <select value={form.room_type_id} onChange={(e) => handleRoomTypeChange(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="">Select room type</option>
-              {roomTypes.filter((t) => t.status === 'active').map((t) => (
-                <option key={t._id} value={t._id}>{t.name} (cap: {t.capacity})</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+      </div>
+      <div>
+        <Label htmlFor="floor">Floor</Label>
+        <Input
+          id="floor"
+          value={formData.floor}
+          onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="capacity">Capacity *</Label>
+        <Input
+          id="capacity"
+          type="number"
+          min="0"
+          value={formData.capacity}
+          onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="occupied">Occupied</Label>
+        <Input
+          id="occupied"
+          type="number"
+          min="0"
+          value={formData.occupied}
+          onChange={(e) => setFormData({ ...formData, occupied: e.target.value })}
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

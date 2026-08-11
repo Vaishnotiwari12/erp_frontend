@@ -14,7 +14,7 @@
 // ====================================================================
 
 import { useMemo, useState, useEffect } from 'react'
-import { Plus, Layers, Pencil, Trash2, Eye, DoorOpen, CircleCheck as CheckCircle2 } from 'lucide-react'
+import { Plus, Layers, Pencil, Trash2, Eye, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,7 +23,10 @@ import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
+
+import { academicsService } from '@/services/academics.service'
+import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
@@ -33,28 +36,19 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { academicsService } from '@/services/academics.service'
-// import { academicClasses } from '@/services/mockData'
-import { formatDate } from '@/utils/format'
-import { useToast } from '@/hooks/use-toast'
+import { useSections } from '@/hooks/useAcademics'
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Section' },
-  { key: 'class', label: 'Class' },
-  { key: 'room', label: 'Room' },
-  { key: 'capacity', label: 'Capacity' },
-  { key: 'status', label: 'Status' },
+  { key: "section_name", label: "Section" },
+  { key: "class_name", label: "Class" },
+  { key: "createdAt", label: "Created" },
 ]
 
-// const CLASS_OPTIONS = academicClasses.map((c) => c.name)
+
 
 export default function SectionsPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => academicsService.sections(), [])
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const [classFilter, setClassFilter] = useState('all')
+  const { rows, allSections, stats, isLoading, search, setSearch, saveSection, deleteSection } = useSections()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
@@ -62,53 +56,57 @@ export default function SectionsPage() {
   const [classOptions, setClassOptions] = useState([])
 
   useEffect(() => {
-    academicsService.classes().then((data) => {
-      setClassOptions(data.map((c) => c.name))
+    academicsService.classes().then((res) => {
+      setClassOptions(res || [])
     })
   }, [])
 
-  const rows = data || []
+  // Build lookup map for efficient ID resolution
+  const classMap = useMemo(() => {
+    const map = {}
+    classOptions.forEach(c => map[c._id] = c)
+    return map
+  }, [classOptions])
+
   const filtered = useMemo(
     () => rows.filter((r) => {
-      const ms = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.class.toLowerCase().includes(search.toLowerCase())
-      const mst = status === 'all' || r.status === status
-      const msc = classFilter === 'all' || r.class === classFilter
-      return ms && mst && msc
+      const ms = !search || r.section_name?.toLowerCase().includes(search.toLowerCase()) || r.class_name?.toLowerCase().includes(search.toLowerCase())
+      return ms
     }),
-    [rows, search, status, classFilter],
+    [rows, search],
   )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    capacity: rows.reduce((s, r) => s + (r.capacity || 0), 0),
-    inactive: rows.filter((r) => r.status !== 'active').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
-      header: 'Section',
+      accessorKey: "section_name",
+      header: "Section",
       cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Layers className="h-4 w-4" />
+        <button
+          onClick={() => setViewRow(row.original)}
+          className="flex items-center gap-3"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Layers className="h-5 w-5 text-primary" />
           </div>
+
           <div>
-            <p className="font-medium hover:underline">Section {row.original.name}</p>
-            <p className="text-xs text-muted-foreground">{row.original.class}</p>
+            <p className="font-medium">
+              {row.original.section_name}
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              {row.original.class_name || classMap[row.original.class_id]?.class_name || row.original.class_id}
+            </p>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'class', header: 'Class' },
-    { accessorKey: 'room', header: 'Room', cell: ({ row }) => (
-      <span className="inline-flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5 text-muted-foreground" />{row.original.room}</span>
-    ) },
-    { accessorKey: 'capacity', header: 'Capacity', cell: ({ row }) => <span className="font-medium">{row.original.capacity}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
-  ], [])
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => formatDate(row.original.createdAt),
+    },
+  ], [classMap, search])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
@@ -132,28 +130,33 @@ export default function SectionsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Sections" value={stats.total} icon={Layers} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={CheckCircle2} accent="success" />
-        <StatCard label="Total Capacity" value={stats.capacity} icon={DoorOpen} accent="chart2" />
-        <StatCard label="Inactive" value={stats.inactive} icon={Layers} accent="warning" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard
+          label="Total Sections"
+          value={stats.total}
+          icon={Layers}
+          accent="primary"
+        />
+
+        <StatCard
+          label="Showing"
+          value={rows.length}
+          icon={BookOpen}
+          accent="success"
+        />
       </div>
 
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search sections…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="sections" />
-          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All classes</option>
-            {/* {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)} */}
-          </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <ExportButtons 
+            rows={rows.map(r => ({
+              ...r,
+              class_name: r.class_name || classMap[r.class_id]?.class_name || r.class_id,
+            }))} 
+            columns={EXPORT_COLS} 
+            filename="sections" 
+          />
         </div>
       </FilterBar>
 
@@ -168,25 +171,35 @@ export default function SectionsPage() {
           enableSelection
           enableExport
           exportFilename="sections"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Sections deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: (ids) => { ids.forEach((id) => deleteSection(id)) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <SectionDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Section" onSubmit={async (p) => { await academicsService.createSection(p); toast({ title: 'Section added', description: `Section ${p.name}` }); setAddOpen(false); refetch() }} />
-      <SectionDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Section" initial={editRow} onSubmit={async (p) => { await academicsService.update(editRow._id, p); toast({ title: 'Section updated', description: `Section ${p.name}` }); setEditRow(null); refetch() }} />
+      <SectionDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Section" classOptions={classOptions} onSubmit={async (p) => { await saveSection(p); setAddOpen(false) }} />
+      <SectionDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Section" initial={editRow} classOptions={classOptions} onSubmit={async (p) => { await saveSection(p, editRow._id); setEditRow(null) }} />
 
-      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Section Details" description={viewRow ? `Section ${viewRow.name} · ${viewRow.class}` : ''} width="sm:max-w-md"
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Section Details" description={viewRow ? `${viewRow.section_name} · ${classMap[viewRow.class_id]?.class_name || viewRow.class_id}` : ''} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow ? (
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {[
-              { label: 'Section Name', value: viewRow.name },
-              { label: 'Class', value: viewRow.class },
-              { label: 'Room', value: viewRow.room },
-              { label: 'Capacity', value: viewRow.capacity },
-              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-              { label: 'Created', value: formatDate(viewRow.createdAt) },
+              {
+                label: "Section",
+                value: viewRow.section_name,
+              },
+              {
+                label: "Class",
+                value: classMap[viewRow.class_id]?.class_name || viewRow.class_id,
+              },
+              {
+                label: "Created",
+                value: formatDate(viewRow.createdAt),
+              },
+              {
+                label: "Updated",
+                value: formatDate(viewRow.updatedAt),
+              },
             ].map((r) => (
               <div key={r.label} className="space-y-0.5">
                 <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
@@ -197,52 +210,41 @@ export default function SectionsPage() {
         ) : null}
       </Drawer>
 
-      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow ? `Section ${deleteRow.name}` : ''}
-        onConfirm={() => { toast({ title: 'Section deleted' }); setDeleteRow(null); refetch() }} />
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow ? `Section ${deleteRow.section_name}` : ''}
+        onConfirm={() => { deleteSection(deleteRow._id || deleteRow.id); setDeleteRow(null) }} />
     </div>
   )
 }
 
-function SectionDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+function SectionDrawer({ open, onOpenChange, title, initial, classOptions = [], onSubmit }) {
   const [form, setForm] = useState({
-    name: initial?.name || '',
-    class: initial?.class || '',
-    room: initial?.room || '',
-    capacity: initial?.capacity || 0,
-    status: initial?.status || 'active',
+    class_id: initial?.class_id || '',
+    section_name: initial?.section_name || '',
   })
+
+  useEffect(() => {
+    setForm({
+      class_id: initial?.class_id || '',
+      section_name: initial?.section_name || '',
+    })
+  }, [initial])
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange} title={title} description="Section details" width="sm:max-w-md"
       footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
         <FormSection columns={2}>
           <div className="space-y-1.5">
-            <Label className="text-xs">Section Name <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. A" required />
-          </div>
-          <div className="space-y-1.5">
             <Label className="text-xs">Class <span className="text-destructive">*</span></Label>
-            <select value={form.class} onChange={(e) => setForm((f) => ({ ...f, class: e.target.value }))}
+            <select value={form.class_id} onChange={(e) => setForm((f) => ({ ...f, class_id: e.target.value }))}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
               <option value="">Select class</option>
-              {/* {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)} */}
+              {classOptions.map((c) => <option key={c._id || c.value} value={c._id || c.value}>{c.class_name || c.label}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Room</Label>
-            <Input value={form.room} onChange={(e) => setForm((f) => ({ ...f, room: e.target.value }))} placeholder="e.g. 101" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Capacity</Label>
-            <Input type="number" value={form.capacity} onChange={(e) => setForm((f) => ({ ...f, capacity: Number(e.target.value) }))} placeholder="e.g. 40" />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Label className="text-xs">Section Name <span className="text-destructive">*</span></Label>
+            <Input value={form.section_name} onChange={(e) => setForm((f) => ({ ...f, section_name: e.target.value }))} placeholder="e.g. A" required />
           </div>
         </FormSection>
         <button type="submit" className="hidden" aria-hidden="true" />

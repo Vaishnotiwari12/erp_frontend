@@ -25,25 +25,46 @@ export const attendanceService = {
   // ==========================================================
 
   async list(params = {}) {
-    return apiClient.get('/attendance/student', {
+    const res = await apiClient.get('/attendance/student', {
       params,
     })
+    return res || []
   },
 
   async get(id) {
-    return apiClient.get(`/attendance/student/${id}`)
+    const res = await apiClient.get(`/attendance/student/${id}`)
+    return res
   },
 
   async create(payload) {
-    return apiClient.post('/attendance/student', payload)
+    const res = await apiClient.post('/attendance/student', payload)
+    return res
   },
 
   async update(id, payload) {
-    return apiClient.put(`/attendance/student/${id}`, payload)
+    const res = await apiClient.put(`/attendance/student/${id}`, payload)
+    return res
   },
 
   async remove(id) {
-    return apiClient.delete(`/attendance/student/${id}`)
+    const res = await apiClient.delete(`/attendance/student/${id}`)
+    return res
+  },
+
+  async markAttendance(id, payload) {
+    const res = await apiClient.put(`/attendance/student/${id}`, payload)
+    return res
+  },
+
+  async bulkMark(payload) {
+    const res = await apiClient.post('/attendance/student/bulk', payload)
+    return res
+  },
+
+  // Alias for getLeaves — hooks call leaves()
+  async leaves(params = {}) {
+    const res = await apiClient.get('/attendance/approve-leave', { params })
+    return res || []
   },
 
   // ==========================================================
@@ -57,37 +78,47 @@ export const attendanceService = {
   // page
   // limit
   // ==========================================================
-
-  async byDate(payload, params = {}) {
-    return apiClient.post('/attendance/by-date', payload, {
+async byDate(date, params = {}) {
+  return await apiClient.post(
+    '/attendance/by-date',
+    {
+      attendanceDate: date,
+    },
+    {
       params,
-    })
-  },
+    }
+  )
+},
 
   // ==========================================================
   // Leave Approval
   // ==========================================================
 
   async getLeaves(params = {}) {
-    return apiClient.get('/attendance/approve-leave', {
+    const res = await apiClient.get('/attendance/approve-leave', {
       params,
     })
+    return res || []
   },
 
   async getLeave(id) {
-    return apiClient.get(`/attendance/approve-leave/${id}`)
+    const res = await apiClient.get(`/attendance/approve-leave/${id}`)
+    return res
   },
 
   async createLeave(payload) {
-    return apiClient.post('/attendance/approve-leave', payload)
+    const res = await apiClient.post('/attendance/approve-leave', payload)
+    return res
   },
 
   async updateLeave(id, payload) {
-    return apiClient.put(`/attendance/approve-leave/${id}`, payload)
+    const res = await apiClient.put(`/attendance/approve-leave/${id}`, payload)
+    return res
   },
 
   async deleteLeave(id) {
-    return apiClient.delete(`/attendance/approve-leave/${id}`)
+    const res = await apiClient.delete(`/attendance/approve-leave/${id}`)
+    return res
   },
 }
 

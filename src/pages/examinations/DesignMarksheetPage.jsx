@@ -2,176 +2,284 @@
 // Module: Examinations
 // Page: Design Marksheet
 //
-// Purpose:
-// Visual builder for the marksheet template with live preview.
-//
-// Data Source:
-// examination.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Payload Schema: { header, footer, school_logo }
 // ====================================================================
 
-import { useState } from 'react'
-import { FileBadge, Eye, Save, RotateCcw } from 'lucide-react'
+import { useState, useRef, useMemo } from 'react'
+import { FileBadge, RotateCcw, Printer, Download, Save, Upload, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { FormSection } from '@/components/FormSection'
 import { examinationService } from '@/services/examination.service'
 import { useToast } from '@/hooks/use-toast'
 
-const FIELDS = ['Student Name', 'Admission No', 'Class', 'Subjects', 'Marks', 'Total', 'Percentage', 'Grade', 'Division', 'Rank']
+const INITIAL_FORM = {
+  header: 'ABC PUBLIC SCHOOL',
+  footer: 'Principal Signature',
+  school_logo: '',
+}
+
+const PREVIEW_SUBJECTS = [
+  { subject: 'English', max: 100, obtained: 91, grade: 'A+', remarks: 'Excellent' },
+  { subject: 'Mathematics', max: 100, obtained: 95, grade: 'A+', remarks: 'Outstanding' },
+  { subject: 'Science', max: 100, obtained: 88, grade: 'A', remarks: 'Very Good' },
+  { subject: 'Social Science', max: 100, obtained: 90, grade: 'A+', remarks: 'Excellent' },
+  { subject: 'Hindi', max: 100, obtained: 85, grade: 'B+', remarks: 'Good' },
+]
 
 export default function DesignMarksheetPage() {
   const { toast } = useToast()
-  const [form, setForm] = useState({
-    show_logo: true,
-    header_text: 'Scholaria ERP - Marksheet',
-    show_grades: true,
-    show_attendance: true,
-    show_remarks: true,
-    show_teacher_signature: true,
-    show_principal_signature: true,
-    fields: FIELDS.slice(),
-    paper_size: 'A4',
-    orientation: 'landscape',
-  })
+  const fileInputRef = useRef(null)
+  const [form, setForm] = useState(INITIAL_FORM)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const toggle = (key) => setForm((f) => ({ ...f, [key]: !f[key] }))
-  const toggleField = (f) => setForm((s) => ({ ...s, fields: s.fields.includes(f) ? s.fields.filter((x) => x !== f) : [...s.fields, x] }))
-
-  const save = async () => {
-    await examinationService.updateMarksheetTemplate(form)
-    toast({ title: 'Marksheet template saved' })
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid File', description: 'Please select an image file.', variant: 'destructive' })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      setForm((f) => ({ ...f, school_logo: evt.target?.result || '' }))
+      toast({ title: 'Logo Uploaded' })
+    }
+    reader.readAsDataURL(file)
   }
 
-  const reset = () => {
-    setForm({ show_logo: true, header_text: 'Scholaria ERP - Marksheet', show_grades: true, show_attendance: true, show_remarks: true, show_teacher_signature: true, show_principal_signature: true, fields: FIELDS.slice(), paper_size: 'A4', orientation: 'landscape' })
-    toast({ title: 'Template reset to default' })
+  const handleSave = async () => {
+    if (!form.header.trim()) {
+      toast({ title: 'Validation Error', description: 'School Header is required.', variant: 'destructive' })
+      return
+    }
+    if (!form.footer.trim()) {
+      toast({ title: 'Validation Error', description: 'Footer signature text is required.', variant: 'destructive' })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const payload = {
+        header: form.header.trim(),
+        footer: form.footer.trim(),
+        school_logo: form.school_logo.trim(),
+      }
+      await examinationService.createMarksheetDesign(payload)
+      toast({ title: '✓ Template Saved Successfully' })
+    } catch (error) {
+      toast({
+        title: 'Save Failed',
+        description: error?.response?.data?.message || error?.message || 'Failed to save template.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  const handlePrint = () => window.print()
+
+  const studentInfo = useMemo(() => [
+    { label: 'Student Name', val: 'Rahul Sharma' },
+    { label: 'Admission No', val: '10234' },
+    { label: 'Roll No', val: '18' },
+    { label: 'Class', val: 'X-A' },
+    { label: 'Session', val: '2026-27' },
+  ], [])
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Examinations', to: '/examinations/exam-groups' }, { label: 'Design Marksheet' }]} />
+    <div className="space-y-6 animate-fade-in pb-10">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #printable-marksheet, #printable-marksheet * { visibility: visible; }
+          #printable-marksheet {
+            position: absolute; left: 0; top: 0; width: 100% !important;
+            margin: 0 !important; padding: 20px !important; box-shadow: none !important;
+          }
+        }
+      `}</style>
+
+      <Breadcrumbs
+        items={[
+          { label: 'Home', to: '/dashboard' },
+          { label: 'Examinations', to: '/examinations/exam-groups' },
+          { label: 'Design Marksheet' },
+        ]}
+      />
+
       <PageHeader
         title="Design Marksheet"
-        description="Visual builder for the marksheet template with live preview."
+        description="Create and customize printable marksheet templates with live preview."
         icon={FileBadge}
         actions={
-          <>
-            <Button variant="outline" onClick={reset}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
-            <Button onClick={save}><Save className="mr-2 h-4 w-4" /> Save Template</Button>
-          </>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setForm(INITIAL_FORM)}>
+              <RotateCcw className="mr-1.5 h-4 w-4" /> Reset
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="mr-1.5 h-4 w-4" /> Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Download className="mr-1.5 h-4 w-4" /> Download PDF
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              <Save className="mr-1.5 h-4 w-4" /> {isSaving ? 'Saving...' : 'Save Template'}
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4 rounded-xl border bg-card p-5">
-          <h3 className="text-sm font-semibold">Template Settings</h3>
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* LEFT SIDE: Template Settings */}
+        <div className="lg:col-span-5 space-y-4 rounded-xl border bg-card p-5 shadow-sm h-fit">
+          <h3 className="text-sm font-semibold border-b pb-2">Template Settings</h3>
           <FormSection columns={1}>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">School Logo</Label><p className="text-xs text-muted-foreground">Display institution logo</p></div>
-              <Switch checked={form.show_logo} onCheckedChange={() => toggle('show_logo')} />
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                School Header <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={form.header}
+                onChange={(e) => setForm((f) => ({ ...f, header: e.target.value }))}
+                placeholder="e.g. ABC PUBLIC SCHOOL"
+              />
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Grades Column</Label><p className="text-xs text-muted-foreground">Show grades in marks table</p></div>
-              <Switch checked={form.show_grades} onCheckedChange={() => toggle('show_grades')} />
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Footer <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={form.footer}
+                onChange={(e) => setForm((f) => ({ ...f, footer: e.target.value }))}
+                placeholder="e.g. Principal Signature"
+              />
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Attendance</Label><p className="text-xs text-muted-foreground">Show attendance summary</p></div>
-              <Switch checked={form.show_attendance} onCheckedChange={() => toggle('show_attendance')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Remarks</Label><p className="text-xs text-muted-foreground">Show remarks section</p></div>
-              <Switch checked={form.show_remarks} onCheckedChange={() => toggle('show_remarks')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Teacher Signature</Label><p className="text-xs text-muted-foreground">Show class teacher sign-off</p></div>
-              <Switch checked={form.show_teacher_signature} onCheckedChange={() => toggle('show_teacher_signature')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Principal Signature</Label><p className="text-xs text-muted-foreground">Show principal sign-off</p></div>
-              <Switch checked={form.show_principal_signature} onCheckedChange={() => toggle('show_principal_signature')} />
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">School Logo</Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              {form.school_logo ? (
+                <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-2.5">
+                  <div className="flex items-center gap-3">
+                    <img src={form.school_logo} alt="Logo Preview" className="h-9 w-9 object-contain rounded border bg-white p-0.5" />
+                    <span className="text-xs font-medium text-emerald-600">✓ logo.png uploaded</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => setForm((f) => ({ ...f, school_logo: '' }))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Upload Logo
+                </Button>
+              )}
             </div>
           </FormSection>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Header Text</Label>
-            <Input value={form.header_text} onChange={(e) => setForm((f) => ({ ...f, header_text: e.target.value }))} />
-          </div>
-          <FormSection columns={2}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Paper Size</Label>
-              <select value={form.paper_size} onChange={(e) => setForm((f) => ({ ...f, paper_size: e.target.value }))} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="A4">A4</option><option value="Letter">Letter</option><option value="Legal">Legal</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Orientation</Label>
-              <select value={form.orientation} onChange={(e) => setForm((f) => ({ ...f, orientation: e.target.value }))} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="portrait">Portrait</option><option value="landscape">Landscape</option>
-              </select>
-            </div>
-          </FormSection>
-          <div className="space-y-2">
-            <Label className="text-xs">Marksheet Fields</Label>
-            <div className="flex flex-wrap gap-2">
-              {FIELDS.map((f) => (
-                <button key={f} type="button" onClick={() => toggleField(f)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${form.fields.includes(f) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground'}`}>
-                  {form.fields.includes(f) ? '✓ ' : ''}{f}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Eye className="h-4 w-4" /> Live Preview</div>
-          <div className={`mx-auto rounded-xl border bg-white p-6 shadow-sm ${form.orientation === 'landscape' ? 'aspect-[1.414/1]' : 'aspect-[1/1.414]'} max-w-2xl`}>
-            <div className="flex h-full flex-col gap-3">
-              <div className="flex items-center gap-3">
-                {form.show_logo ? <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><FileBadge className="h-5 w-5" /></div> : null}
-                <h2 className="flex-1 text-base font-bold">{form.header_text}</h2>
+        {/* RIGHT SIDE: Live Preview */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+            <span>Live Preview</span>
+          </div>
+
+          <div className="overflow-y-auto max-h-[85vh] p-4 bg-slate-100 dark:bg-slate-900/50 rounded-xl border flex justify-center">
+            {/* Always rendered in white paper mode regardless of theme */}
+            <div
+              id="printable-marksheet"
+              className="w-full max-w-[210mm] bg-white text-black border border-gray-300 shadow-xl rounded-sm p-6 space-y-5"
+            >
+              {/* Header Section */}
+              <div className="text-center border-b border-gray-300 pb-3">
+                {form.school_logo ? (
+                  <img src={form.school_logo} alt="School Logo" className="mx-auto mb-2 h-14 w-14 object-contain" />
+                ) : (
+                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-700 font-bold text-xs border">
+                    LOGO
+                  </div>
+                )}
+                <h1 className="text-lg font-black tracking-wide text-black uppercase">
+                  {form.header || 'SCHOOL NAME'}
+                </h1>
+                <p className="text-xs font-semibold text-gray-700 mt-0.5">Annual Examination 2026</p>
+                <p className="text-[10px] text-gray-500">Affiliated to CBSE, New Delhi</p>
               </div>
-              <div className="h-px w-full bg-border" />
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">—</span></div>
-                <div><span className="text-muted-foreground">Class:</span> <span className="font-medium">—</span></div>
-                <div><span className="text-muted-foreground">Roll:</span> <span className="font-medium">—</span></div>
+
+              {/* Student Information */}
+              <div className="border border-gray-300 bg-gray-50 rounded p-3 text-xs grid grid-cols-2 gap-y-1.5 gap-x-4">
+                {studentInfo.map((info) => (
+                  <div key={info.label} className={info.label === 'Session' ? 'col-span-2' : ''}>
+                    <span className="font-semibold text-gray-600">{info.label} : </span>
+                    <span className="font-bold text-black">{info.val}</span>
+                  </div>
+                ))}
               </div>
-              <table className="w-full border-collapse text-xs">
+
+              {/* Subject Table */}
+              <table className="w-full border-collapse text-xs border border-gray-300 text-black">
                 <thead>
-                  <tr className="border border-border bg-muted/30">
-                    <th className="border border-border px-2 py-1 text-left">Subject</th>
-                    <th className="border border-border px-2 py-1">Marks</th>
-                    {form.show_grades ? <th className="border border-border px-2 py-1">Grade</th> : null}
+                  <tr className="bg-gray-100 font-bold border-b border-gray-300 text-gray-800">
+                    <th className="border-r border-gray-300 px-2.5 py-1.5 text-left">Subject</th>
+                    <th className="border-r border-gray-300 px-2.5 py-1.5 text-center">Max Marks</th>
+                    <th className="border-r border-gray-300 px-2.5 py-1.5 text-center">Obtained</th>
+                    <th className="border-r border-gray-300 px-2.5 py-1.5 text-center">Grade</th>
+                    <th className="px-2.5 py-1.5 text-left">Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {['Mathematics', 'Physics', 'Chemistry', 'English', 'Biology'].map((s) => (
-                    <tr key={s} className="border border-border">
-                      <td className="border border-border px-2 py-1">{s}</td>
-                      <td className="border border-border px-2 py-1 text-center">—</td>
-                      {form.show_grades ? <td className="border border-border px-2 py-1 text-center">—</td> : null}
+                  {PREVIEW_SUBJECTS.map((item) => (
+                    <tr key={item.subject} className="border-b border-gray-200">
+                      <td className="border-r border-gray-300 px-2.5 py-1.5 font-medium">{item.subject}</td>
+                      <td className="border-r border-gray-300 px-2.5 py-1.5 text-center">{item.max}</td>
+                      <td className="border-r border-gray-300 px-2.5 py-1.5 text-center font-bold">{item.obtained}</td>
+                      <td className="border-r border-gray-300 px-2.5 py-1.5 text-center font-semibold">{item.grade}</td>
+                      <td className="px-2.5 py-1.5 text-gray-600">{item.remarks}</td>
                     </tr>
                   ))}
-                  <tr className="border border-border bg-muted/20 font-semibold">
-                    <td className="border border-border px-2 py-1">Total</td>
-                    <td className="border border-border px-2 py-1 text-center">—</td>
-                    {form.show_grades ? <td className="border border-border px-2 py-1 text-center">—</td> : null}
-                  </tr>
                 </tbody>
               </table>
-              {form.show_attendance ? <p className="text-xs"><span className="text-muted-foreground">Attendance:</span> <span className="font-medium">—</span></p> : null}
-              {form.show_remarks ? <p className="text-xs"><span className="text-muted-foreground">Remarks:</span> <span className="font-medium">—</span></p> : null}
-              <div className="mt-auto flex justify-between pt-4 text-xs">
-                {form.show_teacher_signature ? <div className="text-center"><div className="mb-1 h-6 w-24 border-b border-dashed" /><span className="text-muted-foreground">Class Teacher</span></div> : <span />}
-                {form.show_principal_signature ? <div className="text-center"><div className="mb-1 h-6 w-24 border-b border-dashed" /><span className="text-muted-foreground">Principal</span></div> : <span />}
+
+              {/* Results Summary */}
+              <div className="border border-gray-300 bg-gray-50 rounded p-2.5 text-xs flex justify-between items-center font-semibold text-black">
+                <span>Total Marks : 449 / 500</span>
+                <span>Percentage : 89.8%</span>
+                <span>Overall Grade : A+</span>
+                <span className="text-emerald-700 font-bold">Result : PASS</span>
+              </div>
+
+              {/* Signatures */}
+              <div className="mt-12 flex justify-between text-xs pt-6 text-black">
+                <div className="text-center">
+                  <div className="mb-1 w-32 border-b border-gray-400" />
+                  <span className="font-medium text-gray-700">Class Teacher</span>
+                </div>
+                <div className="text-center">
+                  <div className="mb-1 w-32 border-b border-gray-400" />
+                  <span className="font-bold text-black">{form.footer || 'Principal Signature'}</span>
+                </div>
               </div>
             </div>
           </div>

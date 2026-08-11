@@ -13,18 +13,16 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { Plus, Library, Pencil, Trash2, Eye, FlaskConical, BookText, CircleCheck as CheckCircle2 } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Plus, Library, Pencil, Trash2, Eye, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
@@ -35,22 +33,14 @@ import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
 import { useSubjects } from '@/hooks/useAcademics'
-// import { subjectGroups, SUBJECT_COLORS } from '@/services/mockData'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Subject' },
-  { key: 'code', label: 'Code' },
-  { key: 'theory', label: 'Theory Marks' },
-  { key: 'practical', label: 'Practical Marks' },
-  { key: 'type', label: 'Type' },
-  { key: 'group', label: 'Group' },
-  { key: 'status', label: 'Status' },
+  { key: "subject_name", label: "Subject" },
+  { key: "subject_code", label: "Code" },
+  { key: "createdAt", label: "Created" },
 ]
-
-const GROUP_OPTIONS = subjectGroups.map((g) => g.name)
-const TYPE_OPTIONS = ['Core', 'Elective']
 
 export default function SubjectsPage() {
   const { toast } = useToast()
@@ -59,8 +49,6 @@ export default function SubjectsPage() {
     stats,
     isLoading,
     search, setSearch,
-    status, setStatus,
-    typeFilter, setTypeFilter,
     saveSubject,
     deleteSubject,
     bulkDelete,
@@ -72,39 +60,34 @@ export default function SubjectsPage() {
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
-      header: 'Subject',
+      accessorKey: "subject_name",
+      header: "Subject",
       cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <span className="h-9 w-9 rounded-lg" style={{ backgroundColor: SUBJECT_COLORS[row.original.name] || '#64748b' }} aria-hidden="true" />
+        <button
+          onClick={() => setViewRow(row.original)}
+          className="flex items-center gap-3"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Library className="h-5 w-5 text-primary" />
+          </div>
+
           <div>
-            <p className="font-medium hover:underline">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground">{row.original.code}</p>
+            <p className="font-medium">
+              {row.original.subject_name}
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              {row.original.subject_code}
+            </p>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'group', header: 'Group' },
     {
-      accessorKey: 'theory',
-      header: 'Theory',
-      cell: ({ row }) => <span className="inline-flex items-center gap-1.5"><BookText className="h-3.5 w-3.5 text-muted-foreground" />{row.original.theory}</span>,
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
-    {
-      accessorKey: 'practical',
-      header: 'Practical',
-      cell: ({ row }) => <span className="inline-flex items-center gap-1.5"><FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />{row.original.practical}</span>,
-    },
-    {
-      accessorKey: 'type',
-      header: 'Type',
-      cell: ({ row }) => (
-        <Badge variant={row.original.type === 'Core' ? 'default' : 'secondary'} className="font-medium">
-          {row.original.type}
-        </Badge>
-      ),
-    },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
   ], [])
 
   const rowActions = (r) => [
@@ -129,28 +112,26 @@ export default function SubjectsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Subjects" value={stats.total} icon={Library} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={CheckCircle2} accent="success" />
-        <StatCard label="Core" value={stats.core} icon={BookText} accent="chart2" />
-        <StatCard label="Elective" value={stats.elective} icon={FlaskConical} accent="chart3" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard
+          label="Total Subjects"
+          value={stats.total}
+          icon={Library}
+          accent="primary"
+        />
+
+        <StatCard
+          label="Showing"
+          value={filtered.length}
+          icon={BookOpen}
+          accent="success"
+        />
       </div>
 
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search subjects…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="subjects" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All types</option>
-            {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
         </div>
       </FilterBar>
 
@@ -165,7 +146,7 @@ export default function SubjectsPage() {
           enableSelection
           enableExport
           exportFilename="subjects"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Subjects deleted' }) } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: (ids) => { bulkDelete(ids) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
@@ -173,20 +154,27 @@ export default function SubjectsPage() {
       <SubjectDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Subject" onSubmit={async (p) => { await saveSubject(p); setAddOpen(false) }} />
       <SubjectDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Subject" initial={editRow} onSubmit={async (p) => { await saveSubject(p, editRow._id); setEditRow(null) }} />
 
-      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Subject Details" description={viewRow?.name} width="sm:max-w-md"
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Subject Details" description={viewRow?.subject_name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow ? (
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {[
-              { label: 'Subject Name', value: viewRow.name },
-              { label: 'Subject Code', value: viewRow.code },
-              { label: 'Theory Marks', value: viewRow.theory },
-              { label: 'Practical Marks', value: viewRow.practical },
-              { label: 'Total Marks', value: viewRow.theory + viewRow.practical },
-              { label: 'Type', value: viewRow.type },
-              { label: 'Group', value: viewRow.group },
-              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-              { label: 'Created', value: formatDate(viewRow.createdAt) },
+              {
+                label: "Subject Name",
+                value: viewRow.subject_name,
+              },
+              {
+                label: "Subject Code",
+                value: viewRow.subject_code,
+              },
+              {
+                label: "Created",
+                value: formatDate(viewRow.createdAt),
+              },
+              {
+                label: "Updated",
+                value: formatDate(viewRow.updatedAt),
+              },
             ].map((r) => (
               <div key={r.label} className="space-y-0.5">
                 <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
@@ -197,22 +185,25 @@ export default function SubjectsPage() {
         ) : null}
       </Drawer>
 
-      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={() => { deleteSubject(deleteRow._id); setDeleteRow(null) }} />
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.subject_name}
+        onConfirm={() => { deleteSubject(deleteRow._id || deleteRow.id); setDeleteRow(null) }} />
     </div>
   )
 }
 
 function SubjectDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
-    name: initial?.name || '',
-    code: initial?.code || '',
-    theory: initial?.theory ?? 100,
-    practical: initial?.practical ?? 0,
-    type: initial?.type || 'Core',
-    group: initial?.group || '',
-    status: initial?.status || 'active',
+    subject_name: initial?.subject_name || '',
+    subject_code: initial?.subject_code || '',
   })
+
+  useEffect(() => {
+    setForm({
+      subject_name: initial?.subject_name || '',
+      subject_code: initial?.subject_code || '',
+    })
+  }, [initial])
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange} title={title} description="Subject details" width="sm:max-w-md"
       footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}>
@@ -220,42 +211,11 @@ function SubjectDrawer({ open, onOpenChange, title, initial, onSubmit }) {
         <FormSection columns={2}>
           <div className="space-y-1.5">
             <Label className="text-xs">Subject Name <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Mathematics" required />
+            <Input value={form.subject_name} onChange={(e) => setForm((f) => ({ ...f, subject_name: e.target.value }))} placeholder="e.g. Mathematics" required />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Subject Code <span className="text-destructive">*</span></Label>
-            <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="e.g. MATH" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Theory Marks</Label>
-            <Input type="number" value={form.theory} onChange={(e) => setForm((f) => ({ ...f, theory: Number(e.target.value) }))} placeholder="e.g. 80" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Practical Marks</Label>
-            <Input type="number" value={form.practical} onChange={(e) => setForm((f) => ({ ...f, practical: Number(e.target.value) }))} placeholder="e.g. 20" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Type</Label>
-            <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Group</Label>
-            <select value={form.group} onChange={(e) => setForm((f) => ({ ...f, group: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="">Select group</option>
-              {GROUP_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Input value={form.subject_code} onChange={(e) => setForm((f) => ({ ...f, subject_code: e.target.value }))} placeholder="e.g. MATH" required />
           </div>
         </FormSection>
         <button type="submit" className="hidden" aria-hidden="true" />

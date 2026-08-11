@@ -13,7 +13,7 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Printer, FileDown, Download, CircleCheck as CheckCircle2, Circle as XCircle, CalendarPlus, Clock3, ChevronLeft, ChevronRight, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -26,26 +26,28 @@ import { NoData } from '@/components/NoData'
 import { ExportButtons } from '@/components/ExportButtons'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { attendanceService } from '@/services/attendance.service'
-// import { academicClasses, academicSections, ATTENDANCE_STATUS } from '@/services/mockData'
+import { academicsService } from '@/services/academics.service'
 import { exportToCsv } from '@/utils/export'
 import { fullName, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
-const CLASS_OPTIONS = academicClasses.map((c) => c.name)
-const SECTION_OPTIONS = Array.from(new Set(academicSections.map((s) => s.name)))
+const ATTENDANCE_STATUS = {
+  present: { label: 'Present', color: '#16a34a', bg: 'bg-success/10', text: 'text-success', border: 'border-success/20' },
+  absent: { label: 'Absent', color: '#dc2626', bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/20' },
+  leave: { label: 'Leave', color: '#ca8a04', bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20' },
+  late: { label: 'Late', color: '#2563eb', bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' },
+}
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Student' },
-  { key: 'admission_no', label: 'Admission No' },
-  { key: 'class', label: 'Class' },
+  { key: 'student_name', label: 'Student' },
+  { key: 'roll_number', label: 'Roll Number' },
+  { key: 'class_name', label: 'Class' },
   { key: 'section', label: 'Section' },
   { key: 'status', label: 'Status' },
-  { key: 'check_in', label: 'Check-in' },
-  { key: 'remarks', label: 'Remarks' },
 ]
 
 function StatusPill({ status }) {
@@ -119,14 +121,34 @@ export default function AttendanceByDatePage() {
   const { toast } = useToast()
   const todayStr = new Date().toISOString().slice(0, 10)
   const [date, setDate] = useState(todayStr)
-  const [classFilter, setClassFilter] = useState(CLASS_OPTIONS[0])
-  const [sectionFilter, setSectionFilter] = useState(SECTION_OPTIONS[0])
+  const [classFilter, setClassFilter] = useState('all')
+  const [sectionFilter, setSectionFilter] = useState('all')
+  const [classOptions, setClassOptions] = useState([])
+  const [sectionOptions, setSectionOptions] = useState([])
+
+  useEffect(() => {
+    let mounted = true
+    Promise.all([academicsService.classes(), academicsService.sections()])
+      .then(([clsRes, secRes]) => {
+        if (!mounted) return
+        const classes = clsRes || []
+        const sections = secRes || []
+        setClassOptions(classes)
+        setSectionOptions(Array.from(new Set(sections.map((s) => s.section_name))))
+      })
+      .catch(() => {
+        if (!mounted) return
+        setClassOptions([])
+        setSectionOptions([])
+      })
+    return () => { mounted = false }
+  }, [])
 
   const { data, isLoading } = useAsyncData(() => attendanceService.byDate(date), [date])
 
   const rows = useMemo(() => {
     const all = data || []
-    return all.filter((r) => r.class === classFilter && r.section === sectionFilter)
+    return all.filter((r) => (classFilter === 'all' || r.class_id === classFilter) && (sectionFilter === 'all' || r.section === sectionFilter))
   }, [data, classFilter, sectionFilter])
 
   const stats = useMemo(() => ({
@@ -138,8 +160,18 @@ export default function AttendanceByDatePage() {
   }), [rows])
 
   const handlePrint = () => window.print()
-  const handleExportPdf = () => toast({ title: 'Exporting PDF', description: 'The attendance PDF will download shortly.' })
-  const handleExportCsv = () => exportToCsv(rows, EXPORT_COLS, `attendance-${date}`)
+  const handleExportPdf = () => window.print()
+  const handleExportCsv = () => {
+    const exportData = rows.map(r => ({
+      ...r,
+      student_name: r.student_id?.name ? `${r.student_id.name.first} ${r.student_id.name.last}` : 'Unknown',
+      roll_number: r.student_id?.roll_number || '—',
+      class_name: classOptions.find(c => c._id === r.class_id)?.class_name || r.class_id,
+      section: r.section || '—',
+      status: r.status,
+    }))
+    exportToCsv(exportData, EXPORT_COLS, `attendance-${date}`)
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -174,14 +206,16 @@ export default function AttendanceByDatePage() {
                 <label className="text-xs font-medium text-muted-foreground">Class</label>
                 <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                  {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="all">All classes</option>
+                  {classOptions.map((c) => <option key={c._id} value={c._id}>{c.class_name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Section</label>
                 <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                  {SECTION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  <option value="all">All sections</option>
+                  {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -190,8 +224,8 @@ export default function AttendanceByDatePage() {
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" />
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
-                <Badge variant="secondary" className="rounded-full">{classFilter}</Badge>
-                <Badge variant="outline" className="rounded-full">Section {sectionFilter}</Badge>
+                {classFilter !== 'all' && <Badge variant="secondary" className="rounded-full">{classFilter}</Badge>}
+                {sectionFilter !== 'all' && <Badge variant="outline" className="rounded-full">Section {sectionFilter}</Badge>}
                 <Badge variant="outline" className="rounded-full">{date}</Badge>
               </div>
             </CardContent>
@@ -202,7 +236,18 @@ export default function AttendanceByDatePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Attendance for {date}</h3>
-            <ExportButtons rows={rows} columns={EXPORT_COLS} filename={`attendance-${date}`} />
+            <ExportButtons 
+              rows={rows.map(r => ({
+                ...r,
+                student_name: r.student_id?.name ? `${r.student_id.name.first} ${r.student_id.name.last}` : 'Unknown',
+                roll_number: r.student_id?.roll_number || '—',
+                class_name: classOptions.find(c => c._id === r.class_id)?.class_name || r.class_id,
+                section: r.section || '—',
+                status: r.status,
+              }))} 
+              columns={EXPORT_COLS} 
+              filename={`attendance-${date}`} 
+            />
           </div>
 
           {isLoading ? (
@@ -217,29 +262,31 @@ export default function AttendanceByDatePage() {
                     <thead className="border-b bg-muted/40">
                       <tr>
                         <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Student</th>
-                        <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Admission No</th>
+                        <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Roll Number</th>
                         <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
-                        <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Check-in</th>
-                        <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Remarks</th>
+                        <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Section</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((r) => (
-                        <tr key={r._id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          <td className="p-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                                {initials(r.name)}
+                      {rows.map((r) => {
+                        const student = r.student_id || {};
+                        const name = student.name ? `${student.name.first} ${student.name.last}` : 'Unknown';
+                        return (
+                          <tr key={r._id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                            <td className="p-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                  {initials(name)}
+                                </div>
+                                <span className="text-sm font-medium">{name}</span>
                               </div>
-                              <span className="text-sm font-medium">{fullName(r.name)}</span>
-                            </div>
-                          </td>
-                          <td className="p-3 text-sm text-muted-foreground">{r.admission_no}</td>
-                          <td className="p-3"><StatusPill status={r.status} /></td>
-                          <td className="p-3 text-sm">{r.check_in}</td>
-                          <td className="p-3 text-sm text-muted-foreground">{r.remarks || '—'}</td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="p-3 text-sm text-muted-foreground">{student.roll_number || '—'}</td>
+                            <td className="p-3"><StatusPill status={r.status} /></td>
+                            <td className="p-3 text-sm text-muted-foreground">{r.section || '—'}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

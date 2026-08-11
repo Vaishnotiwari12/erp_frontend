@@ -3,7 +3,7 @@
 // Page: Postal Dispatch
 //
 // Purpose:
-// Track letters and parcels sent out from the institution.
+// Manage postal dispatch records.
 //
 // Data Source:
 // frontOffice.service.js
@@ -14,22 +14,11 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  Send,
-  Eye,
-  Pencil,
-  Trash2,
-  Paperclip,
-  Mail,
-  Package,
-  FileText,
-  Building2,
-} from 'lucide-react'
+import { Send, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -38,84 +27,66 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { frontOfficeService } from '@/services/frontOffice.service'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'to_title', label: 'Recipient' },
-  { key: 'to_address', label: 'Address' },
+  { key: 'to_title', label: 'To Title' },
   { key: 'reference_no', label: 'Reference No' },
-  { key: 'dispatch_type', label: 'Type' },
-  { key: 'dispatch_date', label: 'Dispatch Date' },
-  { key: 'dispatched_by', label: 'Dispatched By' },
-  { key: 'received_by', label: 'Courier' },
-  { key: 'notes', label: 'Notes' },
+  { key: 'address', label: 'Address' },
+  { key: 'date', label: 'Date' },
+  { key: 'note', label: 'Note' },
 ]
 
 export default function PostalDispatchPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => frontOfficeService.getDispatches(), [])
+  const { data: dispatches, isLoading, refetch } = useAsyncData(() => frontOfficeService.getDispatches(), [])
+  
   const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
+  const rows = dispatches || []
 
   const filtered = useMemo(() => rows.filter((r) => {
     const q = search.toLowerCase()
-    const matchSearch = !q || r.to_title.toLowerCase().includes(q) || r.reference_no.toLowerCase().includes(q) || r.dispatched_by.toLowerCase().includes(q)
-    const matchType = typeFilter === 'all' || r.dispatch_type === typeFilter
-    return matchSearch && matchType
-  }), [rows, search, typeFilter])
-
-  const typeOptions = useMemo(() => [...new Set(rows.map((r) => r.dispatch_type).filter(Boolean))], [rows])
+    return !q || 
+      (r.to_title || '').toLowerCase().includes(q) ||
+      (r.reference_no || '').toLowerCase().includes(q) ||
+      (r.address || '').toLowerCase().includes(q)
+  }), [rows, search])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    letters: rows.filter((r) => r.dispatch_type === 'Letter').length,
-    parcels: rows.filter((r) => r.dispatch_type === 'Parcel').length,
-    documents: rows.filter((r) => r.dispatch_type === 'Official Document').length,
   }), [rows])
-
-  const handleSave = async (payload, id) => {
-    if (id) {
-      await frontOfficeService.updateDispatch(id, payload)
-      toast({ title: 'Dispatch updated' })
-      setEditRow(null)
-    } else {
-      await frontOfficeService.createDispatch(payload)
-      toast({ title: 'Dispatch recorded' })
-      setAddOpen(false)
-    }
-    refetch()
-  }
 
   const columns = useMemo(() => [
     {
       accessorKey: 'to_title',
-      header: 'Recipient',
+      header: 'To',
       cell: ({ row }) => (
-        <button className="flex flex-col text-left" onClick={() => setViewRow(row.original)}>
-          <span className="font-medium hover:underline">{row.original.to_title}</span>
-          <span className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">{row.original.to_address}</span>
+        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Send className="h-4 w-4" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium hover:underline">{row.original.to_title || 'Unknown'}</span>
+            <span className="text-xs text-muted-foreground">{row.original.reference_no || 'No ref'}</span>
+          </div>
         </button>
       ),
     },
-    { accessorKey: 'reference_no', header: 'Reference No', cell: ({ row }) => <Badge variant="outline">{row.original.reference_no}</Badge> },
-    { accessorKey: 'dispatch_type', header: 'Type', cell: ({ row }) => <Badge variant="secondary">{row.original.dispatch_type}</Badge> },
-    { accessorKey: 'dispatch_date', header: 'Date', cell: ({ row }) => formatDate(row.original.dispatch_date) },
-    { accessorKey: 'dispatched_by', header: 'Dispatched By' },
-    { accessorKey: 'received_by', header: 'Courier' },
+    { accessorKey: 'address', header: 'Address', cell: ({ row }) => <span className="text-sm text-muted-foreground line-clamp-1 max-w-xs">{row.original.address || '—'}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => row.original.date ? formatDate(row.original.date) : '—' },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -125,210 +96,163 @@ export default function PostalDispatchPage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await frontOfficeService.updateDispatch(id, payload)
+        toast({ title: 'Dispatch updated successfully' })
+        setEditRow(null)
+      } else {
+        await frontOfficeService.createDispatch(payload)
+        toast({ title: 'Dispatch created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save dispatch:', error)
+      toast({ title: 'Failed to save dispatch', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await frontOfficeService.deleteDispatch(id)
+      toast({ title: 'Dispatch deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete dispatch:', error)
+      toast({ title: 'Failed to delete dispatch', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Front Office' }, { label: 'Postal Dispatch' }]} />
       <PageHeader
         title="Postal Dispatch"
-        description="Track letters and parcels sent out from the institution."
+        description="Manage postal dispatch records."
         icon={Send}
-        actions={<Button onClick={() => setAddOpen(true)}><Send className="mr-2 h-4 w-4" /> New Dispatch</Button>}
+        actions={<Button onClick={() => setAddOpen(true)}><Send className="mr-2 h-4 w-4" /> Add Dispatch</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-1">
         <StatCard label="Total Dispatches" value={stats.total} icon={Send} accent="primary" />
-        <StatCard label="Letters" value={stats.letters} icon={Mail} accent="chart2" />
-        <StatCard label="Parcels" value={stats.parcels} icon={Package} accent="chart3" />
-        <StatCard label="Official Docs" value={stats.documents} icon={FileText} accent="chart4" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by recipient, reference, or sender…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by title, reference, or address…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="postal-dispatch" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All types</option>
-            {typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={6} cols={6} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : filtered.length === 0 ? (
-        <NoData title="No dispatches found" description="Record a new dispatch to get started." actionLabel="New Dispatch" onAction={() => setAddOpen(true)} />
+        <NoData title="No dispatches found" description="Add a dispatch to get started." actionLabel="Add Dispatch" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          enableSelection
-          enableExport
-          exportFilename="postal-dispatch"
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <DispatchFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Dispatch' : 'New Dispatch'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Dispatch' : 'Add Dispatch'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update dispatch details' : 'Add a new postal dispatch'}</DialogDescription>
+          </DialogHeader>
+          <DispatchForm initial={editRow} onSubmit={(payload) => handleSave(payload, editRow?._id)} onCancel={() => { setAddOpen(false); setEditRow(null) }} />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
-      <Drawer
-        open={!!viewRow}
-        onOpenChange={(o) => !o && setViewRow(null)}
-        title="Dispatch Details"
-        description={viewRow?.reference_no}
-        width="sm:max-w-md"
-        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
-      >
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Dispatch Details" width="sm:max-w-md" footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Building2 className="h-5 w-5" />
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {[
+              { label: 'To Title', value: viewRow.to_title || '—' },
+              { label: 'Reference No', value: viewRow.reference_no || '—' },
+              { label: 'Address', value: viewRow.address || '—' },
+              { label: 'Date', value: viewRow.date ? formatDate(viewRow.date) : '—' },
+              { label: 'Note', value: viewRow.note || '—' },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value}</dd>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.to_title}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.to_address}</p>
-              </div>
-              <Badge variant="secondary">{viewRow.dispatch_type}</Badge>
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {[
-                { label: 'Reference No', value: viewRow.reference_no },
-                { label: 'Dispatch Type', value: viewRow.dispatch_type },
-                { label: 'Dispatch Date', value: formatDate(viewRow.dispatch_date) },
-                { label: 'Dispatched By', value: viewRow.dispatched_by },
-                { label: 'Courier', value: viewRow.received_by },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
-                </div>
-              ))}
-            </dl>
-
-            {viewRow.notes && (
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Notes</p>
-                <p className="rounded-lg border bg-muted/20 p-3 text-sm">{viewRow.notes}</p>
-              </div>
-            )}
-
-            {viewRow.attachment && (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 p-3">
-                <Paperclip className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">{viewRow.attachment}</span>
-                <Button variant="ghost" size="sm" className="ml-auto" onClick={() => toast({ title: 'Opening attachment' })}>View</Button>
-              </div>
-            )}
-          </div>
+            ))}
+          </dl>
         )}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.to_title}
-        onConfirm={async () => {
-          await frontOfficeService.deleteDispatch(deleteRow._id)
-          toast({ title: 'Dispatch record deleted' })
-          setDeleteRow(null)
-          refetch()
-        }}
-      />
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Dispatch</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this dispatch? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// Shared form drawer for Create and Edit dispatch records.
-function DispatchFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    to_title: initial?.to_title || '',
-    to_address: initial?.to_address || '',
-    reference_no: initial?.reference_no || '',
-    dispatch_type: initial?.dispatch_type || 'Letter',
-    dispatch_date: initial?.dispatch_date?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-    dispatched_by: initial?.dispatched_by || '',
-    received_by: initial?.received_by || '',
-    notes: initial?.notes || '',
-    attachment: initial?.attachment || '',
+function DispatchForm({ initial, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    to_title: '', reference_no: '', address: '', date: '', note: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        to_title: initial.to_title || '', reference_no: initial.reference_no || '', address: initial.address || '', date: initial.date ? initial.date.split('T')[0] : '', note: initial.note || '',
+      })
+    } else {
+      setFormData({
+        to_title: '', reference_no: '', address: '', date: new Date().toISOString().split('T')[0], note: '',
+      })
+    }
+  }, [initial])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Outgoing postal record"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Record Dispatch'}
-          onSubmit={() => onSubmit(form)}
-        />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Recipient Name/Title <span className="text-destructive">*</span></Label>
-            <Input value={form.to_title} onChange={(e) => set('to_title', e.target.value)} placeholder="e.g. Mr. John Smith" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Recipient Address</Label>
-            <Textarea value={form.to_address} onChange={(e) => set('to_address', e.target.value)} rows={2} placeholder="Full postal address" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Reference No</Label>
-              <Input value={form.reference_no} onChange={(e) => set('reference_no', e.target.value)} placeholder="REF-2025-001" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Dispatch Type</Label>
-              <select value={form.dispatch_type} onChange={(e) => set('dispatch_type', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option>Letter</option>
-                <option>Parcel</option>
-                <option>Official Document</option>
-                <option>Courier</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Dispatch Date</Label>
-              <Input type="date" value={form.dispatch_date} onChange={(e) => set('dispatch_date', e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Courier / Carrier</Label>
-              <Input value={form.received_by} onChange={(e) => set('received_by', e.target.value)} placeholder="e.g. FedEx, USPS" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Dispatched By</Label>
-            <Input value={form.dispatched_by} onChange={(e) => set('dispatched_by', e.target.value)} placeholder="Staff member name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Notes</Label>
-            <Textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} placeholder="Contents, purpose, etc." />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Attachment (optional)</Label>
-            <Input value={form.attachment} onChange={(e) => set('attachment', e.target.value)} placeholder="e.g. delivery-receipt.pdf" />
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="to_title">To Title *</Label>
+        <Input id="to_title" value={formData.to_title} onChange={(e) => setFormData({ ...formData, to_title: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="reference_no">Reference No *</Label>
+        <Input id="reference_no" value={formData.reference_no} onChange={(e) => setFormData({ ...formData, reference_no: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="address">Address *</Label>
+        <Textarea id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Full address..." rows={3} required />
+      </div>
+      <div>
+        <Label htmlFor="date">Date *</Label>
+        <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="note">Note</Label>
+        <Textarea id="note" value={formData.note} onChange={(e) => setFormData({ ...formData, note: e.target.value })} placeholder="Additional notes..." rows={3} />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

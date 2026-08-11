@@ -13,104 +13,164 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Printer, Eye, CircleCheck as CheckCircle2, Download, Clock, BadgeCheck } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { DollarSign, Eye, Pencil, Trash2, FileText, Calendar, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
-import { Drawer } from '@/components/Drawer'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { usePayroll } from '@/hooks/useHR'
-import { payrollMonths } from '@/data/hr.mock'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { hrService } from '@/services/hr.service'
 import { formatCurrency, formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'employee_id', label: 'Employee ID' },
-  { key: 'name', label: 'Name' },
-  { key: 'department', label: 'Department' },
-  { key: 'basic_salary', label: 'Basic Salary' },
-  { key: 'total_allowances', label: 'Total Allowances' },
-  { key: 'total_deductions', label: 'Total Deductions' },
-  { key: 'net_salary', label: 'Net Salary' },
-  { key: 'status', label: 'Status' },
+  { key: 'staff_name', label: 'Staff Name' },
+  { key: 'month', label: 'Month' },
+  { key: 'year', label: 'Year' },
+  { key: 'basic', label: 'Basic' },
+  { key: 'allowances', label: 'Allowances' },
+  { key: 'deductions', label: 'Deductions' },
+  { key: 'net', label: 'Net Salary' },
+]
+
+const MONTHS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
 ]
 
 export default function PayrollPage() {
   const { toast } = useToast()
-  const [month, setMonth] = useState(payrollMonths[0])
+  const { data: payrolls, isLoading, refetch } = useAsyncData(() => hrService.getPayrolls(), [])
+  const { data: staffList, isLoading: staffLoading } = useAsyncData(() => hrService.getStaff(), [])
+  
   const [viewRow, setViewRow] = useState(null)
+  const [editRow, setEditRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
+  const [search, setSearch] = useState('')
+  const [monthFilter, setMonthFilter] = useState('all')
+  const [yearFilter, setYearFilter] = useState('all')
 
-  const {
-    rows: filtered, summary, deptOptions, isLoading,
-    search, setSearch, deptFilter, setDeptFilter, statusFilter, setStatusFilter,
-    processPayment, bulkProcess, generate,
-  } = usePayroll(month)
+  const rows = payrolls || []
+  const staff = staffList || []
 
-  const handleProcessPayment = async (row) => {
-    await processPayment(row)
-  }
+  const currentYear = new Date().getFullYear()
+  const years = useMemo(() => {
+    const yearSet = new Set(rows.map(r => r.year))
+    if (!yearSet.has(currentYear)) yearSet.add(currentYear)
+    return Array.from(yearSet).sort((a, b) => b - a)
+  }, [rows, currentYear])
 
-  const handleBulkProcess = async (selected) => {
-    await bulkProcess(selected)
-  }
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const staffMember = staff.find(s => s._id === r.staff_id)
+    const matchesSearch = !q || (staffMember?.name || '').toLowerCase().includes(q)
+    const matchesMonth = monthFilter === 'all' || r.month === parseInt(monthFilter)
+    const matchesYear = yearFilter === 'all' || r.year === parseInt(yearFilter)
+    return matchesSearch && matchesMonth && matchesYear
+  }), [rows, search, monthFilter, yearFilter, staff])
 
-  const handleGenerate = async () => {
-    await generate()
-  }
+  const stats = useMemo(() => ({
+    total: rows.length,
+    totalBasic: rows.reduce((s, r) => s + (r.basic || 0), 0),
+    totalAllowances: rows.reduce((s, r) => s + (r.allowances || 0), 0),
+    totalDeductions: rows.reduce((s, r) => s + (r.deductions || 0), 0),
+    totalNet: rows.reduce((s, r) => s + (r.net || 0), 0),
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
+      accessorKey: 'staff_id',
       header: 'Staff Member',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-            {initials(row.original.name)}
-          </div>
-          <div>
-            <p className="font-medium hover:underline">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground">{row.original.employee_id}</p>
-          </div>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const staffMember = staff.find(s => s._id === row.original.staff_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+              {initials(staffMember?.name || 'Unknown')}
+            </div>
+            <div>
+              <p className="font-medium hover:underline">{staffMember?.name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground">{staffMember?.employee_id || '—'}</p>
+            </div>
+          </button>
+        )
+      },
     },
-    { accessorKey: 'department', header: 'Department' },
-    { accessorKey: 'basic_salary', header: 'Basic', cell: ({ row }) => formatCurrency(row.original.basic_salary) },
-    { accessorKey: 'total_allowances', header: 'Allowances', cell: ({ row }) => (
-      <span className="font-medium text-success">+{formatCurrency(row.original.total_allowances)}</span>
+    { accessorKey: 'month', header: 'Month', cell: ({ row }) => {
+      const month = MONTHS.find(m => m.value === row.original.month)
+      return <span>{month?.label || row.original.month}</span>
+    }},
+    { accessorKey: 'year', header: 'Year', cell: ({ row }) => row.original.year },
+    { accessorKey: 'basic', header: 'Basic', cell: ({ row }) => formatCurrency(row.original.basic) },
+    { accessorKey: 'allowances', header: 'Allowances', cell: ({ row }) => (
+      <span className="font-medium text-success">+{formatCurrency(row.original.allowances)}</span>
     ) },
-    { accessorKey: 'total_deductions', header: 'Deductions', cell: ({ row }) => (
-      <span className="font-medium text-destructive">-{formatCurrency(row.original.total_deductions)}</span>
+    { accessorKey: 'deductions', header: 'Deductions', cell: ({ row }) => (
+      <span className="font-medium text-destructive">-{formatCurrency(row.original.deductions)}</span>
     ) },
-    { accessorKey: 'net_salary', header: 'Net Salary', cell: ({ row }) => (
-      <span className="text-base font-bold">{formatCurrency(row.original.net_salary)}</span>
+    { accessorKey: 'net', header: 'Net Salary', cell: ({ row }) => (
+      <span className="text-base font-bold">{formatCurrency(row.original.net)}</span>
     ) },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => (
-      <Badge variant={row.original.status === 'paid' ? 'default' : 'secondary'}>
-        {row.original.status}
-      </Badge>
-    ) },
-  ], [])
+  ], [staff])
 
   const rowActions = (r) => [
     { label: 'View Payslip', icon: Eye, onClick: () => setViewRow(r) },
-    ...(r.status === 'pending' ? [
-      { label: 'Process Payment', icon: BadgeCheck, onClick: () => handleProcessPayment(r) },
-    ] : []),
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
     { separator: true },
-    { label: 'Print Payslip', icon: Printer, onClick: () => window.print() },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
+
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await hrService.updatePayroll(id, payload)
+        toast({ title: 'Payroll updated' })
+      } else {
+        await hrService.createPayroll(payload)
+        toast({ title: 'Payroll created' })
+      }
+      setEditRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to save payroll:', error)
+      toast({ title: 'Failed to save payroll', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await hrService.deletePayroll(id)
+      toast({ title: 'Payroll deleted' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete payroll:', error)
+      toast({ title: 'Failed to delete payroll', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -119,46 +179,31 @@ export default function PayrollPage() {
         title="Payroll Management"
         description="Generate, review, and process monthly staff payroll."
         icon={DollarSign}
-        actions={
-          <>
-            <Button variant="outline" onClick={handleGenerate}>
-              <TrendingUp className="mr-2 h-4 w-4" /> Generate Payroll
-            </Button>
-            <Button variant="outline" onClick={() => window.print()}>
-              <Printer className="mr-2 h-4 w-4" /> Print All
-            </Button>
-          </>
-        }
+        actions={<Button onClick={() => setEditRow({})}><DollarSign className="mr-2 h-4 w-4" /> Add Payroll</Button>}
       />
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Total Gross" value={formatCurrency(summary.totalGross)} icon={Wallet} accent="primary" />
-        <StatCard label="Total Net Pay" value={formatCurrency(summary.totalNet)} icon={DollarSign} accent="success" />
-        <StatCard label="Total Deductions" value={formatCurrency(summary.totalDeductions)} icon={TrendingDown} accent="destructive" />
-        <StatCard label="Paid" value={summary.paid} icon={CheckCircle2} accent="success" />
-        <StatCard label="Pending" value={summary.pending} icon={Clock} accent="warning" />
+        <StatCard label="Total Records" value={stats.total} icon={FileText} accent="primary" />
+        <StatCard label="Total Basic" value={formatCurrency(stats.totalBasic)} icon={DollarSign} accent="primary" />
+        <StatCard label="Total Allowances" value={formatCurrency(stats.totalAllowances)} icon={CheckCircle2} accent="success" />
+        <StatCard label="Total Deductions" value={formatCurrency(stats.totalDeductions)} icon={Trash2} accent="destructive" />
+        <StatCard label="Total Net Pay" value={formatCurrency(stats.totalNet)} icon={DollarSign} accent="success" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search staff or employee ID…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search staff name…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename={`payroll-${month}`} />
-          {/* Month selector — changes trigger a refetch via useAsyncData dep */}
-          <select value={month} onChange={(e) => setMonth(e.target.value)}
+          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="payroll" />
+          <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            {payrollMonths.map((m) => <option key={m} value={m}>{m}</option>)}
+            <option value="all">All months</option>
+            {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All departments</option>
-            {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
+            <option value="all">All years</option>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
       </FilterBar>
@@ -166,17 +211,11 @@ export default function PayrollPage() {
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={8} cols={7} />
       ) : filtered.length === 0 ? (
-        <NoData title="No payroll data" description="Generate payroll for this month to see records." />
+        <NoData title="No payroll data" description="Add payroll records to see them here." actionLabel="Add Payroll" onAction={() => setEditRow({})} />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          enableSelection
-          enableExport
-          exportFilename={`payroll-${month}`}
-          bulkActions={[
-            { label: 'Process Payments', icon: BadgeCheck, onClick: handleBulkProcess },
-          ]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
@@ -186,83 +225,205 @@ export default function PayrollPage() {
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Payslip"
-        description={`${viewRow?.name} — ${month}`}
         width="sm:max-w-lg"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>
-            <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Print</Button>
-          </>
-        }
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-5">
-            {/* Employee summary header */}
-            <div className="flex items-center gap-4 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                {initials(viewRow.name)}
+        {viewRow && (() => {
+          const staffMember = staff.find(s => s._id === viewRow.staff_id)
+          const month = MONTHS.find(m => m.value === viewRow.month)
+          return (
+            <div className="space-y-6">
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold">{staffMember?.name || 'Unknown'}</h3>
+                <p className="text-sm text-muted-foreground">Employee ID: {staffMember?.employee_id || '—'}</p>
+                <p className="text-sm text-muted-foreground">{month?.label} {viewRow.year}</p>
               </div>
-              <div>
-                <p className="font-semibold">{viewRow.name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.employee_id} · {viewRow.department}</p>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Basic Salary</span>
+                  <span className="font-semibold">{formatCurrency(viewRow.basic)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Allowances</span>
+                  <span className="font-semibold text-success">+{formatCurrency(viewRow.allowances)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Deductions</span>
+                  <span className="font-semibold text-destructive">-{formatCurrency(viewRow.deductions)}</span>
+                </div>
+                <div className="border-t pt-4 flex justify-between items-center">
+                  <span className="text-lg font-semibold">Net Salary</span>
+                  <span className="text-xl font-bold">{formatCurrency(viewRow.net)}</span>
+                </div>
               </div>
-              <Badge variant={viewRow.status === 'paid' ? 'default' : 'secondary'} className="ml-auto">
-                {viewRow.status}
-              </Badge>
-            </div>
 
-            {/* Earnings section */}
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Earnings</p>
-              <div className="space-y-1.5 rounded-lg border p-4 text-sm">
-                <SalaryLine label="Basic Salary" value={viewRow.basic_salary} />
-                <SalaryLine label="HRA" value={viewRow.hra} />
-                <SalaryLine label="Transport Allowance" value={viewRow.transport_allowance} />
-                <SalaryLine label="Medical Allowance" value={viewRow.medical_allowance} />
-                <div className="my-2 border-t" />
-                <SalaryLine label="Gross Earnings" value={viewRow.basic_salary + viewRow.total_allowances} bold />
-              </div>
-            </div>
-
-            {/* Deductions section */}
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Deductions</p>
-              <div className="space-y-1.5 rounded-lg border p-4 text-sm">
-                <SalaryLine label="Provident Fund (12%)" value={viewRow.pf_deduction} negative />
-                <SalaryLine label="Tax Deduction (5%)" value={viewRow.tax_deduction} negative />
-                <div className="my-2 border-t" />
-                <SalaryLine label="Total Deductions" value={viewRow.total_deductions} bold negative />
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Created: {formatDate(viewRow.createdAt)}</p>
+                <p>Updated: {formatDate(viewRow.updatedAt)}</p>
               </div>
             </div>
-
-            {/* Net pay summary */}
-            <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 text-center">
-              <p className="text-xs font-medium text-muted-foreground">Net Salary (Take Home)</p>
-              <p className="mt-1 text-2xl font-bold text-primary">{formatCurrency(viewRow.net_salary)}</p>
-              {viewRow.payment_date && (
-                <p className="mt-1 text-xs text-muted-foreground">Paid on {formatDate(viewRow.payment_date)}</p>
-              )}
-            </div>
-
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-xs text-muted-foreground">Bank Account</dt><dd className="font-medium">{viewRow.bank_account}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Pay Month</dt><dd className="font-medium">{month}</dd></div>
-            </dl>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow?._id ? 'Edit Payroll' : 'Add Payroll'}</DialogTitle>
+            <DialogDescription>{editRow?._id ? 'Update payroll information' : 'Add a new payroll record'}</DialogDescription>
+          </DialogHeader>
+          <PayrollForm 
+            initial={editRow} 
+            staff={staff} 
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => setEditRow(null)} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Payroll</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this payroll record? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// Small helper to render a labeled salary line item
-function SalaryLine({ label, value, bold, negative }) {
+// ─── PayrollForm Component ───────────────────────────────────────────────────────
+function PayrollForm({ initial, staff, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    staff_id: '',
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    basic: 0,
+    allowances: 0,
+    deductions: 0,
+    net: 0,
+  })
+
+  useEffect(() => {
+    if (initial) {
+      setFormData({
+        staff_id: initial.staff_id || '',
+        month: initial.month || new Date().getMonth() + 1,
+        year: initial.year || new Date().getFullYear(),
+        basic: initial.basic || 0,
+        allowances: initial.allowances || 0,
+        deductions: initial.deductions || 0,
+        net: initial.net || 0,
+      })
+    }
+  }, [initial])
+
+  // Calculate net automatically
+  useEffect(() => {
+    const net = (formData.basic || 0) + (formData.allowances || 0) - (formData.deductions || 0)
+    setFormData(prev => ({ ...prev, net }))
+  }, [formData.basic, formData.allowances, formData.deductions])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
+
   return (
-    <div className={`flex items-center justify-between ${bold ? 'font-semibold' : ''}`}>
-      <span className="text-muted-foreground">{label}</span>
-      <span className={negative ? 'text-destructive' : ''}>
-        {negative ? '-' : ''}{formatCurrency(value)}
-      </span>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="staff_id">Staff Member *</Label>
+        <select
+          id="staff_id"
+          value={formData.staff_id}
+          onChange={(e) => setFormData({ ...formData, staff_id: e.target.value })}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select staff member</option>
+          {staff.map((s) => (
+            <option key={s._id} value={s._id}>{s.name} ({s.employee_id || 'No ID'})</option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="month">Month *</Label>
+          <select
+            id="month"
+            value={formData.month}
+            onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            required
+          >
+            {MONTHS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="year">Year *</Label>
+          <Input
+            id="year"
+            type="number"
+            min="2020"
+            max="2030"
+            value={formData.year}
+            onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+            required
+          />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="basic">Basic Salary *</Label>
+        <Input
+          id="basic"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.basic}
+          onChange={(e) => setFormData({ ...formData, basic: parseFloat(e.target.value) || 0 })}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="allowances">Allowances</Label>
+        <Input
+          id="allowances"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.allowances}
+          onChange={(e) => setFormData({ ...formData, allowances: parseFloat(e.target.value) || 0 })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="deductions">Deductions</Label>
+        <Input
+          id="deductions"
+          type="number"
+          min="0"
+          step="0.01"
+          value={formData.deductions}
+          onChange={(e) => setFormData({ ...formData, deductions: parseFloat(e.target.value) || 0 })}
+        />
+      </div>
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center">
+          <Label htmlFor="net">Net Salary (Auto-calculated)</Label>
+          <span className="text-lg font-bold">{formatCurrency(formData.net)}</span>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save Payroll</Button>
+      </DialogFooter>
+    </form>
   )
 }

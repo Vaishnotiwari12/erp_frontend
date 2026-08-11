@@ -3,7 +3,7 @@
 // Page: Class Timetable
 //
 // Purpose:
-// View and manage weekly class schedules with color-coded subjects.
+// Manage class timetable entries.
 //
 // Data Source:
 // academics.service.js
@@ -13,193 +13,351 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import {
-  CalendarClock, Printer, FileDown, BookOpen, Clock,
-} from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Plus, CalendarClock, Pencil, Trash2, Eye, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
+import { SearchBar } from '@/components/SearchBar'
+import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
+import { ActionDropdown } from '@/components/ActionDropdown'
+import { DataTable } from '@/components/DataTable'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
-import { useAsyncData } from '@/hooks/useAsyncData'
+import { NoData } from '@/components/NoData'
+import { FormSection } from '@/components/FormSection'
+import { useClassTimetable } from '@/hooks/useAcademics'
 import { academicsService } from '@/services/academics.service'
-// import {
-//   academicClasses, academicSections, TIME_SLOTS, WEEK_DAYS,
-//   SUBJECT_COLORS, ACADEMIC_YEARS, classTimetable,
-// } from '@/services/mockData'
+import apiClient from '@/services/api'
+import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
-import { cn } from '@/lib/utils'
 
-const CLASS_OPTIONS = academicClasses.map((c) => c.name)
+const EXPORT_COLS = [
+  { key: "class_name", label: "Class" },
+  { key: "section_name", label: "Section" },
+  { key: "subject_name", label: "Subject" },
+  { key: "teacher_name", label: "Teacher" },
+  { key: "day", label: "Day" },
+  { key: "start_time", label: "Start Time" },
+  { key: "end_time", label: "End Time" },
+  { key: "room", label: "Room" },
+]
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function ClassTimetablePage() {
   const { toast } = useToast()
-  const { data, isLoading } = useAsyncData(() => academicsService.classTimetable(), [])
-  const [classFilter, setClassFilter] = useState(CLASS_OPTIONS[0])
-  const [sectionFilter, setSectionFilter] = useState('A')
-  const [year, setYear] = useState(ACADEMIC_YEARS[0])
+  const { rows, stats, isLoading, search, setSearch, saveTimetable, deleteTimetable } = useClassTimetable()
+  const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
+  const [viewRow, setViewRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
+  const [classOptions, setClassOptions] = useState([])
+  const [sectionOptions, setSectionOptions] = useState([])
+  const [subjectOptions, setSubjectOptions] = useState([])
+  const [teacherOptions, setTeacherOptions] = useState([])
 
-  const sectionOptions = useMemo(
-    () => academicSections.filter((s) => s.class === classFilter).map((s) => s.name),
-    [classFilter],
-  )
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [
+          classRes,
+          sectionRes,
+          subjectRes,
+          teacherRes,
+        ] = await Promise.all([
+          academicsService.classes(),
+          academicsService.sections(),
+          academicsService.subjects(),
+          apiClient.get("/hr/staff-directory"),
+        ])
 
-  const grid = data || classTimetable
-
-  const stats = useMemo(() => {
-    const entries = Object.values(grid).filter((e) => !e.isBreak && !e.isFree)
-    return {
-      total: entries.length,
-      subjects: new Set(entries.map((e) => e.subject)).size,
-      teachers: new Set(entries.map((e) => e.teacher)).size,
-      periods: TIME_SLOTS.length * WEEK_DAYS.length,
+        setClassOptions(classRes || [])
+        setSectionOptions(sectionRes || [])
+        setSubjectOptions(subjectRes || [])
+        setTeacherOptions(teacherRes || [])
+      } catch (err) {
+        console.log(err)
+      }
     }
-  }, [grid])
 
-  const handlePrint = () => {
-    window.print()
-  }
+    loadData()
+  }, [])
 
-  const handleExportPdf = () => {
-    toast({ title: 'Exporting PDF', description: 'The timetable PDF will download shortly.' })
-  }
+  // Build lookup maps for efficient ID resolution
+  const classMap = useMemo(() => {
+    const map = {}
+    classOptions.forEach(c => map[c._id] = c)
+    return map
+  }, [classOptions])
+
+  const sectionMap = useMemo(() => {
+    const map = {}
+    sectionOptions.forEach(s => map[s._id] = s)
+    return map
+  }, [sectionOptions])
+
+  const subjectMap = useMemo(() => {
+    const map = {}
+    subjectOptions.forEach(s => map[s._id] = s)
+    return map
+  }, [subjectOptions])
+
+  const teacherMap = useMemo(() => {
+    const map = {}
+    teacherOptions.forEach(t => map[t._id] = t)
+    return map
+  }, [teacherOptions])
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: "class_id",
+      header: "Class",
+      cell: ({ row }) => {
+        const cls = classMap[row.original.class_id]
+        const section = sectionMap[row.original.section_id]
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium">{cls?.class_name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground">{section?.section_name || 'Unknown'}</p>
+            </div>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "subject_id",
+      header: "Subject",
+      cell: ({ row }) => {
+        const subject = subjectMap[row.original.subject_id]
+        return subject?.subject_name || row.original.subject_id
+      },
+    },
+    {
+      accessorKey: "teacher_id",
+      header: "Teacher",
+      cell: ({ row }) => {
+        const teacher = teacherMap[row.original.teacher_id]
+        return teacher?.name || row.original.teacher_id
+      },
+    },
+    {
+      accessorKey: "day",
+      header: "Day",
+    },
+    {
+      accessorKey: "start_time",
+      header: "Start Time",
+    },
+    {
+      accessorKey: "end_time",
+      header: "End Time",
+    },
+    {
+      accessorKey: "room",
+      header: "Room",
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => formatDate(row.original.createdAt),
+    },
+  ], [classMap, sectionMap, subjectMap, teacherMap])
+
+  const rowActions = (r) => [
+    { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { separator: true },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Academics', to: '/academics/classes' }, { label: 'Class Timetable' }]} />
       <PageHeader
         title="Class Timetable"
-        description="View and manage weekly class schedules with color-coded subjects."
+        description="Manage class schedule entries."
         icon={CalendarClock}
         actions={
-          <>
-            <Button variant="outline" onClick={handleExportPdf}><FileDown className="mr-2 h-4 w-4" /> Export PDF</Button>
-            <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Print</Button>
-          </>
+          <Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Entry</Button>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Periods" value={stats.periods} icon={Clock} accent="primary" />
-        <StatCard label="Scheduled" value={stats.total} icon={CalendarClock} accent="success" />
-        <StatCard label="Subjects" value={stats.subjects} icon={BookOpen} accent="chart2" />
-        <StatCard label="Teachers" value={stats.teachers} icon={CalendarClock} accent="chart3" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard
+          label="Total Entries"
+          value={stats.total}
+          icon={CalendarClock}
+          accent="primary"
+        />
+
+        <StatCard
+          label="Showing"
+          value={rows.length}
+          icon={BookOpen}
+          accent="success"
+        />
       </div>
 
-      {/* Selectors */}
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-4 p-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Class</label>
-            <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {CLASS_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Section</label>
-            <select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Academic Year</label>
-            <select value={year} onChange={(e) => setYear(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {ACADEMIC_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Badge variant="secondary" className="rounded-full">{classFilter} · {sectionFilter}</Badge>
-            <Badge variant="outline" className="rounded-full">{year}</Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <FilterBar>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search timetable…" className="max-w-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButtons 
+            rows={rows.map(r => ({
+              ...r,
+              class_name: classMap[r.class_id]?.class_name || r.class_id,
+              section_name: sectionMap[r.section_id]?.section_name || r.section_id,
+              subject_name: subjectMap[r.subject_id]?.subject_name || r.subject_id,
+              teacher_name: teacherMap[r.teacher_id]?.name || r.teacher_id,
+            }))} 
+            columns={EXPORT_COLS} 
+            filename="class-timetable" 
+          />
+        </div>
+      </FilterBar>
 
-      {/* Timetable grid */}
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={8} cols={6} />
+        <LoadingSkeleton variant="table" rows={6} cols={9} />
+      ) : rows.length === 0 ? (
+        <NoData title="No timetable entries found" actionLabel="Add Entry" onAction={() => setAddOpen(true)} />
       ) : (
-        <Card className="print:shadow-none print:border-0">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b bg-muted/40">
-                    <th className="sticky left-0 z-10 bg-muted/40 p-3 text-left text-xs font-semibold text-muted-foreground">
-                      Time / Day
-                    </th>
-                    {WEEK_DAYS.map((day) => (
-                      <th key={day} className="min-w-[140px] p-3 text-center text-xs font-semibold text-foreground">
-                        {day}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {TIME_SLOTS.map((slot) => (
-                    <tr key={slot.id} className="border-b last:border-0">
-                      <td className="sticky left-0 z-10 bg-card p-3">
-                        <p className="text-xs font-semibold">{slot.label}</p>
-                        <p className="text-[11px] text-muted-foreground">{slot.start}–{slot.end}</p>
-                      </td>
-                      {WEEK_DAYS.map((day) => {
-                        const entry = grid[`${day}-${slot.id}`]
-                        if (!entry) return <td key={day} className="p-2" />
-                        if (entry.isBreak) {
-                          return (
-                            <td key={day} className="p-2">
-                              <div className="flex h-full min-h-[64px] items-center justify-center rounded-lg bg-muted/50 text-xs font-medium text-muted-foreground">
-                                Break
-                              </div>
-                            </td>
-                          )
-                        }
-                        const color = SUBJECT_COLORS[entry.subject] || '#64748b'
-                        return (
-                          <td key={day} className="p-2">
-                            <div
-                              className="min-h-[64px] cursor-pointer rounded-lg border p-2 transition-shadow hover:shadow-md"
-                              style={{ borderColor: `${color}30`, backgroundColor: `${color}08` }}
-                              onClick={() => toast({ title: entry.subject, description: `${entry.teacher} · Room ${entry.room}` })}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-                                <p className="text-xs font-semibold" style={{ color }}>{entry.subject}</p>
-                              </div>
-                              <p className="mt-1 text-[11px] text-muted-foreground">{entry.teacher}</p>
-                              <p className="text-[11px] text-muted-foreground">Room {entry.room}</p>
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <DataTable
+          columns={columns}
+          data={rows}
+          enableSelection
+          enableExport
+          exportFilename="class-timetable"
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: (ids) => { ids.forEach((id) => deleteTimetable(id)) } }]}
+          rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
+        />
       )}
 
-      {/* Legend */}
-      <Card>
-        <CardContent className="p-5">
-          <p className="mb-3 text-xs font-semibold text-muted-foreground">Subject Legend</p>
-          <div className="flex flex-wrap gap-3">
-            {Object.entries(SUBJECT_COLORS).map(([subject, color]) => (
-              <div key={subject} className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-xs font-medium">{subject}</span>
+      <TimetableDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Timetable Entry" classOptions={classOptions} sectionOptions={sectionOptions} subjectOptions={subjectOptions} teacherOptions={teacherOptions} onSubmit={async (p) => { await saveTimetable(p); setAddOpen(false) }} />
+      <TimetableDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Timetable Entry" initial={editRow} classOptions={classOptions} sectionOptions={sectionOptions} subjectOptions={subjectOptions} teacherOptions={teacherOptions} onSubmit={async (p) => { await saveTimetable(p, editRow._id); setEditRow(null) }} />
+
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Timetable Entry Details" description={subjectMap[viewRow?.subject_id]?.subject_name || 'Unknown'} width="sm:max-w-md"
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
+        {viewRow ? (
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {[
+              { label: "Class", value: classMap[viewRow.class_id]?.class_name || 'Unknown' },
+              { label: "Section", value: sectionMap[viewRow.section_id]?.section_name || 'Unknown' },
+              { label: "Subject", value: subjectMap[viewRow.subject_id]?.subject_name || 'Unknown' },
+              { label: "Teacher", value: teacherMap[viewRow.teacher_id]?.name || 'Unknown' },
+              { label: "Day", value: viewRow.day },
+              { label: "Start Time", value: viewRow.start_time },
+              { label: "End Time", value: viewRow.end_time },
+              { label: "Room", value: viewRow.room },
+              { label: "Created", value: formatDate(viewRow.createdAt) },
+            ].map((r) => (
+              <div key={r.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
+                <dd className="text-sm font-medium">{r.value}</dd>
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </dl>
+        ) : null}
+      </Drawer>
+
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={subjectMap[deleteRow?.subject_id]?.subject_name || 'Unknown'}
+        onConfirm={() => { deleteTimetable(deleteRow._id || deleteRow.id); setDeleteRow(null) }} />
     </div>
+  )
+}
+
+function TimetableDrawer({ open, onOpenChange, title, initial, classOptions = [], sectionOptions = [], subjectOptions = [], teacherOptions = [], onSubmit }) {
+  const [form, setForm] = useState({
+    class_id: initial?.class_id || '',
+    section_id: initial?.section_id || '',
+    subject_id: initial?.subject_id || '',
+    teacher_id: initial?.teacher_id || '',
+    day: initial?.day || 'Monday',
+    start_time: initial?.start_time || '',
+    end_time: initial?.end_time || '',
+    room: initial?.room || '',
+  })
+
+  useEffect(() => {
+    setForm({
+      class_id: initial?.class_id || '',
+      section_id: initial?.section_id || '',
+      subject_id: initial?.subject_id || '',
+      teacher_id: initial?.teacher_id || '',
+      day: initial?.day || 'Monday',
+      start_time: initial?.start_time || '',
+      end_time: initial?.end_time || '',
+      room: initial?.room || '',
+    })
+  }, [initial])
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange} title={title} description="Timetable entry details" width="sm:max-w-md"
+      footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}>
+      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+        <FormSection columns={2}>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Class <span className="text-destructive">*</span></Label>
+            <select value={form.class_id} onChange={(e) => setForm((f) => ({ ...f, class_id: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
+              <option value="">Select class</option>
+              {classOptions.map((c) => <option key={c._id} value={c._id}>{c.class_name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Section <span className="text-destructive">*</span></Label>
+            <select value={form.section_id} onChange={(e) => setForm((f) => ({ ...f, section_id: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
+              <option value="">Select section</option>
+              {sectionOptions.map((s) => <option key={s._id} value={s._id}>{s.section_name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Subject <span className="text-destructive">*</span></Label>
+            <select value={form.subject_id} onChange={(e) => setForm((f) => ({ ...f, subject_id: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
+              <option value="">Select subject</option>
+              {subjectOptions.map((s) => <option key={s._id} value={s._id}>{s.subject_name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Teacher <span className="text-destructive">*</span></Label>
+            <select value={form.teacher_id} onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
+              <option value="">Select teacher</option>
+              {teacherOptions.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Day <span className="text-destructive">*</span></Label>
+            <select value={form.day} onChange={(e) => setForm((f) => ({ ...f, day: e.target.value }))}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required>
+              {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Start Time <span className="text-destructive">*</span></Label>
+            <Input type="time" value={form.start_time} onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">End Time <span className="text-destructive">*</span></Label>
+            <Input type="time" value={form.end_time} onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Room</Label>
+            <Input value={form.room} onChange={(e) => setForm((f) => ({ ...f, room: e.target.value }))} placeholder="e.g. 101" />
+          </div>
+        </FormSection>
+        <button type="submit" className="hidden" aria-hidden="true" />
+      </form>
+    </Drawer>
   )
 }

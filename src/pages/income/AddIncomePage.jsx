@@ -3,7 +3,7 @@
 // Page: Add Income
 //
 // Purpose:
-// Manage income records (amount, date, head, note).
+// Manage income records.
 //
 // Data Source:
 // income.service.js
@@ -14,18 +14,11 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  TrendingUp,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-  IndianRupee,
-} from 'lucide-react'
+import { DollarSign, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -34,63 +27,71 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useIncomes } from '@/hooks/useIncome'
-import { formatCurrency, formatDate } from '@/utils/format'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { incomeService } from '@/services/income.service'
+import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'income_head_name', label: 'Income Head' },
   { key: 'amount', label: 'Amount' },
   { key: 'date', label: 'Date' },
   { key: 'note', label: 'Note' },
-  { key: 'status', label: 'Status' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function AddIncomePage() {
-  const {
-    rows, incomeHeads, stats, isLoading,
-    search, setSearch, headFilter, setHeadFilter,
-    statusFilter, setStatusFilter, saveIncome, deleteIncome,
-  } = useIncomes()
-
+  const { toast } = useToast()
+  const { data: incomes, isLoading, refetch } = useAsyncData(() => incomeService.getIncomes(), [])
+  const { data: heads, isLoading: headsLoading } = useAsyncData(() => incomeService.getIncomeHeads(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveIncome(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const rows = incomes || []
+  const allHeads = heads || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const head = allHeads.find(h => h._id === r.income_head_id)
+    return !q || 
+      (head?.income_head_name || '').toLowerCase().includes(q) ||
+      (r.note || '').toLowerCase().includes(q)
+  }), [rows, search, allHeads])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    totalAmount: rows.reduce((sum, r) => sum + (r.amount || 0), 0),
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'income_head_name',
+      accessorKey: 'income_head_id',
       header: 'Income Head',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <TrendingUp className="h-4 w-4" />
-          </div>
-          <span className="font-medium hover:underline">{row.original.income_head_name}</span>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const head = allHeads.find(h => h._id === row.original.income_head_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <DollarSign className="h-4 w-4" />
+            </div>
+            <span className="font-medium hover:underline">{head?.income_head_name || 'Unknown'}</span>
+          </button>
+        )
+      },
     },
-    {
-      accessorKey: 'amount',
-      header: 'Amount',
-      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.amount)}</span>,
-    },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.date)}</span> },
-    { accessorKey: 'note', header: 'Note', cell: ({ row }) => <span className="text-muted-foreground">{row.original.note || '—'}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-  ], [])
+    { accessorKey: 'amount', header: 'Amount', cell: ({ row }) => `₹${(row.original.amount || 0).toLocaleString()}` },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => row.original.date ? formatDate(row.original.date) : '—' },
+    { accessorKey: 'note', header: 'Note', cell: ({ row }) => <span className="text-sm text-muted-foreground line-clamp-1 max-w-xs">{row.original.note || '—'}</span> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [allHeads])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
@@ -99,93 +100,98 @@ export default function AddIncomePage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await incomeService.updateIncome(id, payload)
+        toast({ title: 'Income updated successfully' })
+        setEditRow(null)
+      } else {
+        await incomeService.createIncome(payload)
+        toast({ title: 'Income created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save income:', error)
+      toast({ title: 'Failed to save income', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await incomeService.deleteIncome(id)
+      toast({ title: 'Income deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete income:', error)
+      toast({ title: 'Failed to delete income', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Income' }, { label: 'Add Income' }]} />
       <PageHeader
         title="Add Income"
-        description="Manage income records with amounts, dates, and notes."
-        icon={TrendingUp}
-        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Income</Button>}
+        description="Manage income records."
+        icon={DollarSign}
+        actions={<Button onClick={() => setAddOpen(true)}><DollarSign className="mr-2 h-4 w-4" /> Add Income</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Total Income" value={formatCurrency(stats.total)} icon={IndianRupee} accent="success" />
-        <StatCard label="This Month" value={formatCurrency(stats.thisMonth)} icon={TrendingUp} accent="primary" />
-        <StatCard label="Entries" value={stats.entries} icon={TrendingUp} accent="chart2" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard label="Total Records" value={stats.total} icon={DollarSign} accent="primary" />
+        <StatCard label="Total Amount" value={`₹${stats.totalAmount.toLocaleString()}`} icon={DollarSign} accent="success" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by head or note…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by income head or note…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="incomes" />
-          <select value={headFilter} onChange={(e) => setHeadFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All heads</option>
-            {incomeHeads.map((h) => <option key={h._id} value={h._id}>{h.income_head_name}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <ExportButtons 
+            rows={filtered.map(r => ({
+              ...r,
+              income_head_name: allHeads.find(h => h._id === r.income_head_id)?.income_head_name || 'Unknown',
+            }))} 
+            columns={EXPORT_COLS} 
+            filename="income" 
+          />
         </div>
       </FilterBar>
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={5} cols={5} />
-      ) : rows.length === 0 ? (
-        <NoData title="No income records found" description="Add a new income record to get started." actionLabel="Add Income" onAction={() => setAddOpen(true)} />
+      ) : filtered.length === 0 ? (
+        <NoData title="No income records found" description="Add an income to get started." actionLabel="Add Income" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="incomes"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Income Form Drawer used for both Add and Edit. */}
-      <IncomeFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Income' : 'Add Income'}
-        initial={editRow}
-        incomeHeads={incomeHeads}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Income' : 'Add Income'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update income details' : 'Add a new income record'}</DialogDescription>
+          </DialogHeader>
+          <IncomeForm initial={editRow} heads={allHeads} headsLoading={headsLoading} onSubmit={(payload) => handleSave(payload, editRow?._id)} onCancel={() => { setAddOpen(false); setEditRow(null) }} />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
-      <Drawer
-        open={!!viewRow}
-        onOpenChange={(o) => !o && setViewRow(null)}
-        title="Income Details"
-        description={viewRow?.income_head_name}
-        width="sm:max-w-md"
-        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
-      >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.income_head_name}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(viewRow.amount)}</p>
-              </div>
-              <StatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Income Details" width="sm:max-w-md" footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
+        {viewRow && (() => {
+          const head = allHeads.find(h => h._id === viewRow.income_head_id)
+          return (
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               {[
-                { label: 'Amount', value: formatCurrency(viewRow.amount) },
-                { label: 'Date', value: formatDate(viewRow.date) },
+                { label: 'Income Head', value: head?.income_head_name || 'Unknown' },
+                { label: 'Amount', value: `₹${(viewRow.amount || 0).toLocaleString()}` },
+                { label: 'Date', value: viewRow.date ? formatDate(viewRow.date) : '—' },
                 { label: 'Note', value: viewRow.note || '—' },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
+                { label: 'Created', value: formatDate(viewRow.createdAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
@@ -193,92 +199,75 @@ export default function AddIncomePage() {
                 </div>
               ))}
             </dl>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.income_head_name}
-        onConfirm={() => deleteIncome(deleteRow._id)}
-      />
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Income</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this income? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Income Form Drawer (shared by Add and Edit) ────────────────────────────
-function IncomeFormDrawer({ open, onOpenChange, title, initial, incomeHeads, onSubmit }) {
-  const [form, setForm] = useState({
-    income_head_id: initial?.income_head_id || '',
-    income_head_name: initial?.income_head_name || '',
-    amount: initial?.amount || 0,
-    date: initial?.date || new Date().toISOString().slice(0, 10),
-    note: initial?.note || '',
-    status: initial?.status || 'active',
+function IncomeForm({ initial, heads, headsLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    income_head_id: '', amount: '', date: '', note: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        income_head_id: initial.income_head_id || '', amount: initial.amount || '', date: initial.date ? initial.date.split('T')[0] : '', note: initial.note || '',
+      })
+    } else {
+      setFormData({
+        income_head_id: heads.length > 0 ? heads[0]._id : '', amount: '', date: new Date().toISOString().split('T')[0], note: '',
+      })
+    }
+  }, [initial, heads])
 
-  // When an income head is selected, auto-fill the name for display.
-  const handleHeadChange = (headId) => {
-    const head = incomeHeads.find((h) => h._id === headId)
-    setForm((f) => ({ ...f, income_head_id: headId, income_head_name: head?.income_head_name || '' }))
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({ ...formData, amount: Number(formData.amount) || 0 })
   }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Income record information"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Income'}
-          submitDisabled={!form.income_head_id || !form.amount}
-          onSubmit={() => onSubmit(form)}
-        />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Income Head <span className="text-destructive">*</span></Label>
-            <select value={form.income_head_id} onChange={(e) => handleHeadChange(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="">Select income head</option>
-              {incomeHeads.filter((h) => h.status === 'active').map((h) => (
-                <option key={h._id} value={h._id}>{h.income_head_name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Amount <span className="text-destructive">*</span></Label>
-              <Input type="number" min="0" value={form.amount} onChange={(e) => set('amount', parseFloat(e.target.value) || 0)} required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Date</Label>
-              <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Note</Label>
-            <Input value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Optional note" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="income_head_id">Income Head *</Label>
+        <select id="income_head_id" value={formData.income_head_id} onChange={(e) => setFormData({ ...formData, income_head_id: e.target.value })} disabled={headsLoading} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" required>
+          <option value="">Select income head</option>
+          {heads.map((h) => (
+            <option key={h._id} value={h._id}>{h.income_head_name || 'Unnamed'}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="amount">Amount *</Label>
+        <Input id="amount" type="number" min="0" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="date">Date *</Label>
+        <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="note">Note</Label>
+        <Textarea id="note" value={formData.note} onChange={(e) => setFormData({ ...formData, note: e.target.value })} placeholder="Additional notes..." rows={3} />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

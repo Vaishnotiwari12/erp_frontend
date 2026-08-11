@@ -1,9 +1,9 @@
 // ====================================================================
 // Module: Homework
-// Page: Daily Assignment
+// Page: Daily Assignments
 //
 // Purpose:
-// Manage daily student assignments tracked per teacher and class.
+// Manage daily student assignments.
 //
 // Data Source:
 // homework.service.js
@@ -14,11 +14,12 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import { ClipboardList, Plus, Eye, Pencil, Trash2, CircleCheck as CheckCircle, Clock, CircleAlert as AlertCircle } from 'lucide-react'
+import { ClipboardList, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -27,71 +28,118 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useDailyAssignments } from '@/hooks/useHomework'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { homeworkService } from '@/services/homework.service'
+import { hrService } from '@/services/hr.service'
+import { studentService } from '@/services/student.service'
 import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'student_name', label: 'Student' },
   { key: 'teacher_name', label: 'Teacher' },
-  { key: 'class_name', label: 'Class' },
-  { key: 'section', label: 'Section' },
   { key: 'date', label: 'Date' },
   { key: 'task', label: 'Task' },
   { key: 'status', label: 'Status' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
-// Maps assignment status to a StatusBadge-compatible value.
-function AssignmentStatusBadge({ status }) {
-  const map = { pending: 'pending', completed: 'active', overdue: 'suspended' }
-  return <StatusBadge status={map[status] || status} />
-}
-
 export default function DailyAssignmentPage() {
-  const {
-    rows, stats, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
-    saveAssignment, deleteAssignment,
-  } = useDailyAssignments()
-
+  const { toast } = useToast()
+  const { data: assignments, isLoading, refetch } = useAsyncData(() => homeworkService.getDailyAssignments(), [])
+  const { data: teachers, isLoading: teachersLoading } = useAsyncData(() => hrService.getStaff(), [])
+  const { data: students, isLoading: studentsLoading } = useAsyncData(() => studentService.list(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveAssignment(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const rows = assignments || []
+  const allTeachers = teachers || []
+  const allStudents = students || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const teacher = allTeachers.find(t => t._id === r.teacher_id)
+    const student = allStudents.find(s => s._id === r.student_id)
+    const teacherName = !teacher ? 'Unknown' : typeof teacher === 'string' ? teacher : teacher?.full_name || teacher?.name || teacher?.first_name || 'Unknown'
+    let studentName = 'Unknown'
+    if (student) {
+      if (typeof student === 'string') {
+        studentName = student
+      } else if (student?.name) {
+        const firstName = student.name.first || ''
+        const lastName = student.name.last || ''
+        studentName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown'
+      } else {
+        studentName = student?.full_name || student?.first_name || student?.last_name ? `${student.first_name} ${student.last_name}` : 'Unknown'
+      }
+    }
+    return !q || 
+      teacherName.toLowerCase().includes(q) ||
+      studentName.toLowerCase().includes(q) ||
+      (r.task || '').toLowerCase().includes(q)
+  }), [rows, search, allTeachers, allStudents])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'student_name',
-      header: 'Student',
+      accessorKey: 'task',
+      header: 'Task',
       cell: ({ row }) => (
         <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <ClipboardList className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.student_name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.class_name} · {row.original.section}</span>
+            <span className="font-medium hover:underline line-clamp-1 max-w-xs">{row.original.task || 'No task'}</span>
+            <span className="text-xs text-muted-foreground">{row.original.date ? formatDate(row.original.date) : 'No date'}</span>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'teacher_name', header: 'Teacher' },
-    { accessorKey: 'class_name', header: 'Class', cell: ({ row }) => <Badge variant="secondary">{row.original.class_name}</Badge> },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => formatDate(row.original.date) },
-    { accessorKey: 'task', header: 'Task', cell: ({ row }) => <span className="line-clamp-1 max-w-xs">{row.original.task}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <AssignmentStatusBadge status={row.original.status} /> },
-  ], [])
+    {
+      accessorKey: 'student_id',
+      header: 'Student',
+      cell: ({ row }) => {
+        const student = allStudents.find(s => s._id === row.original.student_id)
+        let studentName = 'Unknown'
+        if (student) {
+          if (typeof student === 'string') {
+            studentName = student
+          } else if (student?.name) {
+            const firstName = student.name.first || ''
+            const lastName = student.name.last || ''
+            studentName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown'
+          } else {
+            studentName = student?.full_name || student?.first_name || student?.last_name ? `${student.first_name} ${student.last_name}` : 'Unknown'
+          }
+        }
+        return <Badge variant="secondary">{studentName}</Badge>
+      },
+    },
+    {
+      accessorKey: 'teacher_id',
+      header: 'Teacher',
+      cell: ({ row }) => {
+        const teacher = allTeachers.find(t => t._id === row.original.teacher_id)
+        const teacherName = !teacher ? 'Unknown' : typeof teacher === 'string' ? teacher : teacher?.full_name || teacher?.name || teacher?.first_name || 'Unknown'
+        return <span className="text-sm">{teacherName}</span>
+      },
+    },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => row.original.date ? formatDate(row.original.date) : '—' },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <Badge variant={row.original.status === 'completed' ? 'default' : 'secondary'}>{row.original.status || 'Pending'}</Badge> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [allStudents, allTeachers])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
@@ -100,189 +148,237 @@ export default function DailyAssignmentPage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await homeworkService.updateDailyAssignment(id, payload)
+        toast({ title: 'Assignment updated successfully' })
+        setEditRow(null)
+      } else {
+        await homeworkService.createDailyAssignment(payload)
+        toast({ title: 'Assignment created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save assignment:', error)
+      toast({ title: 'Failed to save assignment', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await homeworkService.deleteDailyAssignment(id)
+      toast({ title: 'Assignment deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete assignment:', error)
+      toast({ title: 'Failed to delete assignment', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Homework' }, { label: 'Daily Assignment' }]} />
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Homework' }, { label: 'Daily Assignments' }]} />
       <PageHeader
-        title="Daily Assignment"
-        description="Track daily student assignments and their completion status."
+        title="Daily Assignments"
+        description="Manage daily student assignments."
         icon={ClipboardList}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Assignment</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-1">
         <StatCard label="Total Assignments" value={stats.total} icon={ClipboardList} accent="primary" />
-        <StatCard label="Pending" value={stats.pending} icon={Clock} accent="warning" />
-        <StatCard label="Completed" value={stats.completed} icon={CheckCircle} accent="success" />
-        <StatCard label="Overdue" value={stats.overdue} icon={AlertCircle} accent="destructive" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, teacher, task, or class…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, teacher, or task…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="daily-assignments" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
+          <ExportButtons 
+            rows={filtered.map(r => {
+              const teacher = allTeachers.find(t => t._id === r.teacher_id)
+              const teacherName = !teacher ? 'Unknown' : typeof teacher === 'string' ? teacher : teacher?.full_name || teacher?.name || teacher?.first_name || 'Unknown'
+              const student = allStudents.find(s => s._id === r.student_id)
+              let studentName = 'Unknown'
+              if (student) {
+                if (typeof student === 'string') {
+                  studentName = student
+                } else if (student?.name) {
+                  const firstName = student.name.first || ''
+                  const lastName = student.name.last || ''
+                  studentName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown'
+                } else {
+                  studentName = student?.full_name || student?.first_name || student?.last_name ? `${student.first_name} ${student.last_name}` : 'Unknown'
+                }
+              }
+              return {
+                ...r,
+                teacher_name: teacherName,
+                student_name: studentName,
+              }
+            })} 
+            columns={EXPORT_COLS} 
+            filename="daily-assignments" 
+          />
         </div>
       </FilterBar>
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={5} cols={6} />
-      ) : rows.length === 0 ? (
-        <NoData title="No assignments found" description="Add a new daily assignment to get started." actionLabel="Add Assignment" onAction={() => setAddOpen(true)} />
+      ) : filtered.length === 0 ? (
+        <NoData title="No assignments found" description="Add an assignment to get started." actionLabel="Add Assignment" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="daily-assignments"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Assignment Form Drawer used for both Add and Edit. */}
-      <AssignmentFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Assignment' : 'Add Assignment'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Assignment' : 'Add Assignment'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update assignment details' : 'Add a new daily assignment'}</DialogDescription>
+          </DialogHeader>
+          <AssignmentForm initial={editRow} teachers={allTeachers} students={allStudents} teachersLoading={teachersLoading} studentsLoading={studentsLoading} onSubmit={(payload) => handleSave(payload, editRow?._id)} onCancel={() => { setAddOpen(false); setEditRow(null) }} />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
-      <Drawer
-        open={!!viewRow}
-        onOpenChange={(o) => !o && setViewRow(null)}
-        title="Assignment Details"
-        description={viewRow?.student_name}
-        width="sm:max-w-md"
-        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
-      >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <ClipboardList className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.student_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.class_name} · Section {viewRow.section}</p>
-              </div>
-              <AssignmentStatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Assignment Details" width="sm:max-w-md" footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
+        {viewRow && (() => {
+          const teacher = allTeachers.find(t => t._id === viewRow.teacher_id)
+          const teacherName = !teacher ? 'Unknown' : typeof teacher === 'string' ? teacher : teacher?.full_name || teacher?.name || teacher?.first_name || 'Unknown'
+          const student = allStudents.find(s => s._id === viewRow.student_id)
+          let studentName = 'Unknown'
+          if (student) {
+            if (typeof student === 'string') {
+              studentName = student
+            } else if (student?.name) {
+              const firstName = student.name.first || ''
+              const lastName = student.name.last || ''
+              studentName = firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unknown'
+            } else {
+              studentName = student?.full_name || student?.first_name || student?.last_name ? `${student.first_name} ${student.last_name}` : 'Unknown'
+            }
+          }
+          return (
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               {[
-                { label: 'Teacher', value: viewRow.teacher_name },
-                { label: 'Date', value: formatDate(viewRow.date) },
-                { label: 'Section', value: viewRow.section },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
+                { label: 'Task', value: viewRow.task || '—' },
+                { label: 'Student', value: studentName },
+                { label: 'Teacher', value: teacherName },
+                { label: 'Date', value: viewRow.date ? formatDate(viewRow.date) : '—' },
+                { label: 'Status', value: viewRow.status || 'Pending' },
+                { label: 'Created', value: formatDate(viewRow.createdAt) },
+                { label: 'Updated', value: formatDate(viewRow.updatedAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
+                  <dd className="text-sm font-medium">{f.value}</dd>
                 </div>
               ))}
             </dl>
-
-            <div className="space-y-1">
-              <dt className="text-xs font-medium text-muted-foreground">Task</dt>
-              <dd className="text-sm">{viewRow.task || '—'}</dd>
-            </div>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.student_name}
-        onConfirm={() => deleteAssignment(deleteRow._id)}
-      />
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Assignment</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this assignment? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Assignment Form Drawer (shared by Add and Edit) ────────────────────────
-function AssignmentFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    student_name: initial?.student_name || '',
-    teacher_name: initial?.teacher_name || '',
-    class_name: initial?.class_name || '',
-    section: initial?.section || '',
-    date: initial?.date || '',
-    task: initial?.task || '',
-    status: initial?.status || 'pending',
+function AssignmentForm({ initial, teachers, students, teachersLoading, studentsLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    student_id: '', teacher_id: '', date: '', task: '', status: 'pending',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        student_id: initial.student_id || '', teacher_id: initial.teacher_id || '', date: initial.date ? initial.date.split('T')[0] : '', task: initial.task || '', status: initial.status || 'pending',
+      })
+    } else {
+      setFormData({
+        student_id: students.length > 0 ? students[0]._id : '', teacher_id: teachers.length > 0 ? teachers[0]._id : '', date: new Date().toISOString().split('T')[0], task: '', status: 'pending',
+      })
+    }
+  }, [initial, students, teachers])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
+
+  const getTeacherName = (teacher) => {
+    if (!teacher) return 'Unnamed'
+    if (typeof teacher === 'string') return teacher
+    return teacher?.full_name || teacher?.name || teacher?.first_name || teacher?.employee_id || 'Unnamed'
+  }
+
+  const getStudentName = (student) => {
+    if (!student) return 'Unnamed'
+    if (typeof student === 'string') return student
+    // Handle nested name object from student service
+    if (student?.name) {
+      const firstName = student.name.first || ''
+      const lastName = student.name.last || ''
+      return firstName || lastName ? `${firstName} ${lastName}`.trim() : 'Unnamed'
+    }
+    return student?.full_name || student?.first_name || student?.last_name ? `${student.first_name} ${student.last_name}` : 'Unnamed'
+  }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Daily assignment information"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Assignment'}
-          submitDisabled={!form.student_name.trim() || !form.task.trim() || !form.date}
-          onSubmit={() => onSubmit(form)}
-        />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Student Name <span className="text-destructive">*</span></Label>
-              <Input value={form.student_name} onChange={(e) => set('student_name', e.target.value)} placeholder="e.g. Aarav Sharma" required />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Teacher Name</Label>
-              <Input value={form.teacher_name} onChange={(e) => set('teacher_name', e.target.value)} placeholder="e.g. Hannah Kim" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Class</Label>
-              <Input value={form.class_name} onChange={(e) => set('class_name', e.target.value)} placeholder="e.g. Class 10" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Section</Label>
-              <Input value={form.section} onChange={(e) => set('section', e.target.value)} placeholder="e.g. A" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Date <span className="text-destructive">*</span></Label>
-            <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Task <span className="text-destructive">*</span></Label>
-            <textarea value={form.task} onChange={(e) => set('task', e.target.value)}
-              placeholder="Describe the assignment task…"
-              className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="overdue">Overdue</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="student_id">Student *</Label>
+        <select id="student_id" value={formData.student_id} onChange={(e) => setFormData({ ...formData, student_id: e.target.value })} disabled={studentsLoading} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" required>
+          <option value="">Select student</option>
+          {students.map((s) => (
+            <option key={s._id} value={s._id}>{getStudentName(s)}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="teacher_id">Teacher *</Label>
+        <select id="teacher_id" value={formData.teacher_id} onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })} disabled={teachersLoading} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" required>
+          <option value="">Select teacher</option>
+          {teachers.map((t) => (
+            <option key={t._id} value={t._id}>{getTeacherName(t)}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="date">Date *</Label>
+        <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required />
+      </div>
+      <div>
+        <Label htmlFor="task">Task *</Label>
+        <Textarea id="task" value={formData.task} onChange={(e) => setFormData({ ...formData, task: e.target.value })} placeholder="Assignment task..." rows={3} required />
+      </div>
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

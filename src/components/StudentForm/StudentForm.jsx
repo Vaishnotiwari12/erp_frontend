@@ -2,206 +2,298 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Switch } from '@/components/ui/switch'
 import { FormSection } from '@/components/FormSection'
 import { fullName } from '@/utils/format'
 
-const CLASS_OPTIONS = [
-  '8-A', '8-B', '8-C', '9-A', '9-B', '10-A', '10-B', '11-A', '11-B', '12-A', '12-B',
-  'Year-1', 'Year-2', 'Year-3',
-]
-const CATEGORY_OPTIONS = ['General', 'OBC', 'SC', 'ST', 'EWS']
-const HOUSE_OPTIONS = ['Red House', 'Blue House', 'Green House', 'Yellow House']
-const BLOOD_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+const dateValue = (date) => date ? new Date(date).toISOString().slice(0, 10) : ''
+const referenceId = (value) => typeof value === 'object' ? value?._id || '' : value || ''
+
+const initialForm = (student) => ({
+  roll_number: student?.roll_number || '',
+  class_name: student?.class_name || '',
+  section: student?.section || '',
+  name: {
+    first: student?.name?.first || '',
+    last: student?.name?.last || '',
+  },
+  gender: student?.gender || '',
+  dob: dateValue(student?.dob),
+  blood_group: student?.blood_group || '',
+  religion: student?.religion || '',
+  caste: student?.caste || '',
+  mobile: student?.mobile || '',
+  email: student?.email || '',
+  password: '',
+  admission_date: dateValue(student?.admission_date),
+  category: student?.category || '',
+  house: student?.house || '',
+  height: student?.height ?? '',
+  weight: student?.weight ?? '',
+  guardian: {
+    name: student?.guardian?.name || '',
+    relation: student?.guardian?.relation || '',
+    phone: student?.guardian?.phone || '',
+    email: student?.guardian?.email || '',
+    occupation: student?.guardian?.occupation || '',
+    address: student?.guardian?.address || '',
+  },
+  transport: {
+    route_id: referenceId(student?.transport?.route_id),
+    pickup_point: student?.transport?.pickup_point || '',
+    fees_month: student?.transport?.fees_month || '',
+  },
+  hostel: {
+    hostel_id: referenceId(student?.hostel?.hostel_id),
+    room_no: student?.hostel?.room_no || '',
+  },
+  status: student?.status || 'active',
+  student_photo: null,
+  guardian_photo: null,
+  documents: null,
+})
 
 function Field({ label, required, error, children }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-foreground">
-        {label}{required ? <span className="text-destructive"> *</span> : null}
-      </Label>
+      <Label className="text-sm font-medium">{label}{required ? <span className="text-destructive"> *</span> : null}</Label>
       {children}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )
 }
 
-export function StudentForm({ initial, onSubmit, submitLabel = 'Save' }) {
-  const [form, setForm] = useState(() => ({
-    first_name: initial?.name?.first || '',
-    last_name: initial?.name?.last || '',
-    email: initial?.email || '',
-    mobile: initial?.mobile || '',
-    admission_no: initial?.admission_no || '',
-    class: initial?.class || '',
-    section: initial?.section || '',
-    school_name: initial?.school_name || '',
-    guardian_name: initial?.guardian_name || '',
-    gender: initial?.gender || 'male',
-    dob: initial?.dob || '',
-    address: initial?.address || '',
-    category: initial?.category || 'General',
-    house: initial?.house || '',
-    blood_group: initial?.blood_group || '',
-    nationality: initial?.nationality || '',
-    status: initial?.status || 'active',
-    ...initial,
-  }))
+function SelectField({ value, onChange, children, placeholder = 'Select' }) {
+  return (
+    <select 
+      value={value ?? ''} 
+      onChange={(event) => onChange(event.target.value)} 
+      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+    >
+      <option value="">{placeholder}</option>
+      {children}
+    </select>
+  )
+}
+
+export function StudentForm({ initial, onSubmit }) {
+  const [form, setForm] = useState(() => initialForm(initial))
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
-  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
+  const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  const setNested = (group, key, value) => setForm((current) => ({
+    ...current,
+    [group]: { ...current[group], [key]: value },
+  }))
 
   const validate = () => {
-    const e = {}
-    if (!form.first_name) e.first_name = 'First name is required'
-    if (!form.last_name) e.last_name = 'Last name is required'
-    if (!form.email) e.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email'
-    if (!form.admission_no) e.admission_no = 'Admission number is required'
-    if (!form.class) e.class = 'Class is required'
-    setErrors(e)
-    return Object.keys(e).length === 0
+    const next = {}
+    if (!form.name.first.trim()) next.first = 'First name is required'
+    if (!form.class_name.trim()) next.class_name = 'Class name is required'
+    setErrors(next)
+    return !Object.keys(next).length
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
     if (!validate()) return
     setSubmitting(true)
-    const payload = {
-      ...form,
-      name: { first: form.first_name, last: form.last_name },
-    }
     try {
-      await onSubmit?.(payload)
+      await onSubmit?.(form)
     } finally {
       setSubmitting(false)
     }
   }
+return (
+  <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
+    <FormSection title="Identity" description="Required student identity and contact fields" columns={2}>
+      <Field label="First name" required error={errors.first}>
+        <Input className="h-10" value={form.name.first} onChange={(e) => setNested('name', 'first', e.target.value)} placeholder="e.g. John" />
+      </Field>
+      <Field label="Last name">
+        <Input className="h-10" value={form.name.last} onChange={(e) => setNested('name', 'last', e.target.value)} placeholder="e.g. Doe" />
+      </Field>
+      <Field label="Email">
+        <Input type="email" className="h-10" value={form.email} onChange={(e) => setField('email', e.target.value)} placeholder="student@school.com" />
+      </Field>
+      <Field label="Mobile">
+        <Input className="h-10" value={form.mobile} onChange={(e) => setField('mobile', e.target.value)} placeholder="+91 9876543210" />
+      </Field>
+      
+      <Field label="Gender">
+        <SelectField value={form.gender} onChange={(value) => setField('gender', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </SelectField>
+      </Field>
 
-  return (
-    <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
-      <FormSection title="Personal Information" description="Basic identity and contact details" columns={2}>
-        <Field label="First Name" required error={errors.first_name}>
-          <Input value={form.first_name} onChange={(e) => set('first_name', e.target.value)} placeholder="e.g. Aarav" />
-        </Field>
-        <Field label="Last Name" required error={errors.last_name}>
-          <Input value={form.last_name} onChange={(e) => set('last_name', e.target.value)} placeholder="e.g. Sharma" />
-        </Field>
-        <Field label="Email" required error={errors.email}>
-          <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="student@school.edu" />
-        </Field>
-        <Field label="Mobile">
-          <Input value={form.mobile} onChange={(e) => set('mobile', e.target.value)} placeholder="+1 555-0000" />
-        </Field>
-        <Field label="Date of Birth">
-          <Input type="date" value={form.dob} onChange={(e) => set('dob', e.target.value)} />
-        </Field>
-        <Field label="Gender">
-          <RadioGroup value={form.gender} onValueChange={(v) => set('gender', v)} className="flex h-9 items-center gap-4">
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="male" id="g-male" />
-              <Label htmlFor="g-male" className="text-sm font-normal">Male</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="female" id="g-female" />
-              <Label htmlFor="g-female" className="text-sm font-normal">Female</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="other" id="g-other" />
-              <Label htmlFor="g-other" className="text-sm font-normal">Other</Label>
-            </div>
-          </RadioGroup>
-        </Field>
-        <Field label="Blood Group">
-          <Select value={form.blood_group} onValueChange={(v) => set('blood_group', v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              {BLOOD_OPTIONS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Nationality">
-          <Input value={form.nationality} onChange={(e) => set('nationality', e.target.value)} placeholder="e.g. American" />
-        </Field>
-      </FormSection>
+      <Field label="Date of birth">
+        <Input type="date" className="h-10" value={form.dob} onChange={(e) => setField('dob', e.target.value)} />
+      </Field>
 
-      <FormSection title="Academic Information" description="Enrollment and class placement" columns={2}>
-        <Field label="Admission No." required error={errors.admission_no}>
-          <Input value={form.admission_no} onChange={(e) => set('admission_no', e.target.value)} placeholder="ADM-1001" />
-        </Field>
-        <Field label="Class" required error={errors.class}>
-          <Select value={form.class} onValueChange={(v) => set('class', v)}>
-            <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-            <SelectContent>
-              {CLASS_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Section">
-          <Select value={form.section} onValueChange={(v) => set('section', v)}>
-            <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
-            <SelectContent>
-              {['A', 'B', 'C'].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Institution">
-          <Input value={form.school_name} onChange={(e) => set('school_name', e.target.value)} placeholder="School / College name" />
-        </Field>
-        <Field label="Category">
-          <Select value={form.category} onValueChange={(v) => set('category', v)}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              {CATEGORY_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="House">
-          <Select value={form.house} onValueChange={(v) => set('house', v)}>
-            <SelectTrigger><SelectValue placeholder="Select house" /></SelectTrigger>
-            <SelectContent>
-              {HOUSE_OPTIONS.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </Field>
-      </FormSection>
+      <Field label="Blood group">
+        <SelectField value={form.blood_group} onChange={(value) => setField('blood_group', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Blood Group</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+        </SelectField>
+      </Field>
 
-      <FormSection title="Guardian & Address" description="Primary contact and residence" columns={2}>
-        <Field label="Guardian Name">
-          <Input value={form.guardian_name} onChange={(e) => set('guardian_name', e.target.value)} placeholder="Parent / Guardian" />
-        </Field>
-        <Field label="Status">
-          <Select value={form.status} onValueChange={(v) => set('status', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="disabled">Disabled</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <div className="sm:col-span-2">
-          <Field label="Address">
-            <Textarea value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="Residential address" rows={3} />
-          </Field>
-        </div>
-      </FormSection>
+      <Field label="Password">
+        <Input type="password" className="h-10" value={form.password} onChange={(e) => setField('password', e.target.value)} placeholder="••••••••" />
+      </Field>
+    </FormSection>
 
-      <button type="submit" className="hidden" aria-hidden="true" disabled={submitting}>
-        {submitLabel}
-      </button>
-    </form>
-  )
+    <FormSection title="Enrollment" description="The backend stores class and roll values as strings" columns={2}>
+      <Field label="Roll number">
+        <Input className="h-10" value={form.roll_number} onChange={(e) => setField('roll_number', e.target.value)} placeholder="e.g. 101" />
+      </Field>
+      <Field label="Class name" required error={errors.class_name}>
+        <Input className="h-10" value={form.class_name} onChange={(e) => setField('class_name', e.target.value)} placeholder="e.g. Class 10" />
+      </Field>
+
+      <Field label="Section">
+        <SelectField value={form.section} onChange={(value) => setField('section', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Section</option>
+          <option value="A">Section A</option>
+          <option value="B">Section B</option>
+          <option value="C">Section C</option>
+          <option value="D">Section D</option>
+        </SelectField>
+      </Field>
+
+      <Field label="Admission date">
+        <Input type="date" className="h-10" value={form.admission_date} onChange={(e) => setField('admission_date', e.target.value)} />
+      </Field>
+
+      <Field label="Category">
+        <SelectField value={form.category} onChange={(value) => setField('category', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Category</option>
+          <option value="General">General</option>
+          <option value="OBC">OBC</option>
+          <option value="SC">SC</option>
+          <option value="ST">ST</option>
+          <option value="Other">Other</option>
+        </SelectField>
+      </Field>
+
+      <Field label="House">
+        <SelectField value={form.house} onChange={(value) => setField('house', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select House</option>
+          <option value="Red">Red</option>
+          <option value="Blue">Blue</option>
+          <option value="Green">Green</option>
+          <option value="Yellow">Yellow</option>
+        </SelectField>
+      </Field>
+
+      <Field label="Religion">
+        <SelectField value={form.religion} onChange={(value) => setField('religion', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Religion</option>
+          <option value="Hinduism">Hinduism</option>
+          <option value="Islam">Islam</option>
+          <option value="Christianity">Christianity</option>
+          <option value="Sikhism">Sikhism</option>
+          <option value="Buddhism">Buddhism</option>
+          <option value="Jainism">Jainism</option>
+          <option value="Other">Other</option>
+        </SelectField>
+      </Field>
+
+      <Field label="Caste">
+        <Input className="h-10" value={form.caste} onChange={(e) => setField('caste', e.target.value)} placeholder="Sub-caste or category" />
+      </Field>
+      <Field label="Height">
+        <Input type="number" className="h-10" value={form.height} onChange={(e) => setField('height', e.target.value)} placeholder="in cm" />
+      </Field>
+      <Field label="Weight">
+        <Input type="number" className="h-10" value={form.weight} onChange={(e) => setField('weight', e.target.value)} placeholder="in kg" />
+      </Field>
+
+      <Field label="Status">
+        <SelectField value={form.status} onChange={(value) => setField('status', typeof value === 'object' ? value.target.value : value)}>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="disabled">Disabled</option>
+        </SelectField>
+      </Field>
+    </FormSection>
+
+    <FormSection title="Guardian" description="Nested guardian fields supported by the backend" columns={2}>
+      <Field label="Name">
+        <Input className="h-10" value={form.guardian.name} onChange={(e) => setNested('guardian', 'name', e.target.value)} placeholder="Guardian full name" />
+      </Field>
+
+      <Field label="Relation">
+        <SelectField value={form.guardian.relation} onChange={(value) => setNested('guardian', 'relation', typeof value === 'object' ? value.target.value : value)}>
+          <option value="">Select Relation</option>
+          <option value="Father">Father</option>
+          <option value="Mother">Mother</option>
+          <option value="Guardian">Guardian</option>
+          <option value="Other">Other</option>
+        </SelectField>
+      </Field>
+
+      <Field label="Phone">
+        <Input className="h-10" value={form.guardian.phone} onChange={(e) => setNested('guardian', 'phone', e.target.value)} placeholder="+91 9876543210" />
+      </Field>
+      <Field label="Email">
+        <Input type="email" className="h-10" value={form.guardian.email} onChange={(e) => setNested('guardian', 'email', e.target.value)} placeholder="guardian@email.com" />
+      </Field>
+      <Field label="Occupation">
+        <Input className="h-10" value={form.guardian.occupation} onChange={(e) => setNested('guardian', 'occupation', e.target.value)} placeholder="e.g. Business / Service" />
+      </Field>
+
+      <div className="sm:col-span-2">
+        <Field label="Address">
+          <Textarea className="min-h-[80px]" value={form.guardian.address} onChange={(e) => setNested('guardian', 'address', e.target.value)} rows={3} placeholder="Full residential address" />
+        </Field>
+      </div>
+    </FormSection>
+
+    <FormSection title="Transport and hostel references" description="IDs are stored exactly as supplied by the backend schema" columns={2}>
+      <Field label="Transport route ID">
+        <Input className="h-10" value={form.transport.route_id} onChange={(e) => setNested('transport', 'route_id', e.target.value)} placeholder="e.g. ROUTE-01" />
+      </Field>
+      <Field label="Pickup point">
+        <Input className="h-10" value={form.transport.pickup_point} onChange={(e) => setNested('transport', 'pickup_point', e.target.value)} placeholder="Stop name / location" />
+      </Field>
+      <Field label="Monthly transport fees">
+        <Input className="h-10" value={form.transport.fees_month} onChange={(e) => setNested('transport', 'fees_month', e.target.value)} placeholder="Amount in ₹" />
+      </Field>
+      <Field label="Hostel ID">
+        <Input className="h-10" value={form.hostel.hostel_id} onChange={(e) => setNested('hostel', 'hostel_id', e.target.value)} placeholder="e.g. HOSTEL-A" />
+      </Field>
+      <Field label="Room number">
+        <Input className="h-10" value={form.hostel.room_no} onChange={(e) => setNested('hostel', 'room_no', e.target.value)} placeholder="e.g. 204" />
+      </Field>
+    </FormSection>
+
+    <FormSection title="Files" description="The create route accepts Cloudinary uploads" columns={2}>
+      <Field label="Student photo">
+        <Input type="file" accept="image/*" className="h-10" onChange={(e) => setField('student_photo', e.target.files?.[0] || null)} />
+      </Field>
+      <Field label="Guardian photo">
+        <Input type="file" accept="image/*" className="h-10" onChange={(e) => setField('guardian_photo', e.target.files?.[0] || null)} />
+      </Field>
+      <div className="sm:col-span-2">
+        <Field label="Documents">
+          <Input type="file" className="h-10" onChange={(e) => setField('documents', e.target.files?.[0] || null)} />
+        </Field>
+      </div>
+    </FormSection>
+
+    <button type="submit" disabled={submitting} className="hidden" aria-hidden="true">Submit</button>
+  </form>
+)
 }
 
 export default StudentForm

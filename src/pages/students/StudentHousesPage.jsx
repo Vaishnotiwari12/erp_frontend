@@ -1,215 +1,192 @@
-// ====================================================================
-// Module: Students
-// Page: Student Houses
-//
-// Purpose:
-// Organize students into houses for activities and events.
-//
-// Data Source:
-// student.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
-// ====================================================================
-
 import { useMemo, useState } from 'react'
-import { Plus, Hop as Home, Pencil, Trash2, Eye, Users, Crown } from 'lucide-react'
+import { Home, Pencil, Plus, Trash2, Search, Palette, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
-import { FilterBar } from '@/components/FilterBar'
-import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
-import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
+import { ActionDropdown } from '@/components/ActionDropdown'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
 import { DeleteDialog } from '@/components/DeleteDialog'
-import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { studentService } from '@/services/student.service'
-import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
-const EXPORT_COLS = [
-  { key: 'name', label: 'House' },
-  { key: 'motto', label: 'Motto' },
-  { key: 'captain', label: 'Captain' },
-  { key: 'students_count', label: 'Students' },
-  { key: 'status', label: 'Status' },
-]
+const listValue = (data) => Array.isArray(data) ? data : data?.data || []
 
-const COLOR_PRESETS = ['#dc2626', '#2563eb', '#16a34a', '#ca8a04', '#9333ea', '#0891b2', '#c2410c']
-
-export default function StudentHousesPage() {
-  const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => studentService.houses(), [])
-  const [search, setSearch] = useState('')
-  const [addOpen, setAddOpen] = useState(false)
-  const [editHouse, setEditHouse] = useState(null)
-  const [deleteHouse, setDeleteHouse] = useState(null)
-
-  const rows = data || []
-  const filtered = useMemo(
-    () => rows.filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.captain.toLowerCase().includes(search.toLowerCase())),
-    [rows, search],
-  )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    students: rows.reduce((sum, r) => sum + (r.students_count || 0), 0),
-    inactive: rows.filter((r) => r.status !== 'active').length,
-  }), [rows])
-
-  const columns = useMemo(
-    () => [
-      {
-        accessorKey: 'name',
-        header: 'House',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-lg" style={{ backgroundColor: row.original.color }} aria-hidden="true" />
-            <div>
-              <p className="font-medium">{row.original.name}</p>
-              <p className="text-xs text-muted-foreground">{row.original.motto}</p>
-            </div>
-          </div>
-        ),
-      },
-      { accessorKey: 'captain', header: 'Captain', cell: ({ row }) => (
-        <span className="inline-flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-warning" />{row.original.captain}</span>
-      ) },
-      {
-        accessorKey: 'students_count',
-        header: 'Students',
-        cell: ({ row }) => <span className="font-medium">{row.original.students_count}</span>,
-      },
-      { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-      { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
-    ],
-    [],
-  )
-
-  const rowActions = (house) => [
-    { label: 'View', icon: Eye, onClick: () => toast({ title: house.name, description: house.motto }) },
-    { label: 'Edit', icon: Pencil, onClick: () => setEditHouse(house) },
-    { separator: true },
-    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteHouse(house) },
-  ]
-
+function HouseForm({ initial, onSubmit }) {
+  const [form, setForm] = useState({ house_name: initial?.house_name || '', house_color: initial?.house_color || '' })
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Students', to: '/students' }, { label: 'Houses' }]} />
-      <PageHeader
-        title="Student Houses"
-        description="Organize students into houses for activities and events."
-        icon={Home}
-        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add House</Button>}
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Houses" value={stats.total} icon={Home} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={Home} accent="success" />
-        <StatCard label="House Members" value={stats.students} icon={Users} accent="chart2" />
-        <StatCard label="Inactive" value={stats.inactive} icon={Home} accent="warning" />
-      </div>
-
-      <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search houses or captains…" className="max-w-sm" />
-        <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="student-houses" />
-      </FilterBar>
-
-      {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={5} />
-      ) : filtered.length === 0 ? (
-        <NoData title="No houses found" actionLabel="Add House" onAction={() => setAddOpen(true)} />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={filtered}
-          enableSelection
-          enableExport
-          exportFilename="student-houses"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Houses deleted' }); refetch() } }]}
-          rowActions={(house) => <ActionDropdown actions={rowActions(house)} />}
+    <form id="house-form" onSubmit={(event) => { event.preventDefault(); if (form.house_name.trim()) onSubmit({ house_name: form.house_name.trim(), house_color: form.house_color }) }} className="space-y-6">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">House Name *</Label>
+        <Input 
+          autoFocus 
+          required 
+          value={form.house_name} 
+          onChange={(e) => set('house_name', e.target.value)} 
+          placeholder="Enter house name (e.g., Red House, Blue House)"
+          className="h-10"
         />
-      )}
-
-      <HouseDrawer open={addOpen} onOpenChange={setAddOpen} title="Add House" onSubmit={async (p) => { toast({ title: 'House added', description: p.name }); setAddOpen(false); refetch() }} />
-      <HouseDrawer open={!!editHouse} onOpenChange={(o) => !o && setEditHouse(null)} title="Edit House" initial={editHouse} onSubmit={async (p) => { toast({ title: 'House updated', description: p.name }); setEditHouse(null); refetch() }} />
-
-      <DeleteDialog
-        open={!!deleteHouse}
-        onOpenChange={(o) => !o && setDeleteHouse(null)}
-        entityName={deleteHouse?.name}
-        onConfirm={() => { toast({ title: 'House deleted' }); setDeleteHouse(null); refetch() }}
-      />
-    </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">House Color</Label>
+        <div className="flex items-center gap-3">
+          <Input 
+            value={form.house_color} 
+            onChange={(e) => set('house_color', e.target.value)} 
+            placeholder="e.g. #ef4444 or Red"
+            className="h-10 flex-1"
+          />
+          {form.house_color && (
+            <div 
+              className="h-10 w-10 rounded-lg border-2 border-border shadow-sm" 
+              style={{ backgroundColor: form.house_color }}
+            />
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">Enter a hex color code (e.g., #ef4444) or color name.</p>
+      </div>
+      
+      <button className="hidden" type="submit" aria-hidden="true">Save</button>
+    </form>
   )
 }
 
-function HouseDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    name: initial?.name || '',
-    color: initial?.color || COLOR_PRESETS[0],
-    motto: initial?.motto || '',
-    captain: initial?.captain || '',
-    status: initial?.status || 'active',
-  })
+export default function StudentHousesPage() {
+  const { toast } = useToast()
+  const { data, isLoading, error, refetch } = useAsyncData(() => studentService.houses({ page: 1, limit: 100 }), [])
+  const [search, setSearch] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [edit, setEdit] = useState(null)
+  const [remove, setRemove] = useState(null)
+  const rows = listValue(data).filter((item) => !search.trim() || String(item.house_name || '').toLowerCase().includes(search.trim().toLowerCase()))
+  const columns = useMemo(() => [
+    { 
+      accessorKey: 'house_name', 
+      header: 'House Name', 
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div 
+            className="h-8 w-8 rounded-lg border-2" 
+            style={{ backgroundColor: row.original.house_color || 'transparent' }}
+          />
+          <span className="font-medium">{row.original.house_name}</span>
+        </div>
+      )
+    },
+    { 
+      accessorKey: 'house_color', 
+      header: 'House Color', 
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded-full border" style={{ backgroundColor: row.original.house_color || 'transparent' }} />
+          <span className="text-sm">{row.original.house_color || '—'}</span>
+        </div>
+      )
+    },
+    { 
+      accessorKey: 'createdAt', 
+      header: 'Created', 
+      cell: ({ row }) => row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—' 
+    },
+  ], [])
+  const save = async (payload, id) => { if (id) await studentService.updateHouse(id, payload); else await studentService.createHouse(payload); toast({ title: id ? 'House updated' : 'House created' }); await refetch(); id ? setEdit(null) : setAddOpen(false) }
+  const deleteItem = async () => { if (remove) { await studentService.deleteHouse(remove._id); toast({ title: 'House deleted' }); setRemove(null); await refetch() } }
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="House details"
-      width="sm:max-w-md"
-      footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Red House" required />
+    <div className="space-y-8 animate-fade-in">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Students', to: '/students' }, { label: 'Student Houses' }]} />
+      
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Student Houses</h1>
+          <p className="text-muted-foreground">Manage student houses for intra-school competitions and activities.</p>
+        </div>
+        <Button size="lg" onClick={() => setAddOpen(true)} className="gap-2">
+          <Plus className="h-5 w-5" />
+          Add House
+        </Button>
+      </div>
+      
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchBar 
+            value={search} 
+            onChange={setSearch} 
+            placeholder="Search by house name..." 
+            className="pl-10"
+          />
+        </div>
+        
+        {isLoading ? (
+          <div className="py-12">
+            <LoadingSkeleton variant="table" rows={5} cols={4} />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Motto</Label>
-            <Input value={form.motto} onChange={(e) => setForm((f) => ({ ...f, motto: e.target.value }))} placeholder="House motto" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Captain</Label>
-            <Input value={form.captain} onChange={(e) => setForm((f) => ({ ...f, captain: e.target.value }))} placeholder="House captain name" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Color</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} type="button" aria-label={`Color ${c}`}
-                  onClick={() => setForm((f) => ({ ...f, color: c }))}
-                  className={`h-8 w-8 rounded-full ring-offset-2 transition ${form.color === c ? 'ring-2 ring-ring' : ''}`}
-                  style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" aria-hidden="true" />
-      </form>
-    </Drawer>
+        ) : error ? (
+          <NoData 
+            title="Unable to load houses" 
+            description={error.message || 'The backend could not return student houses. Please try again.'} 
+            actionLabel="Retry" 
+            onAction={refetch}
+            icon={AlertTriangle}
+          />
+        ) : rows.length === 0 ? (
+          <NoData 
+            title="No student houses" 
+            description="Create a house to assign students for competitions and activities." 
+            actionLabel="Add House" 
+            onAction={() => setAddOpen(true)}
+            icon={Home}
+          />
+        ) : (
+          <DataTable 
+            columns={columns} 
+            data={rows} 
+            enableExport 
+            exportFilename="student-houses" 
+            rowActions={(row) => <ActionDropdown actions={[
+              { label: 'Edit', icon: Pencil, onClick: () => setEdit(row) }, 
+              { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setRemove(row) }
+            ]} />} 
+          />
+        )}
+      </div>
+      
+      <Drawer 
+        open={addOpen} 
+        onOpenChange={setAddOpen} 
+        title="Add Student House" 
+        description="Create a new house for student grouping and competitions." 
+        width="sm:max-w-md"
+        footer={<DrawerFooter formId="house-form" onCancel={() => setAddOpen(false)} submitLabel="Create House" />}
+      >
+        {addOpen ? <HouseForm onSubmit={(payload) => save(payload)} /> : null}
+      </Drawer>
+      
+      <Drawer 
+        open={Boolean(edit)} 
+        onOpenChange={(open) => !open && setEdit(null)} 
+        title="Edit Student House" 
+        description={edit?.house_name}
+        width="sm:max-w-md"
+        footer={<DrawerFooter formId="house-form" onCancel={() => setEdit(null)} submitLabel="Save Changes" />}
+      >
+        {edit ? <HouseForm initial={edit} onSubmit={(payload) => save(payload, edit._id)} /> : null}
+      </Drawer>
+      
+      <DeleteDialog 
+        open={Boolean(remove)} 
+        onOpenChange={(open) => !open && setRemove(null)} 
+        entityName={remove?.house_name || 'house'} 
+        onConfirm={deleteItem} 
+      />
+    </div>
   )
 }

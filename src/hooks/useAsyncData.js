@@ -28,8 +28,8 @@ export function useAsyncData(fetcher, deps = []) {
     setError(null)
     try {
       const result = await fetcherRef.current()
-      // Unwrap the { success, data, message } envelope returned by services.
-      setData(result?.data !== undefined ? result.data : result)
+      // api.js response interceptor already unwraps { success, data } → returns data directly.
+      setData(result)
     } catch (e) {
       setError(e)
     } finally {
@@ -41,17 +41,21 @@ export function useAsyncData(fetcher, deps = []) {
     let active = true
     setIsLoading(true)
     setError(null)
-    fetcherRef
-      .current()
-      .then((result) => {
-        if (active) setData(result?.data !== undefined ? result.data : result)
-      })
-      .catch((e) => {
-        if (active) setError(e)
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
+    const fetcher = fetcherRef.current
+    if (fetcher) {
+      fetcher()
+        .then((result) => {
+          if (active) setData(result)
+        })
+        .catch((e) => {
+          if (active) setError(e)
+        })
+        .finally(() => {
+          if (active) setIsLoading(false)
+        })
+    } else {
+      setIsLoading(false)
+    }
     return () => {
       active = false
     }

@@ -1,9 +1,9 @@
 // ====================================================================
 // Module: Library
-// Page: Add Staff Member
+// Page: Library Staff Members
 //
 // Purpose:
-// Assign library permissions to staff members.
+// Manage library staff members and their memberships.
 //
 // Data Source:
 // library.service.js
@@ -13,24 +13,12 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import {
-  UserCog,
-  Search,
-  Shield,
-  ShieldCheck,
-  ShieldX,
-  Pencil,
-  Trash2,
-  Eye,
-  UserPlus,
-  Users,
-} from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { UserCog, Eye, Pencil, Trash2, UserPlus, Users, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -39,323 +27,318 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useLibraryStaff } from '@/hooks/useLibrary'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { libraryService } from '@/services/library.service'
+import { hrService } from '@/services/hr.service'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
-import { cn } from '@/lib/utils'
-
-// All available library permissions — maps to backend permission keys.
-const ALL_PERMISSIONS = [
-  { key: 'issue_books', label: 'Issue Books', description: 'Can lend books to members' },
-  { key: 'return_books', label: 'Return Books', description: 'Can process book returns' },
-  { key: 'manage_books', label: 'Manage Books', description: 'Can add, edit, and delete books' },
-  { key: 'manage_staff', label: 'Manage Staff', description: 'Can assign library staff' },
-]
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'department', label: 'Department' },
-  { key: 'permissions', label: 'Permissions' },
-  { key: 'status', label: 'Status' },
-  { key: 'assigned_at', label: 'Assigned On' },
+  { key: 'staff_name', label: 'Staff Name' },
+  { key: 'membership_id', label: 'Membership ID' },
+  { key: 'valid_till', label: 'Valid Till' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function AddStaffMemberPage() {
   const { toast } = useToast()
-  const {
-    rows: filtered, allStaff: rows, stats, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
-    saveStaff, deleteStaff,
-  } = useLibraryStaff()
+  const { data: libraryStaff, isLoading, refetch } = useAsyncData(() => libraryService.getLibraryStaffMembers(), [])
+  const { data: staffList, isLoading: staffLoading } = useAsyncData(() => hrService.getStaff(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveStaff(payload, id)
-    if (id) {
-      setEditRow(null)
-    } else {
-      setAddOpen(false)
-    }
-  }
+  const rows = libraryStaff || []
+  const staff = staffList || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const staffMember = staff.find(s => s._id === r.staff_id)
+    const staffName = staffMember?.name 
+      ? (typeof staffMember.name === 'string' ? staffMember.name : `${staffMember.name.first || ''} ${staffMember.name.last || ''}`.trim())
+      : ''
+    const q = search.toLowerCase()
+    return !q || staffName.toLowerCase().includes(q)
+  }), [rows, search, staff])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    active: rows.filter((r) => new Date(r.valid_till) > new Date()).length,
+    expired: rows.filter((r) => new Date(r.valid_till) <= new Date()).length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
+      accessorKey: 'staff_id',
       header: 'Staff Member',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {row.original.name.charAt(0)}
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium hover:underline">{row.original.name}</span>
-            <span className="text-xs text-muted-foreground">{row.original.email}</span>
-          </div>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const staffMember = staff.find(s => s._id === row.original.staff_id)
+        const staffName = staffMember?.name 
+          ? (typeof staffMember.name === 'string' ? staffMember.name : `${staffMember.name.first || ''} ${staffMember.name.last || ''}`.trim())
+          : 'Unknown'
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              {staffName.charAt(0) || '?'}
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium hover:underline">{staffName}</span>
+              <span className="text-xs text-muted-foreground">{staffMember?.employee_id || '—'}</span>
+            </div>
+          </button>
+        )
+      },
     },
-    { accessorKey: 'department', header: 'Department' },
-    {
-      accessorKey: 'permissions',
-      header: 'Permissions',
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          {row.original.permissions.map((p) => (
-            <Badge key={p} variant="outline" className="text-xs">
-              {ALL_PERMISSIONS.find((ap) => ap.key === p)?.label || p}
-            </Badge>
-          ))}
-        </div>
-      ),
+    { accessorKey: 'membership_id', header: 'Membership ID', cell: ({ row }) => <Badge variant="outline">{row.original.membership_id || '—'}</Badge> },
+    { 
+      accessorKey: 'valid_till', 
+      header: 'Valid Till', 
+      cell: ({ row }) => {
+        const isValid = new Date(row.original.valid_till) > new Date()
+        return (
+          <Badge variant={isValid ? 'default' : 'destructive'}>
+            {formatDate(row.original.valid_till)}
+          </Badge>
+        )
+      }
     },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'assigned_at', header: 'Assigned On', cell: ({ row }) => formatDate(row.original.assigned_at) },
-  ], [])
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [staff])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
     { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
     { separator: true },
-    { label: 'Remove', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
+
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await libraryService.updateLibraryStaffMember(id, payload)
+        toast({ title: 'Library staff updated' })
+      } else {
+        await libraryService.createLibraryStaffMember(payload)
+        toast({ title: 'Library staff added' })
+      }
+      setAddOpen(false)
+      setEditRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to save library staff:', error)
+      toast({ title: 'Failed to save library staff', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await libraryService.deleteLibraryStaffMember(id)
+      toast({ title: 'Library staff deleted' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete library staff:', error)
+      toast({ title: 'Failed to delete library staff', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Library' }, { label: 'Library Staff' }]} />
       <PageHeader
         title="Library Staff"
-        description="Assign library permissions to staff members."
+        description="Manage library staff members and their memberships."
         icon={UserCog}
         actions={<Button onClick={() => setAddOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Add Staff Member</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Total Staff" value={stats.total} icon={Users} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={ShieldCheck} accent="success" />
-        <StatCard label="Inactive" value={stats.inactive} icon={ShieldX} accent="warning" />
+        <StatCard label="Active Memberships" value={stats.active} icon={Calendar} accent="success" />
+        <StatCard label="Expired" value={stats.expired} icon={UserCog} accent="destructive" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by name, email, or department…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by staff name…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="library-staff" />
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={5} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : filtered.length === 0 ? (
         <NoData title="No library staff found" description="Add a staff member to get started." actionLabel="Add Staff Member" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          enableSelection
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <StaffFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Library Staff' : 'Add Library Staff'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Library Staff' : 'Add Library Staff'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update library staff membership' : 'Add a staff member to the library'}</DialogDescription>
+          </DialogHeader>
+          <StaffForm 
+            initial={editRow} 
+            staff={staff} 
+            staffLoading={staffLoading}
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
-        title="Staff Member Details"
-        description={viewRow?.name}
+        title="Library Staff Details"
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
-                {viewRow.name.charAt(0)}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.email}</p>
-              </div>
-              <StatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-              {[
-                { label: 'Department', value: viewRow.department },
-                { label: 'Assigned On', value: formatDate(viewRow.assigned_at) },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
+        {viewRow && (() => {
+          const staffMember = staff.find(s => s._id === viewRow.staff_id)
+          const staffName = staffMember?.name 
+            ? (typeof staffMember.name === 'string' ? staffMember.name : `${staffMember.name.first || ''} ${staffMember.name.last || ''}`.trim())
+            : 'Unknown'
+          const isValid = new Date(viewRow.valid_till) > new Date()
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
+                  {staffName.charAt(0) || '?'}
                 </div>
-              ))}
-            </dl>
-
-            {/* Permissions list */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Assigned Permissions</p>
-              <div className="space-y-2">
-                {ALL_PERMISSIONS.map((p) => {
-                  const has = viewRow.permissions.includes(p.key)
-                  return (
-                    <div key={p.key} className={cn('flex items-center gap-2 rounded-lg border p-2.5', has ? 'bg-success/5 border-success/20' : 'bg-muted/20')}>
-                      {has ? <ShieldCheck className="h-4 w-4 text-success" /> : <ShieldX className="h-4 w-4 text-muted-foreground" />}
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{p.label}</p>
-                        <p className="text-xs text-muted-foreground">{p.description}</p>
-                      </div>
-                    </div>
-                  )
-                })}
+                <div className="flex-1">
+                  <p className="font-semibold">{staffName}</p>
+                  <p className="text-xs text-muted-foreground">{staffMember?.employee_id || '—'}</p>
+                </div>
+                <Badge variant={isValid ? 'default' : 'destructive'}>
+                  {isValid ? 'Active' : 'Expired'}
+                </Badge>
               </div>
+
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                {[
+                  { label: 'Membership ID', value: viewRow.membership_id || '—' },
+                  { label: 'Valid Till', value: formatDate(viewRow.valid_till) },
+                  { label: 'Created', value: formatDate(viewRow.createdAt) },
+                  { label: 'Updated', value: formatDate(viewRow.updatedAt) },
+                ].map((f) => (
+                  <div key={f.label} className="space-y-0.5">
+                    <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                    <dd className="text-sm font-medium">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.name}
-        onConfirm={async () => {
-          await deleteStaff(deleteRow._id)
-          setDeleteRow(null)
-        }}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Library Staff</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this library staff member? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Form Drawer (shared by Add and Edit) ─────────────────────────────────────
-// Staff search field + permission checkboxes + status toggle.
-function StaffFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    name: initial?.name || '',
-    email: initial?.email || '',
-    staff_id: initial?.staff_id || '',
-    department: initial?.department || '',
-    permissions: initial?.permissions || ['issue_books'],
-    status: initial?.status || 'active',
+// ─── StaffForm Component ───────────────────────────────────────────────────────
+function StaffForm({ initial, staff, staffLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    staff_id: '',
+    membership_id: '',
+    valid_till: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year from now
   })
-  const [staffSearch, setStaffSearch] = useState('')
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useEffect(() => {
+    if (initial) {
+      setFormData({
+        staff_id: initial.staff_id || '',
+        membership_id: initial.membership_id || '',
+        valid_till: initial.valid_till ? initial.valid_till.split('T')[0] : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      })
+    } else {
+      setFormData({
+        staff_id: staff[0]?._id || '',
+        membership_id: '',
+        valid_till: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      })
+    }
+  }, [initial, staff])
 
-  // Toggle a permission on or off — checkbox-driven permission assignment.
-  const togglePermission = (key) => {
-    setForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(key)
-        ? f.permissions.filter((p) => p !== key)
-        : [...f.permissions, key],
-    }))
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
   }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Assign library permissions to a staff member"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Staff Member'}
-          submitDisabled={!form.name.trim()}
-          onSubmit={() => onSubmit(form)}
-        />
-      }
-    >
-      <div className="space-y-4">
-        <FormSection columns={1}>
-          {/* Staff search — type the name, fills the form fields */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Staff Member Name <span className="text-destructive">*</span></Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={staffSearch}
-                onChange={(e) => {
-                  setStaffSearch(e.target.value)
-                  set('name', e.target.value)
-                }}
-                placeholder="Search existing staff by name…"
-                className="pl-9"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Email</Label>
-              <Input value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@school.edu" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Department</Label>
-              <Input value={form.department} onChange={(e) => set('department', e.target.value)} placeholder="Department" />
-            </div>
-          </div>
-        </FormSection>
-
-        {/* Permission checkboxes — each one grants a specific library capability */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
-            <Label className="text-sm font-medium">Library Permissions</Label>
-          </div>
-          <div className="space-y-2">
-            {ALL_PERMISSIONS.map((p) => (
-              <label
-                key={p.key}
-                className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
-                  form.permissions.includes(p.key) ? 'border-primary/30 bg-primary/5' : 'hover:bg-muted/40',
-                )}
-              >
-                <Checkbox
-                  checked={form.permissions.includes(p.key)}
-                  onCheckedChange={() => togglePermission(p.key)}
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{p.label}</p>
-                  <p className="text-xs text-muted-foreground">{p.description}</p>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="staff_id">Staff Member *</Label>
+        <select
+          id="staff_id"
+          value={formData.staff_id}
+          onChange={(e) => setFormData({ ...formData, staff_id: e.target.value })}
+          disabled={staffLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select staff member</option>
+          {staff.map((s) => {
+            const staffName = s.name 
+              ? (typeof s.name === 'string' ? s.name : `${s.name.first || ''} ${s.name.last || ''}`.trim())
+              : 'Unknown'
+            return (
+              <option key={s._id} value={s._id}>{staffName} ({s.employee_id || 'No ID'})</option>
+            )
+          })}
+        </select>
       </div>
-    </Drawer>
+      <div>
+        <Label htmlFor="membership_id">Membership ID</Label>
+        <Input
+          id="membership_id"
+          value={formData.membership_id}
+          onChange={(e) => setFormData({ ...formData, membership_id: e.target.value })}
+          placeholder="Enter membership ID"
+        />
+      </div>
+      <div>
+        <Label htmlFor="valid_till">Valid Till *</Label>
+        <Input
+          id="valid_till"
+          type="date"
+          value={formData.valid_till}
+          onChange={(e) => setFormData({ ...formData, valid_till: e.target.value })}
+          required
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

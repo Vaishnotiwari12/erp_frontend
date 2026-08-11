@@ -13,18 +13,16 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { Plus, FolderTree, Pencil, Trash2, Eye, Library, CircleCheck as CheckCircle2 } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Plus, FolderTree, Pencil, Trash2, Eye, Library, BookOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
@@ -34,75 +32,64 @@ import { ImportButton } from '@/components/ImportButton'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
-import { academicsService } from '@/services/academics.service'
-// import { subjects as mockSubjects } from '@/services/mockData'
+import { useSubjectGroups } from '@/hooks/useAcademics'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Group' },
-  { key: 'code', label: 'Code' },
-  { key: 'description', label: 'Description' },
-  { key: 'status', label: 'Status' },
+  { key: "group_name", label: "Group" },
+  { key: "group_code", label: "Code" },
+  { key: "createdAt", label: "Created" },
 ]
 
 export default function SubjectGroupsPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => academicsService.subjectGroups(), [])
+  const { rows, allSubjectGroups, stats, isLoading, saveSubjectGroup, deleteSubjectGroup } = useSubjectGroups()
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
+  const rowsAll = allSubjectGroups || []
   const filtered = useMemo(
-    () => rows.filter((r) => {
-      const ms = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.code.toLowerCase().includes(search.toLowerCase())
-      const mst = status === 'all' || r.status === status
-      return ms && mst
+    () => rowsAll.filter((r) => {
+      const ms = !search || (r.group_name || '').toLowerCase().includes(search.toLowerCase()) || (r.group_code || '').toLowerCase().includes(search.toLowerCase())
+      return ms
     }),
-    [rows, search, status],
+    [rowsAll, search],
   )
-
-  const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((r) => r.status === 'active').length,
-    subjects: mockSubjects.length,
-    inactive: rows.filter((r) => r.status !== 'active').length,
-  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
-      header: 'Group',
+      accessorKey: "group_name",
+      header: "Group",
       cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FolderTree className="h-4 w-4" />
+        <button
+          onClick={() => setViewRow(row.original)}
+          className="flex items-center gap-3"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <FolderTree className="h-5 w-5 text-primary" />
           </div>
+
           <div>
-            <p className="font-medium hover:underline">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground">{row.original.code}</p>
+            <p className="font-medium">
+              {row.original.group_name}
+            </p>
+
+            <p className="text-xs text-muted-foreground">
+              {row.original.group_code}
+            </p>
           </div>
         </button>
       ),
     },
-    { accessorKey: 'description', header: 'Description' },
     {
-      accessorKey: 'subjects_count',
-      header: 'Subjects',
-      cell: ({ row }) => (
-        <span className="inline-flex items-center gap-1.5 font-medium">
-          <Library className="h-3.5 w-3.5 text-muted-foreground" />
-          {mockSubjects.filter((s) => s.group === row.original.name).length}
-        </span>
-      ),
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => formatDate(row.original.createdAt),
     },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -127,23 +114,26 @@ export default function SubjectGroupsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Groups" value={stats.total} icon={FolderTree} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={CheckCircle2} accent="success" />
-        <StatCard label="Total Subjects" value={stats.subjects} icon={Library} accent="chart2" />
-        <StatCard label="Inactive" value={stats.inactive} icon={FolderTree} accent="warning" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard
+          label="Total Groups"
+          value={stats.total}
+          icon={FolderTree}
+          accent="primary"
+        />
+
+        <StatCard
+          label="Showing"
+          value={filtered.length}
+          icon={BookOpen}
+          accent="success"
+        />
       </div>
 
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search subject groups…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="subject-groups" />
-          <select value={status} onChange={(e) => setStatus(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
         </div>
       </FilterBar>
 
@@ -158,87 +148,76 @@ export default function SubjectGroupsPage() {
           enableSelection
           enableExport
           exportFilename="subject-groups"
-          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => { toast({ title: 'Groups deleted' }); refetch() } }]}
+          bulkActions={[{ label: 'Delete', icon: Trash2, variant: 'destructive', onClick: (ids) => { ids.forEach((id) => deleteSubjectGroup(id)) } }]}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <GroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Subject Group" onSubmit={async (p) => { await academicsService.createSubjectGroup(p); toast({ title: 'Group added', description: p.name }); setAddOpen(false); refetch() }} />
-      <GroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Subject Group" initial={editRow} onSubmit={async (p) => { await academicsService.update(editRow._id, p); toast({ title: 'Group updated', description: p.name }); setEditRow(null); refetch() }} />
+      <GroupDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Subject Group" onSubmit={async (p) => { await saveSubjectGroup(p); setAddOpen(false) }} />
+      <GroupDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Subject Group" initial={editRow} onSubmit={async (p) => { await saveSubjectGroup(p, editRow._id); setEditRow(null) }} />
 
-      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Group Details" description={viewRow?.name} width="sm:max-w-md"
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Group Details" description={viewRow?.group_name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow ? (
-          <div className="space-y-6">
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-              {[
-                { label: 'Name', value: viewRow.name },
-                { label: 'Code', value: viewRow.code },
-                { label: 'Description', value: viewRow.description },
-                { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-                { label: 'Created', value: formatDate(viewRow.createdAt) },
-              ].map((r) => (
-                <div key={r.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
-                  <dd className="text-sm font-medium">{r.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Subjects in this group</p>
-              <div className="flex flex-wrap gap-2">
-                {mockSubjects.filter((s) => s.group === viewRow.name).map((s) => (
-                  <span key={s._id} className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/40 px-2.5 py-1 text-xs font-medium">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#2563eb' }} />
-                    {s.name}
-                  </span>
-                ))}
-                {mockSubjects.filter((s) => s.group === viewRow.name).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No subjects assigned.</p>
-                ) : null}
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {[
+              {
+                label: "Group Name",
+                value: viewRow.group_name,
+              },
+              {
+                label: "Group Code",
+                value: viewRow.group_code,
+              },
+              {
+                label: "Created",
+                value: formatDate(viewRow.createdAt),
+              },
+              {
+                label: "Updated",
+                value: formatDate(viewRow.updatedAt),
+              },
+            ].map((r) => (
+              <div key={r.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
+                <dd className="text-sm font-medium">{r.value}</dd>
               </div>
-            </div>
-          </div>
+            ))}
+          </dl>
         ) : null}
       </Drawer>
 
-      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={() => { toast({ title: 'Group deleted' }); setDeleteRow(null); refetch() }} />
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.group_name}
+        onConfirm={() => { deleteSubjectGroup(deleteRow._id || deleteRow.id); setDeleteRow(null) }} />
     </div>
   )
 }
 
 function GroupDrawer({ open, onOpenChange, title, initial, onSubmit }) {
   const [form, setForm] = useState({
-    name: initial?.name || '',
-    code: initial?.code || '',
-    description: initial?.description || '',
-    status: initial?.status || 'active',
+    group_name: initial?.group_name || '',
+    group_code: initial?.group_code || '',
   })
+
+  useEffect(() => {
+    setForm({
+      group_name: initial?.group_name || '',
+      group_code: initial?.group_code || '',
+    })
+  }, [initial])
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange} title={title} description="Group details" width="sm:max-w-md"
       footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
+        <FormSection columns={2}>
           <div className="space-y-1.5">
-            <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Science Group" required />
+            <Label className="text-xs">Group Name <span className="text-destructive">*</span></Label>
+            <Input value={form.group_name} onChange={(e) => setForm((f) => ({ ...f, group_name: e.target.value }))} placeholder="e.g. Science Group" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Code <span className="text-destructive">*</span></Label>
-            <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="e.g. SCI" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Description</Label>
-            <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={3} placeholder="Group description" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <Label className="text-xs">Group Code <span className="text-destructive">*</span></Label>
+            <Input value={form.group_code} onChange={(e) => setForm((f) => ({ ...f, group_code: e.target.value }))} placeholder="e.g. SCI" required />
           </div>
         </FormSection>
         <button type="submit" className="hidden" aria-hidden="true" />

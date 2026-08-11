@@ -37,10 +37,10 @@ export function useStaff() {
       rows.filter((r) => {
         const matchSearch =
           !search ||
-          r.name.toLowerCase().includes(search.toLowerCase()) ||
-          r.email.toLowerCase().includes(search.toLowerCase()) ||
-          r.employee_id.toLowerCase().includes(search.toLowerCase())
-        const matchDept = deptFilter === 'all' || r.department === deptFilter
+          (r.name || '').toLowerCase().includes(search.toLowerCase()) ||
+          (r.email || '').toLowerCase().includes(search.toLowerCase()) ||
+          (r.employee_id || '').toLowerCase().includes(search.toLowerCase())
+        const matchDept = deptFilter === 'all' || r.department_id === deptFilter
         const matchStatus = statusFilter === 'all' || r.status === statusFilter
         return matchSearch && matchDept && matchStatus
       }),
@@ -52,50 +52,50 @@ export function useStaff() {
       total: rows.length,
       active: rows.filter((r) => r.status === 'active').length,
       inactive: rows.filter((r) => r.status === 'inactive').length,
-      departments: new Set(rows.map((r) => r.department)).size,
+      departments: new Set(rows.map((r) => r.department_id)).size,
     }),
     [rows],
   )
 
-  const deptOptions = useMemo(() => [...new Set(rows.map((r) => r.department))], [rows])
+  const deptOptions = useMemo(() => [...new Set(rows.map((r) => r.department_id))], [rows])
 
   const saveStaff = useCallback(
     async (payload, id) => {
-      if (id) {
-        await hrService.updateStaff(id, payload)
-        toast({ title: 'Staff updated', description: payload.name })
-      } else {
-        await hrService.createStaff(payload)
-        toast({ title: 'Staff added', description: payload.name })
+      try {
+        if (id) {
+          await hrService.updateStaff(id, payload)
+          toast({ title: 'Staff updated', description: payload.name })
+        } else {
+          await hrService.createStaff(payload)
+          toast({ title: 'Staff added', description: payload.name })
+        }
+        await refetch()
+      } catch (error) {
+        console.error('Failed to save staff:', error)
+        toast({
+          title: 'Failed to save staff',
+          variant: 'destructive',
+        })
+        throw error
       }
-      refetch()
     },
     [refetch, toast],
   )
 
   const deleteStaff = useCallback(
     async (id, name) => {
-      await hrService.deleteStaff(id)
-      toast({ title: 'Staff deleted', description: `${name} has been removed.` })
-      refetch()
-    },
-    [refetch, toast],
-  )
-
-  const disableStaff = useCallback(
-    async (id) => {
-      await hrService.disableStaff(id)
-      toast({ title: 'Staff disabled' })
-      refetch()
-    },
-    [refetch, toast],
-  )
-
-  const restoreStaff = useCallback(
-    async (id) => {
-      await hrService.restoreStaff(id)
-      toast({ title: 'Staff restored' })
-      refetch()
+      try {
+        await hrService.deleteStaff(id)
+        toast({ title: 'Staff deleted', description: `${name} has been removed.` })
+        await refetch()
+      } catch (error) {
+        console.error('Failed to delete staff:', error)
+        toast({
+          title: 'Failed to delete staff',
+          variant: 'destructive',
+        })
+        throw error
+      }
     },
     [refetch, toast],
   )
@@ -111,8 +111,6 @@ export function useStaff() {
     statusFilter, setStatusFilter,
     saveStaff,
     deleteStaff,
-    disableStaff,
-    restoreStaff,
   }
 }
 
@@ -249,7 +247,7 @@ export function useLeaveTypes() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        return !q || (r.name || '').toLowerCase().includes(q)
+        return !q || (r.leave_type || '').toLowerCase().includes(q)
       }),
     [rows, search],
   )
@@ -258,10 +256,10 @@ export function useLeaveTypes() {
     async (payload, id) => {
       if (id) {
         await hrService.updateLeaveType(id, payload)
-        toast({ title: 'Leave type updated', description: payload.name })
+        toast({ title: 'Leave type updated', description: payload.leave_type })
       } else {
         await hrService.createLeaveType(payload)
-        toast({ title: 'Leave type added', description: payload.name })
+        toast({ title: 'Leave type added', description: payload.leave_type })
       }
       refetch()
     },

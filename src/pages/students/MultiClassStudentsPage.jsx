@@ -1,592 +1,243 @@
 import { useMemo, useState } from 'react'
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  RefreshCw,
-  Users,
-} from 'lucide-react'
-
-import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/PageHeader'
-
+import { Layers3, Pencil, Plus, Trash2, Search, User, GraduationCap, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-
 import { Label } from '@/components/ui/label'
+import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
+import { SearchBar } from '@/components/SearchBar'
+import { DataTable } from '@/components/DataTable'
+import { ActionDropdown } from '@/components/ActionDropdown'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
+import { useMultiClassStudents } from '@/hooks/useStudents'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { studentService } from '@/services/student.service'
+import { fullName } from '@/utils/format'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+const referenceId = (value) => typeof value === 'object' ? value?._id || '' : value || ''
+const listValue = (data) => Array.isArray(data) ? data : data?.data || []
 
-const mockStudents = [
-  {
-    id: '1',
-    admissionNo: 'ADM001',
-    student: 'Rahul Sharma',
-    primaryClass: 'Class 10 A',
-    classes: ['10 A', '11 A'],
-    status: 'Active',
-  },
-  {
-    id: '2',
-    admissionNo: 'ADM002',
-    student: 'Priya Singh',
-    primaryClass: 'Class 9 B',
-    classes: ['9 B', '10 B', '11 B'],
-    status: 'Active',
-  },
-]
+function AssignmentForm({ initial, students, classes, onSubmit }) {
+  const [form, setForm] = useState({ student_id: referenceId(initial?.student_id), class_id: referenceId(initial?.class_id) })
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  
+  return (
+    <form id="multi-class-form" onSubmit={(event) => { event.preventDefault(); if (form.student_id && form.class_id) onSubmit(form) }} className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <User className="h-5 w-5 text-primary" />
+          Student Information
+        </h3>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Student *</Label>
+          {students.length > 0 ? (
+            <select 
+              required 
+              value={form.student_id} 
+              onChange={(e) => set('student_id', e.target.value)} 
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Select student</option>
+              {students.map((student) => (
+                <option key={student._id} value={student._id}>
+                  {fullName(student.name) || 'Unnamed'} ({student.roll_number || 'No roll number'})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input 
+              required 
+              value={form.student_id} 
+              onChange={(e) => set('student_id', e.target.value)} 
+              placeholder="Enter student ID"
+              className="h-10"
+            />
+          )}
+        </div>
+      </div>
+      
+      <div className="space-y-4">
+        <h3 className="flex items-center gap-2 text-lg font-semibold">
+          <GraduationCap className="h-5 w-5 text-primary" />
+          Class Information
+        </h3>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Class *</Label>
+          {classes.length > 0 ? (
+            <select 
+              required 
+              value={form.class_id} 
+              onChange={(e) => set('class_id', e.target.value)} 
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Select class</option>
+              {classes.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.class_name || 'Unnamed'}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input 
+              required 
+              value={form.class_id} 
+              onChange={(e) => set('class_id', e.target.value)} 
+              placeholder="Enter class ID"
+              className="h-10"
+            />
+          )}
+        </div>
+      </div>
+      
+      <button type="submit" className="hidden" aria-hidden="true">Save</button>
+    </form>
+  )
+}
 
 export default function MultiClassStudentsPage() {
-  const [students, setStudents] = useState(mockStudents)
-  const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState(null)
-
-  const [openForm, setOpenForm] = useState(false)
-  const [openDelete, setOpenDelete] = useState(false)
-
-  const filteredStudents = useMemo(() => {
-    return students.filter(
-      (item) =>
-        item.student.toLowerCase().includes(search.toLowerCase()) ||
-        item.admissionNo.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [students, search])
-
+  const { rows, isLoading, error, refetch, search, setSearch, saveAssignment, removeAssignment } = useMultiClassStudents()
+  const studentsResult = useAsyncData(() => studentService.list({ page: 1, limit: 100 }), [])
+  const classesResult = useAsyncData(() => studentService.list({ page: 1, limit: 100 }), [])
+  const [addOpen, setAddOpen] = useState(false)
+  const [edit, setEdit] = useState(null)
+  const [remove, setRemove] = useState(null)
+  
+  const students = listValue(studentsResult.data)
+  const classes = listValue(classesResult.data)
+  
+  const getStudentName = (studentId) => {
+    const student = students.find(s => s._id === studentId)
+    return student ? fullName(student.name) : 'Unknown'
+  }
+  
+  const getClassName = (classId) => {
+    const cls = classes.find(c => c._id === classId)
+    return cls ? cls.class_name : 'Unknown'
+  }
+  
+  const columns = useMemo(() => [
+    { 
+      accessorKey: 'student_id', 
+      header: 'Student', 
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{getStudentName(row.original.student_id)}</p>
+          <p className="text-xs text-muted-foreground">{row.original.student_id}</p>
+        </div>
+      )
+    },
+    { 
+      accessorKey: 'class_id', 
+      header: 'Class', 
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{getClassName(row.original.class_id)}</p>
+          <p className="text-xs text-muted-foreground">{row.original.class_id}</p>
+        </div>
+      )
+    },
+    { 
+      accessorKey: 'createdAt', 
+      header: 'Created', 
+      cell: ({ row }) => row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—' 
+    },
+  ], [students, classes])
+  
+  const save = async (payload, id) => { await saveAssignment(payload, id); id ? setEdit(null) : setAddOpen(false) }
+  const onDelete = async () => { if (remove) { await removeAssignment(remove._id); setRemove(null) } }
+  const loading = isLoading || studentsResult.isLoading || classesResult.isLoading
+  const errorState = error || studentsResult.error || classesResult.error
+  
   return (
-    <div className="space-y-6">
-
-      <Breadcrumbs
-        items={[
-          { label: 'Home', to: '/' },
-          { label: 'Student Information' },
-          { label: 'Multi Class Students' },
-        ]}
-      />
-
-      <PageHeader
-        title="Multi Class Students"
-        description="Manage students assigned to multiple classes."
-
-        actions={
-          <div className="flex gap-2">
-
-            <Button variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-
-            <Button onClick={() => setOpenForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Assign Class
-            </Button>
-
-          </div>
-        }
-      />
-
-      {/* KPI */}
-
-      <div className="grid gap-4 md:grid-cols-4">
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Total Students
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {students.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Multi Class
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {students.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Active
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-green-600">
-              {
-                students.filter((s) => s.status === 'Active').length
-              }
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Total Assignments
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {students.reduce((a, b) => a + b.classes.length, 0)}
-            </h2>
-          </CardContent>
-        </Card>
-
+    <div className="space-y-8 animate-fade-in">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Students', to: '/students' }, { label: 'Multi-Class Students' }]} />
+      
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Multi-Class Students</h1>
+          <p className="text-muted-foreground">Manage students assigned to multiple classes.</p>
+        </div>
+        <Button size="lg" onClick={() => setAddOpen(true)} className="gap-2">
+          <Plus className="h-5 w-5" />
+          Add Assignment
+        </Button>
       </div>
-
-      {/* Search */}
-
-      <Card>
-
-        <CardContent className="p-5">
-
-          <div className="relative">
-
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Student..."
-              className="pl-10"
-            />
-
+      
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchBar 
+            value={search} 
+            onChange={setSearch} 
+            placeholder="Search by student or class..." 
+            className="pl-10"
+          />
+        </div>
+        
+        {loading ? (
+          <div className="py-12">
+            <LoadingSkeleton variant="table" rows={5} cols={4} />
           </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-4">
-
-            <Select>
-
-              <SelectTrigger>
-
-                <SelectValue placeholder="Class" />
-
-              </SelectTrigger>
-
-              <SelectContent>
-
-                <SelectItem value="10">Class 10</SelectItem>
-
-                <SelectItem value="11">Class 11</SelectItem>
-
-              </SelectContent>
-
-            </Select>
-
-            <Select>
-
-              <SelectTrigger>
-
-                <SelectValue placeholder="Section" />
-
-              </SelectTrigger>
-
-              <SelectContent>
-
-                <SelectItem value="A">A</SelectItem>
-
-                <SelectItem value="B">B</SelectItem>
-
-              </SelectContent>
-
-            </Select>
-
-            <Select>
-
-              <SelectTrigger>
-
-                <SelectValue placeholder="Status" />
-
-              </SelectTrigger>
-
-              <SelectContent>
-
-                <SelectItem value="Active">
-                  Active
-                </SelectItem>
-
-                <SelectItem value="Inactive">
-                  Inactive
-                </SelectItem>
-
-              </SelectContent>
-
-            </Select>
-
-          </div>
-
-        </CardContent>
-
-      </Card>
-
-      {/* Table */}
-
-      <Card>
-
-        <CardContent className="p-0">
-
-          <Table>
-
-            <TableHeader>
-
-              <TableRow>
-
-                <TableHead>Admission No</TableHead>
-
-                <TableHead>Student</TableHead>
-
-                <TableHead>Primary Class</TableHead>
-
-                <TableHead>Assigned Classes</TableHead>
-
-                <TableHead>Status</TableHead>
-
-                <TableHead className="text-right">
-                  Actions
-                </TableHead>
-
-              </TableRow>
-
-            </TableHeader>
-
-            <TableBody>
-
-              {filteredStudents.map((student) => (
-
-                <TableRow key={student.id}>
-
-                  <TableCell>
-                    {student.admissionNo}
-                  </TableCell>
-
-                  <TableCell className="font-medium">
-                    {student.student}
-                  </TableCell>
-
-                  <TableCell>
-                    {student.primaryClass}
-                  </TableCell>
-
-                  <TableCell>
-
-                    <div className="flex flex-wrap gap-2">
-
-                      {student.classes.map((cls) => (
-
-                        <span
-                          key={cls}
-                          className="rounded-full bg-primary/10 px-2 py-1 text-xs"
-                        >
-                          {cls}
-                        </span>
-
-                      ))}
-
-                    </div>
-
-                  </TableCell>
-
-                  <TableCell>
-
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs text-green-700">
-                      {student.status}
-                    </span>
-
-                  </TableCell>
-
-                  <TableCell>
-
-                    <div className="flex justify-end gap-2">
-
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setSelected(student)
-                          setOpenForm(true)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => {
-                          setSelected(student)
-                          setOpenDelete(true)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-
-                    </div>
-
-                  </TableCell>
-
-                </TableRow>
-
-              ))}
-
-            </TableBody>
-
-          </Table>
-
-        </CardContent>
-
-      </Card>
-
-            {/* Assign / Edit Dialog */}
-
-      <Dialog open={openForm} onOpenChange={setOpenForm}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selected ? 'Edit Multi Class Assignment' : 'Assign Multiple Classes'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-5 py-2">
-
-            <div className="space-y-2">
-              <Label>Student</Label>
-              <Input
-                defaultValue={selected?.student || ''}
-                placeholder="Student Name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Admission Number</Label>
-              <Input
-                defaultValue={selected?.admissionNo || ''}
-                placeholder="Admission Number"
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-
-              <div className="space-y-2">
-                <Label>Primary Class</Label>
-
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        selected?.primaryClass || 'Select Primary Class'
-                      }
-                    />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem value="10A">Class 10 A</SelectItem>
-                    <SelectItem value="10B">Class 10 B</SelectItem>
-                    <SelectItem value="11A">Class 11 A</SelectItem>
-                    <SelectItem value="11B">Class 11 B</SelectItem>
-                  </SelectContent>
-                </Select>
-
-              </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={selected?.status || 'Active'}
-                    />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    <SelectItem value="Active">
-                      Active
-                    </SelectItem>
-
-                    <SelectItem value="Inactive">
-                      Inactive
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-              </div>
-
-            </div>
-
-            <div className="space-y-2">
-
-              <Label>Assigned Classes</Label>
-
-              <Input
-                defaultValue={
-                  selected?.classes?.join(', ') || ''
-                }
-                placeholder="Example: 10 A, 11 A, 12 B"
-              />
-
-              <p className="text-xs text-muted-foreground">
-                Separate multiple classes using commas.
-              </p>
-
-            </div>
-
-          </div>
-
-          <DialogFooter>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelected(null)
-                setOpenForm(false)
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              onClick={() => {
-                // TODO:
-                // create / update API
-
-                setSelected(null)
-                setOpenForm(false)
-              }}
-            >
-              {selected ? 'Update Assignment' : 'Assign Classes'}
-            </Button>
-
-          </DialogFooter>
-
-        </DialogContent>
-      </Dialog>
-
-      {/* Remove Assignment Dialog */}
-
-      <Dialog
-        open={openDelete}
-        onOpenChange={setOpenDelete}
+        ) : errorState ? (
+          <NoData 
+            title="Unable to load assignments" 
+            description={errorState.message || 'The backend could not return multi-class assignments. Please try again.'} 
+            actionLabel="Retry" 
+            onAction={() => { refetch(); studentsResult.refetch(); classesResult.refetch() }}
+            icon={AlertTriangle}
+          />
+        ) : rows.length === 0 ? (
+          <NoData 
+            title="No multi-class assignments" 
+            description="Create an assignment by linking a student to a class." 
+            actionLabel="Add Assignment" 
+            onAction={() => setAddOpen(true)}
+            icon={Layers3}
+          />
+        ) : (
+          <DataTable 
+            columns={columns} 
+            data={rows} 
+            enableExport 
+            exportFilename="multi-class-students" 
+            rowActions={(row) => <ActionDropdown actions={[
+              { label: 'Edit', icon: Pencil, onClick: () => setEdit(row) }, 
+              { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setRemove(row) }
+            ]} />} 
+          />
+        )}
+      </div>
+      
+      <Drawer 
+        open={addOpen} 
+        onOpenChange={setAddOpen} 
+        title="Add Multi-Class Assignment" 
+        description="Assign a student to an additional class." 
+        width="sm:max-w-2xl"
+        footer={<DrawerFooter formId="multi-class-form" onCancel={() => setAddOpen(false)} submitLabel="Create Assignment" />}
       >
-        <DialogContent className="sm:max-w-md">
-
-          <DialogHeader>
-            <DialogTitle>
-              Remove Assignment
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-
-            <Users className="mx-auto h-12 w-12 text-red-500" />
-
-            <div className="text-center">
-
-              <h3 className="font-semibold">
-                {selected?.student}
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Admission No: {selected?.admissionNo}
-              </p>
-
-            </div>
-
-            <div className="rounded-lg border p-4">
-
-              <p className="text-sm font-medium">
-                Assigned Classes
-              </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-
-                {selected?.classes?.map((cls) => (
-
-                  <span
-                    key={cls}
-                    className="rounded-full bg-primary/10 px-3 py-1 text-xs"
-                  >
-                    {cls}
-                  </span>
-
-                ))}
-
-              </div>
-
-            </div>
-
-            <p className="text-center text-sm text-red-600">
-              This assignment will be removed permanently.
-            </p>
-
-          </div>
-
-          <DialogFooter>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelected(null)
-                setOpenDelete(false)
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              variant="destructive"
-              onClick={() => {
-                // TODO:
-                // delete API
-
-                setStudents((prev) =>
-                  prev.filter(
-                    (item) => item.id !== selected?.id
-                  )
-                )
-
-                setSelected(null)
-                setOpenDelete(false)
-              }}
-            >
-              Remove Assignment
-            </Button>
-
-          </DialogFooter>
-
-        </DialogContent>
-      </Dialog>
-
+        {addOpen ? <AssignmentForm students={students} classes={classes} onSubmit={(payload) => save(payload)} /> : null}
+      </Drawer>
+      
+      <Drawer 
+        open={Boolean(edit)} 
+        onOpenChange={(open) => !open && setEdit(null)} 
+        title="Edit Multi-Class Assignment" 
+        description={`Editing assignment ${edit?._id}`}
+        width="sm:max-w-2xl"
+        footer={<DrawerFooter formId="multi-class-form" onCancel={() => setEdit(null)} submitLabel="Save Changes" />}
+      >
+        {edit ? <AssignmentForm initial={edit} students={students} classes={classes} onSubmit={(payload) => save(payload, edit._id)} /> : null}
+      </Drawer>
+      
+      <DeleteDialog 
+        open={Boolean(remove)} 
+        onOpenChange={(open) => !open && setRemove(null)} 
+        entityName="multi-class assignment" 
+        onConfirm={onDelete} 
+      />
     </div>
   )
 }

@@ -3,7 +3,7 @@
 // Page: Disabled Staff
 //
 // Purpose:
-// View, restore, or permanently delete disabled staff members.
+// View and manage disabled staff records.
 //
 // Data Source:
 // hr.service.js
@@ -13,265 +13,305 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { Ban, Eye, RotateCcw, Trash2, UserX, Power } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Ban, Eye, RotateCcw, Trash2, UserX, Power, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
-import { Drawer } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { hrService } from '@/services/hr.service'
-import { formatDate, initials, formatCurrency } from '@/utils/format'
+import { formatDate, initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'employee_id', label: 'Employee ID' },
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'department', label: 'Department' },
-  { key: 'designation', label: 'Designation' },
-  { key: 'status', label: 'Status' },
-  { key: 'joining_date', label: 'Joining Date' },
+  { key: 'staff_name', label: 'Staff Name' },
+  { key: 'reason', label: 'Reason' },
+  { key: 'date', label: 'Disabled Date' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function DisabledStaffPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getDisabledStaff(), [])
-
+  const { data: disabledStaff, isLoading, refetch } = useAsyncData(() => hrService.getDisabledStaff(), [])
+  const { data: staffList, isLoading: staffLoading } = useAsyncData(() => hrService.getStaff(), [])
+  
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [viewStaff, setViewStaff] = useState(null)
-  const [deleteStaff, setDeleteStaff] = useState(null)
-  const [deleting, setDeleting] = useState(false)
+  const [viewRow, setViewRow] = useState(null)
+  const [editRow, setEditRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
+  const rows = disabledStaff || []
+  const staff = staffList || []
 
   const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email.toLowerCase().includes(search.toLowerCase()) ||
-      r.employee_id.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || r.status === statusFilter
-    return matchSearch && matchStatus
-  }), [rows, search, statusFilter])
+    const staffMember = staff.find(s => s._id === r.staff_id)
+    const q = search.toLowerCase()
+    return !q || (staffMember?.name || '').toLowerCase().includes(q)
+  }), [rows, search, staff])
 
   const stats = useMemo(() => ({
     total: rows.length,
-    disabled: rows.filter((r) => r.status === 'disabled').length,
-    inactive: rows.filter((r) => r.status === 'inactive').length,
-    departments: new Set(rows.map((r) => r.department)).size,
   }), [rows])
-
-  const handleRestore = async (member) => {
-    await hrService.restoreStaff(member._id)
-    toast({ title: 'Staff restored', description: `${member.name} is now active.` })
-    refetch()
-  }
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    try {
-      await hrService.deleteStaff(deleteStaff._id)
-      toast({ title: 'Staff permanently deleted', description: deleteStaff.name })
-      setDeleteStaff(null)
-      refetch()
-    } finally {
-      setDeleting(false)
-    }
-  }
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'name',
+      accessorKey: 'staff_id',
       header: 'Staff Member',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewStaff(row.original)}>
-          {/* Avatar from initials — same pattern as StaffDirectoryPage */}
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
-            {initials(row.original.name)}
-          </div>
-          <div>
-            <p className="font-medium hover:underline">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground">{row.original.email}</p>
-          </div>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const staffMember = staff.find(s => s._id === row.original.staff_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+              {initials(staffMember?.name || 'Unknown')}
+            </div>
+            <div>
+              <p className="font-medium hover:underline">{staffMember?.name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground">{staffMember?.employee_id || '—'}</p>
+            </div>
+          </button>
+        )
+      },
     },
-    { accessorKey: 'employee_id', header: 'Employee ID' },
-    { accessorKey: 'department', header: 'Department' },
-    { accessorKey: 'designation', header: 'Designation' },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
-    },
-    { accessorKey: 'joining_date', header: 'Joined', cell: ({ row }) => formatDate(row.original.joining_date) },
-  ], [])
+    { accessorKey: 'reason', header: 'Reason', cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground line-clamp-1 max-w-[200px]">{row.original.reason || '—'}</span>
+    ) },
+    { accessorKey: 'date', header: 'Disabled Date', cell: ({ row }) => formatDate(row.original.date) },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [staff])
 
-  const rowActions = (member) => [
-    { label: 'View Details', icon: Eye, onClick: () => setViewStaff(member) },
-    { label: 'Restore', icon: RotateCcw, onClick: () => handleRestore(member) },
+  const rowActions = (r) => [
+    { label: 'View Details', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
     { separator: true },
-    { label: 'Delete Permanently', icon: Trash2, variant: 'destructive', onClick: () => setDeleteStaff(member) },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
+
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await hrService.updateDisabledStaff(id, payload)
+        toast({ title: 'Disabled staff record updated' })
+      } else {
+        await hrService.createDisabledStaff(payload)
+        toast({ title: 'Disabled staff record created' })
+      }
+      setEditRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to save disabled staff record:', error)
+      toast({ title: 'Failed to save disabled staff record', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await hrService.deleteDisabledStaff(id)
+      toast({ title: 'Disabled staff record deleted' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete disabled staff record:', error)
+      toast({ title: 'Failed to delete disabled staff record', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Human Resources' }, { label: 'Disabled Staff' }]} />
       <PageHeader
         title="Disabled Staff"
-        description="View and restore disabled or inactive staff members."
+        description="View and manage disabled staff records."
         icon={Ban}
+        actions={<Button onClick={() => setEditRow({})}><Plus className="mr-2 h-4 w-4" /> Add Disabled Staff</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <StatCard label="Total Disabled" value={stats.total} icon={Ban} accent="destructive" />
-        <StatCard label="Disabled" value={stats.disabled} icon={Power} accent="destructive" />
-        <StatCard label="Inactive" value={stats.inactive} icon={UserX} accent="warning" />
-        <StatCard label="Departments" value={stats.departments} icon={UserX} accent="chart2" />
+        <StatCard label="Total Active Staff" value={staff.length} icon={UserX} accent="chart2" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by name, email, or employee ID…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search staff name…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="disabled-staff" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="disabled">Disabled</option>
-            <option value="inactive">Inactive</option>
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={6} />
+        <LoadingSkeleton variant="table" rows={5} cols={4} />
       ) : filtered.length === 0 ? (
         <NoData
           title="No disabled staff"
-          description="All staff members are currently active."
+          description="Add disabled staff records to see them here."
+          actionLabel="Add Disabled Staff"
+          onAction={() => setEditRow({})}
           icon={Ban}
         />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          enableSelection
-          enableExport
-          exportFilename="disabled-staff"
-          bulkActions={[
-            {
-              label: 'Restore Selected',
-              icon: RotateCcw,
-              onClick: async (selected) => {
-                // Restore each selected staff in sequence
-                for (const m of selected) await hrService.restoreStaff(m._id)
-                toast({ title: `${selected.length} staff members restored` })
-                refetch()
-              },
-            },
-            {
-              label: 'Delete Selected',
-              icon: Trash2,
-              variant: 'destructive',
-              onClick: async (selected) => {
-                for (const m of selected) await hrService.deleteStaff(m._id)
-                toast({ title: `${selected.length} staff members deleted` })
-                refetch()
-              },
-            },
-          ]}
           rowActions={(member) => <ActionDropdown actions={rowActions(member)} />}
         />
       )}
 
       {/* View Staff Details Drawer */}
       <Drawer
-        open={!!viewStaff}
-        onOpenChange={(o) => !o && setViewStaff(null)}
-        title="Staff Details"
-        description={viewStaff ? `${viewStaff.employee_id} — ${viewStaff.designation}` : ''}
+        open={!!viewRow}
+        onOpenChange={(o) => !o && setViewRow(null)}
+        title="Disabled Staff Details"
         width="sm:max-w-xl"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setViewStaff(null)}>Close</Button>
-            <Button
-              onClick={() => {
-                handleRestore(viewStaff)
-                setViewStaff(null)
-              }}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" /> Restore
-            </Button>
-          </>
-        }
+        footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewStaff && (
-          <div className="space-y-6">
-            {/* Staff summary header */}
-            <div className="flex items-center gap-4 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-lg font-bold text-muted-foreground">
-                {initials(viewStaff.name)}
+        {viewRow && (() => {
+          const staffMember = staff.find(s => s._id === viewRow.staff_id)
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
+                  {initials(staffMember?.name || 'Unknown')}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{staffMember?.name || 'Unknown'}</h3>
+                  <p className="text-sm text-muted-foreground">Employee ID: {staffMember?.employee_id || '—'}</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-base font-semibold">{viewStaff.name}</p>
-                <p className="text-sm text-muted-foreground">{viewStaff.email}</p>
-                <p className="text-xs text-muted-foreground">{viewStaff.designation} · {viewStaff.department}</p>
-              </div>
-              <StatusBadge status={viewStaff.status} />
-            </div>
 
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-              {[
-                { label: 'Employee ID', value: viewStaff.employee_id },
-                { label: 'Phone', value: viewStaff.phone || '—' },
-                { label: 'Department', value: viewStaff.department },
-                { label: 'Designation', value: viewStaff.designation },
-                { label: 'Gender', value: viewStaff.gender ? viewStaff.gender.charAt(0).toUpperCase() + viewStaff.gender.slice(1) : '—' },
-                { label: 'Date of Birth', value: formatDate(viewStaff.dob) },
-                { label: 'Joining Date', value: formatDate(viewStaff.joining_date) },
-                { label: 'Qualification', value: viewStaff.qualification || '—' },
-                { label: 'Experience', value: viewStaff.experience || '—' },
-                { label: 'Blood Group', value: viewStaff.blood_group || '—' },
-                { label: 'School / Branch', value: viewStaff.school_name || '—' },
-                { label: 'Basic Salary', value: formatCurrency(viewStaff.salary) },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value}</dd>
-                </div>
-              ))}
-              {viewStaff.address && (
-                <div className="space-y-0.5 sm:col-span-2">
-                  <dt className="text-xs font-medium text-muted-foreground">Address</dt>
-                  <dd className="text-sm">{viewStaff.address}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        )}
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                {[
+                  { label: 'Reason', value: viewRow.reason || '—', className: 'sm:col-span-2' },
+                  { label: 'Disabled Date', value: formatDate(viewRow.date) },
+                  { label: 'Created', value: formatDate(viewRow.createdAt) },
+                  { label: 'Updated', value: formatDate(viewRow.updatedAt) },
+                ].map((f) => (
+                  <div key={f.label} className={`space-y-0.5 ${f.className || ''}`}>
+                    <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                    <dd className="text-sm font-medium">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteStaff}
-        onOpenChange={(o) => !o && setDeleteStaff(null)}
-        title="Permanently Delete Staff?"
-        description="This action is irreversible. All records for this staff member will be removed."
-        entityName={deleteStaff?.name}
-        onConfirm={handleDelete}
-        loading={deleting}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow?._id ? 'Edit Disabled Staff' : 'Add Disabled Staff'}</DialogTitle>
+            <DialogDescription>{editRow?._id ? 'Update disabled staff record' : 'Add a new disabled staff record'}</DialogDescription>
+          </DialogHeader>
+          <DisabledStaffForm 
+            initial={editRow} 
+            staff={staff} 
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => setEditRow(null)} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Disabled Staff Record</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this disabled staff record? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  )
+}
+
+// ─── DisabledStaffForm Component ───────────────────────────────────────────────────────
+function DisabledStaffForm({ initial, staff, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    staff_id: '',
+    reason: '',
+    date: new Date().toISOString().split('T')[0],
+  })
+
+  useEffect(() => {
+    if (initial) {
+      setFormData({
+        staff_id: initial.staff_id || '',
+        reason: initial.reason || '',
+        date: initial.date ? initial.date.split('T')[0] : new Date().toISOString().split('T')[0],
+      })
+    } else {
+      setFormData({
+        staff_id: staff[0]?._id || '',
+        reason: '',
+        date: new Date().toISOString().split('T')[0],
+      })
+    }
+  }, [initial, staff])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="staff_id">Staff Member *</Label>
+        <select
+          id="staff_id"
+          value={formData.staff_id}
+          onChange={(e) => setFormData({ ...formData, staff_id: e.target.value })}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select staff member</option>
+          {staff.map((s) => (
+            <option key={s._id} value={s._id}>{s.name} ({s.employee_id || 'No ID'})</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="date">Disabled Date *</Label>
+        <Input
+          id="date"
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="reason">Reason</Label>
+        <Textarea
+          id="reason"
+          value={formData.reason}
+          onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+          placeholder="Provide a reason for disabling this staff member"
+          rows={3}
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save Record</Button>
+      </DialogFooter>
+    </form>
   )
 }

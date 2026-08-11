@@ -33,6 +33,7 @@ import PageLoader from '@/components/loaders/PageLoader'
 
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const SignupPage = lazy(() => import('@/pages/auth/SignupPage'))
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'))
 const SchoolsPage = lazy(() => import('@/pages/schools/SchoolsPage'))
 const CollegesPage = lazy(() => import('@/pages/colleges/CollegesPage'))
@@ -60,7 +61,6 @@ const ExamResultsPage = lazy(() => import('@/pages/examinations/ExamResultsPage'
 const DesignAdmitCardPage = lazy(() => import('@/pages/examinations/DesignAdmitCardPage'))
 const PrintAdmitCardPage = lazy(() => import('@/pages/examinations/PrintAdmitCardPage'))
 const DesignMarksheetPage = lazy(() => import('@/pages/examinations/DesignMarksheetPage'))
-const ConsolidatedMarksheetPage = lazy(() => import('@/pages/examinations/ConsolidatedMarksheetPage'))
 const PrintMarksheetPage = lazy(() => import('@/pages/examinations/PrintMarksheetPage'))
 const MarksGradePage = lazy(() => import('@/pages/examinations/MarksGradePage'))
 const MarksDivisionPage = lazy(() => import('@/pages/examinations/MarksDivisionPage'))
@@ -73,7 +73,7 @@ const CollectFeesPage = lazy(() => import('@/pages/fees/CollectFees'))
 const SearchFeesPaymentPage = lazy(() => import('@/pages/fees/SearchFeesPayment'))
 const SearchDueFeesPage = lazy(() => import('@/pages/fees/SearchDueFees'))
 const OfflineBankPaymentPage = lazy(() => import('@/pages/fees/OfflineBankPayment'))
-const FeesReportPage = lazy(() => import('@/pages/fees/FeesReport'))
+const FeesReminderPage = lazy(() => import('@/pages/fees/FeesReminder'))
 const FeesMasterPage = lazy(() => import('@/pages/fees/FeesMaster'))
 const FeesGroupPage = lazy(() => import('@/pages/fees/FeesGroup'))
 const FeesTypePage = lazy(() => import('@/pages/fees/FeesType'))
@@ -121,25 +121,22 @@ const BookListPage = lazy(() => import('@/pages/library/BookListPage'))
 const IssueReturnPage = lazy(() => import('@/pages/library/IssueReturnPage'))
 const AddBookPage = lazy(() => import('@/pages/library/AddBookPage'))
 const AddStaffMemberPage = lazy(() => import('@/pages/library/AddStaffMemberPage'))
+const LibraryStudentPage = lazy(() => import('@/pages/library/LibraryStudentPage'))
 
 // Transport module — lazy-loaded so the bundle only downloads when a user visits Transport pages
-const TransportDashboardPage = lazy(() => import('@/pages/transport/TransportDashboardPage'))
+
 const RoutesPage = lazy(() => import('@/pages/transport/RoutesPage'))
 const VehiclesPage = lazy(() => import('@/pages/transport/VehiclesPage'))
 const PickupPointsPage = lazy(() => import('@/pages/transport/PickupPointsPage'))
 const AssignVehiclePage = lazy(() => import('@/pages/transport/AssignVehiclePage'))
 const AssignPickupPointPage = lazy(() => import('@/pages/transport/AssignPickupPointPage'))
 const StudentTransportFeesPage = lazy(() => import('@/pages/transport/StudentTransportFeesPage'))
-const TransportReportsPage = lazy(() => import('@/pages/transport/TransportReportsPage'))
+const TransportFeesPage = lazy(() => import('@/pages/transport/TransportFeesPage'))
 
 // Hostel module — lazy-loaded so the bundle only downloads when a user visits Hostel pages
-const HostelDashboardPage = lazy(() => import('@/pages/hostel/HostelDashboardPage'))
+const HostelListPage = lazy(() => import('@/pages/hostel/HostelListPage'))
 const HostelRoomsPage = lazy(() => import('@/pages/hostel/HostelRoomsPage'))
 const RoomTypesPage = lazy(() => import('@/pages/hostel/RoomTypesPage'))
-const RoomAllocationPage = lazy(() => import('@/pages/hostel/RoomAllocationPage'))
-const StudentHostelListPage = lazy(() => import('@/pages/hostel/StudentHostelListPage'))
-const HostelFeesPage = lazy(() => import('@/pages/hostel/HostelFeesPage'))
-const HostelReportsPage = lazy(() => import('@/pages/hostel/HostelReportsPage'))
 
 // Income module — lazy-loaded so the bundle only downloads when a user visits Income pages
 const IncomeHeadPage = lazy(() => import('@/pages/income/IncomeHeadPage'))
@@ -156,10 +153,9 @@ const AddHomeworkPage = lazy(() => import('@/pages/homework/AddHomeworkPage'))
 const DailyAssignmentPage = lazy(() => import('@/pages/homework/DailyAssignmentPage'))
 
 // Lesson Plan module — lazy-loaded so the bundle only downloads when a user visits Lesson Plan pages
-const ManageLessonPlanPage = lazy(() => import('@/pages/lesson-plan/ManageLessonPlanPage'))
-const CopyOldLessonPage = lazy(() => import('@/pages/lesson-plan/CopyOldLessonPage'))
 const LessonPage = lazy(() => import('@/pages/lesson-plan/LessonPage'))
 const TopicPage = lazy(() => import('@/pages/lesson-plan/TopicPage'))
+const ManageLessonPlanPage = lazy(() => import('@/pages/lesson-plan/ManageLessonPlanPage'))
 
 // Alumni module — lazy-loaded so the bundle only downloads when a user visits Alumni pages
 const ManageAlumniPage = lazy(() => import('@/pages/alumni/ManageAlumniPage'))
@@ -172,27 +168,18 @@ const UploadShareContentPage = lazy(() => import('@/pages/download-center/Upload
 const VideoTutorialsPage = lazy(() => import('@/pages/download-center/VideoTutorialsPage'))
 
 // Inventory module — lazy-loaded so the bundle only downloads when a user visits Inventory pages
-const InventoryDashboardPage = lazy(() => import('@/pages/inventory/InventoryDashboardPage'))
 const ItemCategoryPage = lazy(() => import('@/pages/inventory/ItemCategoryPage'))
 const ItemStorePage = lazy(() => import('@/pages/inventory/ItemStorePage'))
 const ItemSupplierPage = lazy(() => import('@/pages/inventory/ItemSupplierPage'))
-const AddItemPage = lazy(() => import('@/pages/inventory/AddItemPage'))
+const ItemsPage = lazy(() => import('@/pages/inventory/ItemsPage'))
 const ItemStockPage = lazy(() => import('@/pages/inventory/ItemStockPage'))
 const IssueItemPage = lazy(() => import('@/pages/inventory/IssueItemPage'))
 
 // Online Exam module — lazy-loaded so the bundle only downloads when a user visits Online Exam pages
 const OnlineExamsPage = lazy(() => import('@/pages/online-exam/OnlineExamsPage'))
 const QuestionBankPage = lazy(() => import('@/pages/online-exam/QuestionBankPage'))
-const AddQuestionPage = lazy(() => import('@/pages/online-exam/AddQuestionPage'))
-const ExamCategoriesPage = lazy(() => import('@/pages/online-exam/CategoriesPage'))
-const OnlineExamSchedulePage = lazy(() => import('@/pages/online-exam/ExamSchedulePage'))
-const AssignQuestionsPage = lazy(() => import('@/pages/online-exam/AssignQuestionsPage'))
-const StudentAttemptsPage = lazy(() => import('@/pages/online-exam/StudentAttemptsPage'))
-const ExamResultsOnlinePage = lazy(() => import('@/pages/online-exam/ResultsPage'))
-const ExamReportsPage = lazy(() => import('@/pages/online-exam/ReportsPage'))
 
 // Certificate module — lazy-loaded so the bundle only downloads when a user visits Certificate pages
-const CertificateDashboardPage = lazy(() => import('@/pages/certificate/CertificateDashboardPage'))
 const StudentCertificatePage = lazy(() => import('@/pages/certificate/StudentCertificatePage'))
 const GenerateCertificatePage = lazy(() => import('@/pages/certificate/GenerateCertificatePage'))
 const StudentIdCardPage = lazy(() => import('@/pages/certificate/StudentIdCardPage'))
@@ -201,7 +188,6 @@ const StaffIdCardPage = lazy(() => import('@/pages/certificate/StaffIdCardPage')
 const GenerateStaffIdCardPage = lazy(() => import('@/pages/certificate/GenerateStaffIdCardPage'))
 
 // Front CMS module — lazy-loaded so the bundle only downloads when a user visits Front CMS pages
-const FrontCmsDashboardPage = lazy(() => import('@/pages/front-cms/FrontCmsDashboardPage'))
 const BannerPage = lazy(() => import('@/pages/front-cms/BannerPage'))
 const NewsPage = lazy(() => import('@/pages/front-cms/NewsPage'))
 const EventPage = lazy(() => import('@/pages/front-cms/EventPage'))
@@ -247,6 +233,16 @@ export default function AppRouter() {
           >
             <Route index element={<LoginPage />} />
           </Route>
+          <Route
+            path="/signup"
+            element={
+              <PublicRoute>
+                <AuthLayout />
+              </PublicRoute>
+            }
+          >
+            <Route index element={<SignupPage />} />
+          </Route>
 
           {/* Protected */}
           <Route
@@ -258,11 +254,17 @@ export default function AppRouter() {
           >
           {/* ── Core modules ── */}
             <Route path="/dashboard" element={<DashboardPage />} />
+            {/* Role-specific dashboard routes (post-login redirect targets) */}
+            <Route path="/admin/dashboard" element={<DashboardPage />} />
+            <Route path="/staff/dashboard" element={<DashboardPage />} />
+            <Route path="/student/dashboard" element={<DashboardPage />} />
+            <Route path="/parent/dashboard" element={<DashboardPage />} />
             <Route path="/schools" element={<SchoolsPage />} />
             <Route path="/colleges" element={<CollegesPage />} />
             <Route path="/domains" element={<DomainsPage />} />
             <Route path="/students" element={<StudentsPage />} />
-            <Route path="/students/profile" element={<StudentProfilePage />} />
+            <Route path="/students/profile" element={<Navigate to="/students" replace />} />
+            <Route path="/students/profile/:id" element={<StudentProfilePage />} />
             <Route path="/students/admissions" element={<AdmissionsPage />} />
             <Route path="/students/categories" element={<StudentCategoriesPage />} />
             <Route path="/students/houses" element={<StudentHousesPage />} />
@@ -303,7 +305,6 @@ export default function AppRouter() {
             <Route path="/examinations/design-admit-card" element={<DesignAdmitCardPage />} />
             <Route path="/examinations/print-admit-card" element={<PrintAdmitCardPage />} />
             <Route path="/examinations/design-marksheet" element={<DesignMarksheetPage />} />
-            <Route path="/examinations/consolidated-marksheet" element={<ConsolidatedMarksheetPage />} />
             <Route path="/examinations/print-marksheet" element={<PrintMarksheetPage />} />
             <Route path="/examinations/marks-grade" element={<MarksGradePage />} />
             <Route path="/examinations/marks-division" element={<MarksDivisionPage />} />
@@ -312,7 +313,7 @@ export default function AppRouter() {
             <Route path="/fees/search-payment" element={<SearchFeesPaymentPage />} />
             <Route path="/fees/search-due" element={<SearchDueFeesPage />} />
             <Route path="/fees/offline-payment" element={<OfflineBankPaymentPage />} />
-            <Route path="/fees/report" element={<FeesReportPage />} />
+            <Route path="/fees/reminder" element={<FeesReminderPage />} />
             <Route path="/fees/master" element={<FeesMasterPage />} />
             <Route path="/fees/group" element={<FeesGroupPage />} />
             <Route path="/fees/type" element={<FeesTypePage />} />
@@ -350,25 +351,21 @@ export default function AppRouter() {
             <Route path="/library/issue-return" element={<IssueReturnPage />} />
             <Route path="/library/add-book" element={<AddBookPage />} />
             <Route path="/library/staff" element={<AddStaffMemberPage />} />
+            <Route path="/library/students" element={<LibraryStudentPage />} />
 
             {/* ── Transport ── */}
-            <Route path="/transport" element={<TransportDashboardPage />} />
             <Route path="/transport/routes" element={<RoutesPage />} />
             <Route path="/transport/vehicles" element={<VehiclesPage />} />
             <Route path="/transport/pickup-points" element={<PickupPointsPage />} />
             <Route path="/transport/assign-vehicle" element={<AssignVehiclePage />} />
             <Route path="/transport/assign-pickup-point" element={<AssignPickupPointPage />} />
-            <Route path="/transport/fees" element={<StudentTransportFeesPage />} />
-            <Route path="/transport/reports" element={<TransportReportsPage />} />
+            <Route path="/transport/fees" element={<TransportFeesPage />} />
+            <Route path="/transport/student-fees" element={<StudentTransportFeesPage />} />
 
             {/* ── Hostel ── */}
-            <Route path="/hostel" element={<HostelDashboardPage />} />
-            <Route path="/hostel/rooms" element={<HostelRoomsPage />} />
+            <Route path="/hostel/hostels" element={<HostelListPage />} />
             <Route path="/hostel/room-types" element={<RoomTypesPage />} />
-            <Route path="/hostel/allocation" element={<RoomAllocationPage />} />
-            <Route path="/hostel/students" element={<StudentHostelListPage />} />
-            <Route path="/hostel/fees" element={<HostelFeesPage />} />
-            <Route path="/hostel/reports" element={<HostelReportsPage />} />
+            <Route path="/hostel/rooms" element={<HostelRoomsPage />} />
 
             {/* ── Income ── */}
             <Route path="/income/head" element={<IncomeHeadPage />} />
@@ -385,10 +382,9 @@ export default function AppRouter() {
             <Route path="/homework/daily-assignment" element={<DailyAssignmentPage />} />
 
             {/* ── Lesson Plan ── */}
-            <Route path="/lesson-plan/manage" element={<ManageLessonPlanPage />} />
-            <Route path="/lesson-plan/copy" element={<CopyOldLessonPage />} />
-            <Route path="/lesson-plan/lesson" element={<LessonPage />} />
-            <Route path="/lesson-plan/topic" element={<TopicPage />} />
+            <Route path="/lesson-plan/lessons" element={<LessonPage />} />
+            <Route path="/lesson-plan/topics" element={<TopicPage />} />
+            <Route path="/lesson-plan/lesson-plans" element={<ManageLessonPlanPage />} />
 
             {/* ── Alumni ── */}
             <Route path="/alumni" element={<ManageAlumniPage />} />
@@ -401,27 +397,18 @@ export default function AppRouter() {
             <Route path="/download-center/video-tutorials" element={<VideoTutorialsPage />} />
 
             {/* ── Inventory ── */}
-            <Route path="/inventory" element={<InventoryDashboardPage />} />
             <Route path="/inventory/categories" element={<ItemCategoryPage />} />
             <Route path="/inventory/stores" element={<ItemStorePage />} />
             <Route path="/inventory/suppliers" element={<ItemSupplierPage />} />
-            <Route path="/inventory/add-item" element={<AddItemPage />} />
+            <Route path="/inventory/items" element={<ItemsPage />} />
             <Route path="/inventory/stock" element={<ItemStockPage />} />
             <Route path="/inventory/issue" element={<IssueItemPage />} />
 
             {/* ── Online Exam ── */}
             <Route path="/online-exam" element={<OnlineExamsPage />} />
             <Route path="/online-exam/question-bank" element={<QuestionBankPage />} />
-            <Route path="/online-exam/add-question" element={<AddQuestionPage />} />
-            <Route path="/online-exam/categories" element={<ExamCategoriesPage />} />
-            <Route path="/online-exam/schedule" element={<OnlineExamSchedulePage />} />
-            <Route path="/online-exam/assign-questions" element={<AssignQuestionsPage />} />
-            <Route path="/online-exam/attempts" element={<StudentAttemptsPage />} />
-            <Route path="/online-exam/results" element={<ExamResultsOnlinePage />} />
-            <Route path="/online-exam/reports" element={<ExamReportsPage />} />
 
             {/* ── Certificate ── */}
-            <Route path="/certificate" element={<CertificateDashboardPage />} />
             <Route path="/certificate/student" element={<StudentCertificatePage />} />
             <Route path="/certificate/generate" element={<GenerateCertificatePage />} />
             <Route path="/certificate/student-id-card" element={<StudentIdCardPage />} />
@@ -430,7 +417,6 @@ export default function AppRouter() {
             <Route path="/certificate/generate-staff-id-card" element={<GenerateStaffIdCardPage />} />
 
             {/* ── Front CMS ── */}
-            <Route path="/front-cms" element={<FrontCmsDashboardPage />} />
             <Route path="/front-cms/banners" element={<BannerPage />} />
             <Route path="/front-cms/news" element={<NewsPage />} />
             <Route path="/front-cms/events" element={<EventPage />} />
@@ -461,6 +447,7 @@ export default function AppRouter() {
           {/* Errors */}
           {/* ── Error / fallback routes ── */}
           <Route path="/403" element={<ForbiddenPage />} />
+          <Route path="/unauthorized" element={<ForbiddenPage />} />
           <Route path="/404" element={<NotFoundPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<NotFoundPage />} />

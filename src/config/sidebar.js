@@ -41,7 +41,6 @@ export const sidebarItems = [
     icon: Users,
     children: [
       { title: 'Student List', path: '/students' },
-      { title: 'Student Profile', path: '/students/profile' },
       { title: 'Student Admission', path: '/students/admissions' },
       { title: 'Student Categories', path: '/students/categories' },
       { title: 'Student House', path: '/students/houses' },
@@ -100,7 +99,6 @@ export const sidebarItems = [
       { title: 'Design Admit Card', path: '/examinations/design-admit-card' },
       { title: 'Print Admit Card', path: '/examinations/print-admit-card' },
       { title: 'Design Marksheet', path: '/examinations/design-marksheet' },
-      { title: 'Consolidated Marksheet', path: '/examinations/consolidated-marksheet' },
       { title: 'Print Marksheet', path: '/examinations/print-marksheet' },
       { title: 'Marks Grade', path: '/examinations/marks-grade' },
       { title: 'Marks Division', path: '/examinations/marks-division' },
@@ -115,7 +113,7 @@ export const sidebarItems = [
       { title: 'Search Fees Payment', path: '/fees/search-payment' },
       { title: 'Search Due Fees', path: '/fees/search-due' },
       { title: 'Offline Bank Payment', path: '/fees/offline-payment' },
-      { title: 'Fees Report', path: '/fees/report' },
+      { title: 'Fee Reminder', path: '/fees/reminder' },
       { title: 'Fees Master', path: '/fees/master' },
       { title: 'Fees Group', path: '/fees/group' },
       { title: 'Fees Type', path: '/fees/type' },
@@ -163,6 +161,7 @@ export const sidebarItems = [
       { title: 'Issue / Return', path: '/library/issue-return' },
       { title: 'Add Book', path: '/library/add-book' },
       { title: 'Library Staff', path: '/library/staff' },
+      { title: 'Library Students', path: '/library/students' },
     ],
   },
   {
@@ -170,14 +169,13 @@ export const sidebarItems = [
     title: 'Transport',
     icon: Bus,
     children: [
-      { title: 'Dashboard', path: '/transport' },
       { title: 'Routes', path: '/transport/routes' },
       { title: 'Vehicles', path: '/transport/vehicles' },
       { title: 'Pickup Points', path: '/transport/pickup-points' },
       { title: 'Assign Vehicle', path: '/transport/assign-vehicle' },
       { title: 'Assign Pickup Point', path: '/transport/assign-pickup-point' },
       { title: 'Transport Fees', path: '/transport/fees' },
-      { title: 'Reports', path: '/transport/reports' },
+      { title: 'Student Transport Fees', path: '/transport/student-fees' },
     ],
   },
   {
@@ -185,13 +183,9 @@ export const sidebarItems = [
     title: 'Hostel',
     icon: BedDouble,
     children: [
-      { title: 'Dashboard', path: '/hostel' },
-      { title: 'Hostel Rooms', path: '/hostel/rooms' },
+      { title: 'Hostels', path: '/hostel/hostels' },
       { title: 'Room Types', path: '/hostel/room-types' },
-      { title: 'Room Allocation', path: '/hostel/allocation' },
-      { title: 'Student Hostel List', path: '/hostel/students' },
-      { title: 'Hostel Fees', path: '/hostel/fees' },
-      { title: 'Reports', path: '/hostel/reports' },
+      { title: 'Hostel Rooms', path: '/hostel/rooms' },
     ],
   },
   {
@@ -228,10 +222,9 @@ export const sidebarItems = [
     title: 'Lesson Plan',
     icon: BookOpen,
     children: [
-      { title: 'Manage Lesson Plan', path: '/lesson-plan/manage' },
-      { title: 'Copy Old Lesson', path: '/lesson-plan/copy' },
-      { title: 'Lesson', path: '/lesson-plan/lesson' },
-      { title: 'Topic', path: '/lesson-plan/topic' },
+      { title: 'Lessons', path: '/lesson-plan/lessons' },
+      { title: 'Topics', path: '/lesson-plan/topics' },
+      { title: 'Lesson Plans', path: '/lesson-plan/lesson-plans' },
     ],
   },
   {
@@ -259,11 +252,10 @@ export const sidebarItems = [
     title: 'Inventory',
     icon: Package,
     children: [
-      { title: 'Dashboard', path: '/inventory' },
       { title: 'Item Category', path: '/inventory/categories' },
       { title: 'Item Store', path: '/inventory/stores' },
       { title: 'Item Supplier', path: '/inventory/suppliers' },
-      { title: 'Add Item', path: '/inventory/add-item' },
+      { title: 'Items', path: '/inventory/items' },
       { title: 'Item Stock', path: '/inventory/stock' },
       { title: 'Issue Item', path: '/inventory/issue' },
     ],
@@ -275,13 +267,6 @@ export const sidebarItems = [
     children: [
       { title: 'Online Exams', path: '/online-exam' },
       { title: 'Question Bank', path: '/online-exam/question-bank' },
-      { title: 'Add Question', path: '/online-exam/add-question' },
-      { title: 'Categories', path: '/online-exam/categories' },
-      { title: 'Exam Schedule', path: '/online-exam/schedule' },
-      { title: 'Assign Questions', path: '/online-exam/assign-questions' },
-      { title: 'Student Attempts', path: '/online-exam/attempts' },
-      { title: 'Results', path: '/online-exam/results' },
-      { title: 'Reports', path: '/online-exam/reports' },
     ],
   },
   {
@@ -289,7 +274,6 @@ export const sidebarItems = [
     title: 'Certificate',
     icon: Award,
     children: [
-      { title: 'Dashboard', path: '/certificate' },
       { title: 'Student Certificate', path: '/certificate/student' },
       { title: 'Generate Certificate', path: '/certificate/generate' },
       { title: 'Student ID Card', path: '/certificate/student-id-card' },
@@ -303,7 +287,6 @@ export const sidebarItems = [
     title: 'Front CMS',
     icon: LayoutTemplate,
     children: [
-      { title: 'Dashboard', path: '/front-cms' },
       { title: 'Banners', path: '/front-cms/banners' },
       { title: 'News', path: '/front-cms/news' },
       { title: 'Events', path: '/front-cms/events' },

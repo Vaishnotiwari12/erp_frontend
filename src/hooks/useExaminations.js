@@ -38,7 +38,7 @@ export function useExamGroups() {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase())
+        const matchSearch = !search || r.exam_name.toLowerCase().includes(search.toLowerCase())
         const matchSession = session === 'all' || r.session === session
         const matchStatus = status === 'all' || r.status === status
         return matchSearch && matchSession && matchStatus
@@ -60,10 +60,10 @@ export function useExamGroups() {
     async (payload, id) => {
       if (id) {
         await examinationService.updateExamGroup(id, payload)
-        toast({ title: 'Exam group updated', description: payload.name })
+        toast({ title: 'Exam group updated', description: payload.exam_name })
       } else {
         await examinationService.createExamGroup(payload)
-        toast({ title: 'Exam group added', description: payload.name })
+        toast({ title: 'Exam group added', description: payload.exam_name })
       }
       refetch()
     },
@@ -108,7 +108,7 @@ export function useExamGroups() {
 // Manages exam schedule list, filtering, stats, and CRUD operations.
 export function useExamSchedule() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => examinationService.getExamSchedule(), [])
+  const { data, isLoading, refetch } = useAsyncData(() => examinationService.getExamSchedules(), [])
 
   const [search, setSearch] = useState('')
   const [examGroup, setExamGroup] = useState('all')
@@ -177,60 +177,156 @@ export function useExamSchedule() {
 // Manages exam results list, filtering, stats, and CRUD operations.
 export function useExamResults() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => examinationService.getExamResults(), [])
+
+  const { data, isLoading, refetch } = useAsyncData(
+    () => examinationService.getExamResults(),
+    []
+  )
 
   const [search, setSearch] = useState('')
-  const [exam, setExam] = useState('all')
-  const [classFilter, setClassFilter] = useState('all')
-  const [section, setSection] = useState('all')
 
-  const rows = data || []
+  const rows = useMemo(() => {
+    if (Array.isArray(data?.data)) return data.data
+    if (Array.isArray(data)) return data
+    return []
+  }, [data])
 
-  // useMemo prevents recalculating filtered results
-  // unless list or filters change.
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const matchSearch = !search || r.student.toLowerCase().includes(search.toLowerCase()) || r.admission_no.toLowerCase().includes(search.toLowerCase())
-        const matchExam = exam === 'all' || r.exam === exam
-        const matchClass = classFilter === 'all' || r.class === classFilter
-        const matchSection = section === 'all' || r.section === section
-        return matchSearch && matchExam && matchClass && matchSection
-      }),
-    [rows, search, exam, classFilter, section],
-  )
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
 
-  const stats = useMemo(
-    () => ({
-      total: rows.length,
-      avg: rows.length ? (rows.reduce((a, r) => a + r.percentage, 0) / rows.length).toFixed(1) : 0,
-      topRank: rows.length ? Math.min(...rows.map((r) => r.rank)) : 0,
-      distinctions: rows.filter((r) => r.grade === 'A+').length,
-    }),
-    [rows],
-  )
+    if (!q) return rows
+
+    return rows.filter((r) => {
+      const studentId = String(
+        r.student_id?._id || r.student_id || ''
+      )
+
+      const rollNo = String(
+        r.student_id?.roll_number || ''
+      )
+
+      const studentName = String(
+        typeof r.student_id?.name === 'object'
+          ? `${r.student_id.name.first || ''} ${r.student_id.name.last || ''}` 
+          : r.student_id?.name || ''
+      )
+
+      const examName = String(
+        r.exam_group_id?.exam_name ||
+        r.exam_group_id?.name ||
+        ''
+      )
+
+      const subjectName = String(
+        r.subject_id?.subject_name ||
+        r.subject_id?.name ||
+        ''
+      )
+
+      return [
+        studentId,
+        rollNo,
+        studentName,
+        examName,
+        subjectName,
+      ].some((value) =>
+        value.toLowerCase().includes(q)
+      )
+    })
+  }, [rows, search])
+
+  const stats = useMemo(() => {
+    const total = rows.length
+
+    if (!total) {
+      return {
+        total: 0,
+        avgPct: '0.00',
+        maxMarks: 0,
+        totalSubjects: 0,
+      }
+    }
+
+    const percentages = rows.map((r) => {
+      const obtained = Number(r.marks_obtained) || 0
+      const totalMarks = Number(r.total_marks) || 0
+
+      return totalMarks > 0
+        ? (obtained / totalMarks) * 100
+        : 0
+    })
+
+    const avgPct =
+      percentages.reduce((sum, value) => sum + value, 0) / total
+
+    const maxMarks = Math.max(
+      ...rows.map((r) => Number(r.marks_obtained) || 0)
+    )
+
+    const totalSubjects = new Set(
+      rows
+        .map((r) =>
+          typeof r.subject_id === 'object'
+            ? r.subject_id?._id || r.subject_id?.id
+            : r.subject_id
+        )
+        .filter(Boolean)
+    ).size
+
+    return {
+      total,
+      avgPct: avgPct.toFixed(2),
+      maxMarks,
+      totalSubjects,
+    }
+  }, [rows])
 
   const saveResult = useCallback(
     async (payload, id) => {
-      if (id) {
-        await examinationService.updateResult(id, payload)
-        toast({ title: 'Result updated', description: payload.student })
-      } else {
-        await examinationService.createResult(payload)
-        toast({ title: 'Result added', description: payload.student })
+      try {
+        if (id) {
+          await examinationService.updateResult(id, payload)
+          toast({ title: 'Result updated successfully' })
+        } else {
+          await examinationService.createResult(payload)
+          toast({ title: 'Result added successfully' })
+        }
+
+        await refetch()
+      } catch (error) {
+        console.error('Failed to save exam result:', error)
+        toast({
+          title: 'Failed to save result',
+          variant: 'destructive',
+        })
+        throw error
       }
-      refetch()
     },
-    [refetch, toast],
+    [refetch, toast]
   )
 
   const deleteResult = useCallback(
     async (id) => {
-      await examinationService.removeResult(id)
-      toast({ title: 'Result deleted' })
-      refetch()
+      try {
+        await examinationService.removeResult(id)
+
+        toast({
+          title: 'Result deleted successfully',
+        })
+
+        await refetch()
+      } catch (error) {
+        console.error('Failed to delete exam result:', error)
+
+        toast({
+          title: 'Failed to delete result',
+          variant: 'destructive',
+        })
+
+        throw error
+      }
     },
-    [refetch, toast],
+    [refetch, toast]
   )
 
   return {
@@ -238,12 +334,11 @@ export function useExamResults() {
     allResults: rows,
     stats,
     isLoading,
-    search, setSearch,
-    exam, setExam,
-    classFilter, setClassFilter,
-    section, setSection,
+    search,
+    setSearch,
     saveResult,
     deleteResult,
+    refetch,
   }
 }
 
@@ -377,7 +472,7 @@ export function useAdmitCards() {
 
   const updateTemplate = useCallback(
     async (payload) => {
-      await examinationService.updateAdmitCardTemplate(payload)
+      await examinationService.updateAdmitCardTemplate(payload._id || payload.id, payload)
       toast({ title: 'Admit card template updated' })
       refetch()
     },
@@ -421,7 +516,7 @@ export function useMarksheets() {
 
   const updateTemplate = useCallback(
     async (payload) => {
-      await examinationService.updateMarksheetTemplate(payload)
+      await examinationService.updateMarksheetTemplate(payload._id || payload.id, payload)
       toast({ title: 'Marksheet template updated' })
       refetch()
     },
@@ -436,35 +531,5 @@ export function useMarksheets() {
     examGroup, setExamGroup,
     classFilter, setClassFilter,
     updateTemplate,
-  }
-}
-
-// ─── useConsolidatedMarksheets ───────────────────────────────────────────────────
-// Manages consolidated marksheets list and filtering.
-export function useConsolidatedMarksheets() {
-  const { data, isLoading } = useAsyncData(() => examinationService.getConsolidatedMarksheets(), [])
-
-  const [search, setSearch] = useState('')
-  const [session, setSession] = useState('all')
-
-  const rows = data || []
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const q = search.toLowerCase()
-        const matchSearch = !q || r.student_name.toLowerCase().includes(q) || r.admission_no.toLowerCase().includes(q)
-        const matchSession = session === 'all' || r.session === session
-        return matchSearch && matchSession
-      }),
-    [rows, search, session],
-  )
-
-  return {
-    rows: filtered,
-    allConsolidated: rows,
-    isLoading,
-    search, setSearch,
-    session, setSession,
   }
 }

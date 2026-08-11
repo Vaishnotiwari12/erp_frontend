@@ -13,8 +13,8 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { Plus, BookOpen, Pencil, Trash2, Eye, Layers, CircleCheck as CheckCircle2 } from 'lucide-react'
+import { useMemo, useState, useEffect } from "react"
+import { Plus, BookOpen, Pencil, Trash2, Eye, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,7 +23,6 @@ import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
 import { FilterBar } from '@/components/FilterBar'
 import { StatCard } from '@/components/StatCard'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
@@ -38,10 +37,14 @@ import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
-  { key: 'name', label: 'Class' },
-  { key: 'numeric', label: 'Numeric' },
-  { key: 'sections_count', label: 'Sections' },
-  { key: 'status', label: 'Status' },
+  {
+    key: "class_name",
+    label: "Class Name",
+  },
+  {
+    key: "createdAt",
+    label: "Created",
+  },
 ]
 
 export default function ClassesPage() {
@@ -54,38 +57,53 @@ export default function ClassesPage() {
     status, setStatus,
     saveClass,
     deleteClass,
-    bulkDelete,
   } = useClasses()
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const columns = useMemo(() => [
-    {
-      accessorKey: 'name',
-      header: 'Class',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <BookOpen className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="font-medium hover:underline">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground">Grade {row.original.numeric}</p>
-          </div>
-        </button>
-      ),
-    },
-    { accessorKey: 'numeric', header: 'Numeric Value' },
-    {
-      accessorKey: 'sections_count',
-      header: 'Sections',
-      cell: ({ row }) => <span className="font-medium">{row.original.sections_count}</span>,
-    },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
-  ], [])
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "class_name",
+        header: "Class Name",
+
+        cell: ({ row }) => (
+          <button
+            onClick={() => setViewRow(row.original)}
+            className="flex items-center gap-3 text-left"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+
+            <div>
+              <p className="font-medium">
+                {row.original.class_name?.startsWith("Class")
+                  ? row.original.class_name
+                  : `Class ${row.original.class_name}`}
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                Academic Class
+              </p>
+            </div>
+          </button>
+        ),
+      },
+
+      {
+        accessorKey: "createdAt",
+
+        header: "Created",
+
+        cell: ({ row }) =>
+          formatDate(row.original.createdAt),
+      },
+    ],
+    []
+  )
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
@@ -109,11 +127,19 @@ export default function ClassesPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Classes" value={stats.total} icon={BookOpen} accent="primary" />
-        <StatCard label="Active" value={stats.active} icon={CheckCircle2} accent="success" />
-        <StatCard label="Total Sections" value={stats.sections} icon={Layers} accent="chart2" />
-        <StatCard label="Inactive" value={stats.inactive} icon={BookOpen} accent="warning" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard
+          label="Total Classes"
+          value={stats.total}
+          icon={BookOpen}
+          accent="primary"
+        />
+        <StatCard
+          label="Showing"
+          value={filtered.length}
+          icon={Layers}
+          accent="success"
+        />
       </div>
 
       <FilterBar>
@@ -143,16 +169,23 @@ export default function ClassesPage() {
       <ClassDrawer open={addOpen} onOpenChange={setAddOpen} title="Add Class" onSubmit={async (p) => { await saveClass(p); setAddOpen(false) }} />
       <ClassDrawer open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Class" initial={editRow} onSubmit={async (p) => { await saveClass(p, editRow._id); setEditRow(null) }} />
 
-      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Class Details" description={viewRow?.name} width="sm:max-w-md"
+      <Drawer open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)} title="Class Details" description={viewRow?.class_name} width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}>
         {viewRow ? (
           <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {[
-              { label: 'Class Name', value: viewRow.name },
-              { label: 'Numeric Value', value: viewRow.numeric },
-              { label: 'Sections Count', value: viewRow.sections_count },
-              { label: 'Status', value: <StatusBadge status={viewRow.status} /> },
-              { label: 'Created', value: formatDate(viewRow.createdAt) },
+              {
+                label: "Class Name",
+                value: viewRow.class_name,
+              },
+              {
+                label: "Created",
+                value: formatDate(viewRow.createdAt),
+              },
+              {
+                label: "Updated",
+                value: formatDate(viewRow.updatedAt),
+              },
             ].map((r) => (
               <div key={r.label} className="space-y-0.5">
                 <dt className="text-xs font-medium text-muted-foreground">{r.label}</dt>
@@ -163,8 +196,8 @@ export default function ClassesPage() {
         ) : null}
       </Drawer>
 
-      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.name}
-        onConfirm={() => { deleteClass(deleteRow._id); setDeleteRow(null) }} />
+      <DeleteDialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)} entityName={deleteRow?.class_name}
+        onConfirm={() => { deleteClass(deleteRow._id || deleteRow.id); setDeleteRow(null) }} />
     </div>
   )
 }
@@ -180,40 +213,72 @@ function FilterSelect({ value, onChange }) {
   )
 }
 
-function ClassDrawer({ open, onOpenChange, title, initial, onSubmit }) {
+function ClassDrawer({
+  open,
+  onOpenChange,
+  title,
+  initial,
+  onSubmit,
+}) {
   const [form, setForm] = useState({
-    name: initial?.name || '',
-    numeric: initial?.numeric || '',
-    sections_count: initial?.sections_count || 0,
-    status: initial?.status || 'active',
+    class_name: "",
   })
+
+  useEffect(() => {
+    setForm({
+      class_name: initial?.class_name || "",
+    })
+  }, [initial])
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} title={title} description="Class details" width="sm:max-w-md"
-      footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel={initial ? 'Save' : 'Create'} onSubmit={() => onSubmit(form)} />}>
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description="Enter class information"
+      width="sm:max-w-md"
+      footer={
+        <DrawerFooter
+          onCancel={() => onOpenChange(false)}
+          submitLabel={initial ? "Update Class" : "Create Class"}
+          onSubmit={() => onSubmit(form)}
+        />
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSubmit(form)
+        }}
+        className="space-y-5"
+      >
         <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Class Name <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Class 10" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Numeric Value <span className="text-destructive">*</span></Label>
-            <Input type="number" value={form.numeric} onChange={(e) => setForm((f) => ({ ...f, numeric: Number(e.target.value) }))} placeholder="e.g. 10" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Sections Count</Label>
-            <Input type="number" value={form.sections_count} onChange={(e) => setForm((f) => ({ ...f, sections_count: Number(e.target.value) }))} placeholder="e.g. 3" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+          <div className="space-y-2">
+            <Label>
+              Class Name
+              <span className="text-destructive">
+                *
+              </span>
+            </Label>
+
+            <Input
+              placeholder="Example : Class 10"
+              value={form.class_name}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  class_name: e.target.value,
+                })
+              }
+              required
+            />
           </div>
         </FormSection>
-        <button type="submit" className="hidden" aria-hidden="true" />
+
+        <button
+          type="submit"
+          className="hidden"
+        />
       </form>
     </Drawer>
   )

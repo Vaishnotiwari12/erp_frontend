@@ -1,90 +1,125 @@
 // ====================================================================
 // Auth Service
 //
-// Handles all backend communication for authentication.
+// Handles all backend communication for authentication across 5 roles.
 //
-// Backend routes (mounted under /api/auth):
-//   POST /api/auth/signup  — Superadmin registration
-//   POST /api/auth/login   — Superadmin login (returns JWT + user)
-//   POST /api/auth/logout  — Invalidates session (requires auth)
+// Backend:
+// SuperAdmin -> /api/auth/*
+// Admin      -> /users/admin/*
+// Staff      -> /users/staff/*
+// Student    -> /users/student/*
+// Parent     -> /users/parent/*
 //
-// Response: { success, data: { id, name, email, role, token }, message }
-// The apiClient interceptor unwraps `.data` so methods receive it directly.
 // ====================================================================
 
 import apiClient from './api'
+import { AUTH_ENDPOINTS, USER_ROLES } from '@/constants/navigation'
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL
+const ROOT_BASE = API_BASE.replace('/api', '')
+
+const VALID_ROLES = Object.values(USER_ROLES)
+
+function getEndpoints(role) {
+  const endpoints = AUTH_ENDPOINTS[role]
+
+  if (!endpoints) {
+    throw new Error(`Invalid role: ${role}`)
+  }
+
+  return endpoints
+}
+
+function authRequest(role, url, payload) {
+  // SuperAdmin uses /api
+  if (role === USER_ROLES.SUPER_ADMIN) {
+    return apiClient.post(url, payload)
+  }
+
+  // Admin / Staff / Student / Parent don't use /api
+  return apiClient.post(
+    `${ROOT_BASE}${url}`,
+    payload,
+    {
+      baseURL: '',
+      withCredentials: true,
+    }
+  )
+}
 
 export const authService = {
-  async login({ email, password }) {
-    if (!email || !password) {
-      return Promise.reject({ message: 'Email and password are required.' })
+  // ----------------------------------------------------
+  // Login
+  // ----------------------------------------------------
+  async login(role, credentials) {
+    if (!role || !VALID_ROLES.includes(role)) {
+      return Promise.reject({
+        message: 'A valid role is required.',
+      })
     }
-    return apiClient.post('/auth/login', { email, password })
+
+    if (!credentials?.email || !credentials?.password) {
+      return Promise.reject({
+        message: 'Email and password are required.',
+      })
+    }
+
+    const { login } = getEndpoints(role)
+
+    return authRequest(role, login, {
+      email: credentials.email,
+      password: credentials.password,
+    })
   },
 
-  async signup({ name, email, password }) {
-    if (!name || !email || !password) {
-      return Promise.reject({ message: 'Name, email and password are required.' })
+  // ----------------------------------------------------
+  // Signup
+  // ----------------------------------------------------
+  async signup(role, data) {
+    if (!role || !VALID_ROLES.includes(role)) {
+      return Promise.reject({
+        message: 'A valid role is required.',
+      })
     }
-    return apiClient.post('/auth/signup', { name, email, password })
+
+    if (!data?.email || !data?.password) {
+      return Promise.reject({
+        message: 'Email and password are required.',
+      })
+    }
+
+    const { signup } = getEndpoints(role)
+
+    return authRequest(role, signup, data)
   },
 
-  async logout() {
-    return apiClient.post('/auth/logout')
+  // ----------------------------------------------------
+  // Logout
+  // ----------------------------------------------------
+  async logout(role) {
+    const endpoints = AUTH_ENDPOINTS[role]
+
+    if (!endpoints?.logout) {
+      return Promise.resolve({ success: true })
+    }
+
+    if (role === USER_ROLES.SUPER_ADMIN) {
+      return apiClient.post(endpoints.logout).catch(() => ({
+        success: true,
+      }))
+    }
+
+    return apiClient.post(
+      `${ROOT_BASE}${endpoints.logout}`,
+      {},
+      {
+        baseURL: '',
+        withCredentials: true,
+      }
+    ).catch(() => ({
+      success: true,
+    }))
   },
 }
 
 export default authService
-
-
-
-
-
-
-//mock data
-
-// export const authService = {
-//   async login({ email, password }) {
-//     if (!email || !password) {
-//       return Promise.reject({ message: 'Email and password are required.' })
-//     }
-//     // Mock response - replace with actual API call later
-//     return Promise.resolve({
-//       success: true,
-//       data: {
-//         id: '64dcb488ec4e893925e16752',
-//         name: 'Super Admin',
-//         email: 'superadmin@erp.com',
-//         role: 'superadmin',
-//         token: 'dummy-jwt-token'
-//       }
-//     })
-//   },
-
-//   async signup({ name, email, password }) {
-//     if (!name || !email || !password) {
-//       return Promise.reject({ message: 'Name, email and password are required.' })
-//     }
-//     // Mock response - replace with actual API call later
-//     return Promise.resolve({
-//       success: true,
-//       data: {
-//         id: '64dcb488ec4e893925e16753',
-//         name,
-//         email,
-//         role: 'superadmin',
-//         token: 'dummy-jwt-token'
-//       }
-//     })
-//   },
-
-//   async logout() {
-//     // Mock response - replace with actual API call later
-//     return Promise.resolve({
-//       success: true,
-//       message: 'Logged out successfully'
-//     })
-//   },
-// }
-
-// export default authService

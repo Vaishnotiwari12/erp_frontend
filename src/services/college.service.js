@@ -1,10 +1,14 @@
 import apiClient from "./api";
 
+
+
+
+console.log("College Service Loaded");
+
+
 export const collegeService = {
   list(params = {}) {
-    return apiClient.get("/college/colleges", {
-      params,
-    });
+    return apiClient.get("/college/colleges", { params });
   },
 
   get(id) {
@@ -16,8 +20,9 @@ export const collegeService = {
   },
 
   create(payload) {
-    return apiClient.post("/college/colleges", payload);
-  },
+  console.log("Calling:", "/college/colleges");
+  return apiClient.post("/college/colleges", payload);
+},
 
   update(id, payload) {
     return apiClient.put(`/college/colleges/${id}`, payload);

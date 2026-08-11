@@ -37,22 +37,21 @@ export function useFeesCollection() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || r.student_name.toLowerCase().includes(q) || r.admission_no.toLowerCase().includes(q)
+        const matchSearch =
+          !q ||
+          (r.fees_group_name || '').toLowerCase().includes(q) ||
+          (r.fees_group_type || '').toLowerCase().includes(q)
         const matchClass = classFilter === 'all' || r.class === classFilter
-        const matchStatus = statusFilter === 'all' || r.status === statusFilter
+        const matchStatus = true
         return matchSearch && matchClass && matchStatus
       }),
-    [rows, search, classFilter, statusFilter],
+    [rows, search, classFilter],
   )
 
   const stats = useMemo(
     () => ({
       total: rows.length,
-      paid: rows.filter((r) => r.status === 'paid').length,
-      pending: rows.filter((r) => r.status === 'pending').length,
-      partial: rows.filter((r) => r.status === 'partial').length,
-      totalCollected: rows.reduce((s, r) => s + (r.paid_amount || 0), 0),
-      totalDue: rows.reduce((s, r) => s + (r.due_amount || 0), 0),
+      active: rows.length,
     }),
     [rows],
   )
@@ -102,7 +101,10 @@ export function useFeesGroups() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q)
+        const matchSearch =
+          !q ||
+          (r.fees_group_name || '').toLowerCase().includes(q) ||
+          (r.fees_group_type || '').toLowerCase().includes(q)
         const matchStatus = status === 'all' || r.status === status
         return matchSearch && matchStatus
       }),
@@ -112,7 +114,7 @@ export function useFeesGroups() {
   const stats = useMemo(
     () => ({
       total: rows.length,
-      active: rows.filter((r) => r.status === 'active').length,
+      active: rows.length,
     }),
     [rows],
   )
@@ -120,11 +122,17 @@ export function useFeesGroups() {
   const saveGroup = useCallback(
     async (payload, id) => {
       if (id) {
-        await feesService.update(id, payload)
-        toast({ title: 'Group updated', description: payload.name })
+        await feesService.updateFeesGroup(id, payload)
+        toast({
+  title: 'Group updated',
+  description: payload.fees_group_name,
+})
       } else {
         await feesService.createFeesGroup(payload)
-        toast({ title: 'Group added', description: payload.name })
+        toast({
+          title: 'Group added',
+          description: payload.fees_group_name,
+        })
       }
       refetch()
     },
@@ -133,7 +141,7 @@ export function useFeesGroups() {
 
   const deleteGroup = useCallback(
     async (id) => {
-      await feesService.remove(id)
+      await feesService.deleteFeesGroup(id)
       toast({ title: 'Group deleted' })
       refetch()
     },
@@ -185,11 +193,11 @@ export function useFeesTypes() {
   const saveType = useCallback(
     async (payload, id) => {
       if (id) {
-        await feesService.update(id, payload)
-        toast({ title: 'Fee type updated', description: payload.name })
+        await feesService.updateFeesType(id, payload)
+        toast({ title: 'Fee type updated', description: payload.fees_type_name })
       } else {
         await feesService.createFeesType(payload)
-        toast({ title: 'Fee type added', description: payload.name })
+        toast({ title: 'Fee type added', description: payload.fees_type_name })
       }
       refetch()
     },
@@ -198,7 +206,7 @@ export function useFeesTypes() {
 
   const deleteType = useCallback(
     async (id) => {
-      await feesService.remove(id)
+      await feesService.deleteFeesType(id)
       toast({ title: 'Fee type deleted' })
       refetch()
     },
@@ -250,11 +258,11 @@ export function useFeesMaster() {
   const saveMaster = useCallback(
     async (payload, id) => {
       if (id) {
-        await feesService.update(id, payload)
-        toast({ title: 'Fees master updated', description: payload.name })
+        await feesService.updateFeesMaster(id, payload)
+        toast({ title: 'Fees master updated', description: payload.fees_master_name })
       } else {
         await feesService.createFeesMaster(payload)
-        toast({ title: 'Fees master added', description: payload.name })
+        toast({ title: 'Fees master added', description: payload.fees_master_name })
       }
       refetch()
     },
@@ -263,7 +271,7 @@ export function useFeesMaster() {
 
   const deleteMaster = useCallback(
     async (id) => {
-      await feesService.remove(id)
+      await feesService.deleteFeesMaster(id)
       toast({ title: 'Fees master deleted' })
       refetch()
     },
@@ -316,11 +324,11 @@ export function useFeesDiscounts() {
   const saveDiscount = useCallback(
     async (payload, id) => {
       if (id) {
-        await feesService.update(id, payload)
-        toast({ title: 'Discount updated', description: payload.name })
+        await feesService.updateFeesDiscount(id, payload)
+        toast({ title: 'Discount updated', description: payload.discount_name })
       } else {
         await feesService.createFeesDiscount(payload)
-        toast({ title: 'Discount added', description: payload.name })
+        toast({ title: 'Discount added', description: payload.discount_name })
       }
       refetch()
     },
@@ -329,7 +337,7 @@ export function useFeesDiscounts() {
 
   const deleteDiscount = useCallback(
     async (id) => {
-      await feesService.remove(id)
+      await feesService.deleteFeesDiscount(id)
       toast({ title: 'Discount deleted' })
       refetch()
     },
@@ -381,12 +389,21 @@ export function useFeesCarryForward() {
   const saveCarryForward = useCallback(
     async (payload, id) => {
       if (id) {
-        await feesService.update(id, payload)
+        await feesService.updateCarryForward(id, payload)
         toast({ title: 'Carry forward updated' })
       } else {
         await feesService.createCarryForward(payload)
         toast({ title: 'Carry forward added' })
       }
+      refetch()
+    },
+    [refetch, toast],
+  )
+
+  const deleteCarryForward = useCallback(
+    async (id) => {
+      await feesService.deleteCarryForward(id)
+      toast({ title: 'Carry forward record deleted' })
       refetch()
     },
     [refetch, toast],
@@ -400,13 +417,14 @@ export function useFeesCarryForward() {
     search, setSearch,
     session, setSession,
     saveCarryForward,
+    deleteCarryForward,
   }
 }
 
-// ─── useFeesReport ──────────────────────────────────────────────────────────────
+// ─── useFeesReminder ──────────────────────────────────────────────────────────────
 // Manages class-wise fee collection report and aggregate stats.
-export function useFeesReport() {
-  const { data, isLoading } = useAsyncData(() => feesService.getFeesReport(), [])
+export function useFeesReminder() {
+  const { data, isLoading } = useAsyncData(() => feesService.getFeesReminder(), [])
 
   const rows = data || []
 
@@ -564,6 +582,24 @@ export function useOfflinePayments() {
     [refetch, toast],
   )
 
+  const updateOfflinePayment = useCallback(
+    async (id, payload) => {
+      await feesService.updateOfflinePayment(id, payload)
+      toast({ title: 'Offline payment updated' })
+      refetch()
+    },
+    [refetch, toast],
+  )
+
+  const deleteOfflinePayment = useCallback(
+    async (id) => {
+      await feesService.deleteOfflinePayment(id)
+      toast({ title: 'Offline payment deleted' })
+      refetch()
+    },
+    [refetch, toast],
+  )
+
   const approvePayment = useCallback(
     async (id) => {
       await feesService.approveOfflinePayment(id)
@@ -590,6 +626,8 @@ export function useOfflinePayments() {
     search, setSearch,
     status, setStatus,
     createOfflinePayment,
+    updateOfflinePayment,
+    deleteOfflinePayment,
     approvePayment,
     rejectPayment,
   }

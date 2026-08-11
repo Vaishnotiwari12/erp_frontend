@@ -13,7 +13,7 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   CalendarClock, Printer, FileDown, BookOpen, Clock, Coffee,
 } from 'lucide-react'
@@ -26,26 +26,36 @@ import { StatCard } from '@/components/StatCard'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { academicsService } from '@/services/academics.service'
-// import {
-//   teachers, TIME_SLOTS, WEEK_DAYS, SUBJECT_COLORS, getTeacherTimetable,
-// } from '@/services/mockData'
+import { TIME_SLOTS, WEEK_DAYS, SUBJECT_COLORS } from '@/constants/academics'
+import apiClient from '@/services/api'
 import { initials } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
 
-const TEACHER_OPTIONS = teachers.filter((t) => t.status === 'active')
-
 export default function TeachersTimetablePage() {
   const { toast } = useToast()
-  const [selectedTeacher, setSelectedTeacher] = useState(TEACHER_OPTIONS[0]?.name || '')
+  const [teacherOptions, setTeacherOptions] = useState([])
+  const [selectedTeacherId, setSelectedTeacherId] = useState('')
+
+  useEffect(() => {
+    apiClient.get('/hr/staff-directory').then((res) => {
+      const teachers = res || []
+      setTeacherOptions(teachers)
+      if (teachers.length && !selectedTeacherId) setSelectedTeacherId(teachers[0]?._id || '')
+    }).catch((err) => {
+      console.error('Failed to load teachers:', err)
+    })
+  }, [])
+
   const { data, isLoading } = useAsyncData(
-    () => academicsService.teacherTimetable(selectedTeacher),
-    [selectedTeacher],
+    () => selectedTeacherId ? academicsService.teacherTimetable(selectedTeacherId) : Promise.resolve([]),
+    [selectedTeacherId],
   )
 
-  const grid = data || getTeacherTimetable(selectedTeacher)
+  const grid = data || {}
+  const timetableData = Array.isArray(data) ? data : Object.values(data || {})
 
   const stats = useMemo(() => {
-    const entries = Object.values(grid)
+    const entries = timetableData
     const scheduled = entries.filter((e) => !e.isBreak && !e.isFree)
     const free = entries.filter((e) => e.isFree)
     return {
@@ -54,14 +64,14 @@ export default function TeachersTimetablePage() {
       free: free.length,
       subjects: new Set(scheduled.map((e) => e.subject)).size,
     }
-  }, [grid])
+  }, [timetableData])
 
   const handlePrint = () => window.print()
   const handleExportPdf = () => {
     toast({ title: 'Exporting PDF', description: 'The teacher timetable will download shortly.' })
   }
 
-  const teacher = TEACHER_OPTIONS.find((t) => t.name === selectedTeacher)
+  const teacher = teacherOptions.find((t) => t._id === selectedTeacherId)
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -90,18 +100,18 @@ export default function TeachersTimetablePage() {
         <CardContent className="flex flex-wrap items-center gap-4 p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {initials(selectedTeacher)}
+              {initials(teacher?.name || 'Teacher')}
             </div>
             <div>
-              <p className="text-sm font-semibold">{selectedTeacher}</p>
-              <p className="text-xs text-muted-foreground">{teacher?.department} · {teacher?.designation}</p>
+              <p className="text-sm font-semibold">{teacher?.name || 'Select a teacher'}</p>
+              <p className="text-xs text-muted-foreground">{teacher?.department || ''} · {teacher?.designation || ''}</p>
             </div>
           </div>
           <div className="ml-auto space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Select Teacher</label>
-            <select value={selectedTeacher} onChange={(e) => setSelectedTeacher(e.target.value)}
+            <select value={selectedTeacherId} onChange={(e) => setSelectedTeacherId(e.target.value)}
               className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              {TEACHER_OPTIONS.map((t) => <option key={t._id} value={t.name}>{t.name} — {t.department}</option>)}
+              {teacherOptions.map((t) => <option key={t._id} value={t._id}>{t.name} — {t.department || ''}</option>)}
             </select>
           </div>
         </CardContent>
@@ -135,7 +145,7 @@ export default function TeachersTimetablePage() {
                         <p className="text-[11px] text-muted-foreground">{slot.start}–{slot.end}</p>
                       </td>
                       {WEEK_DAYS.map((day) => {
-                        const entry = grid[`${day}-${slot.id}`]
+                        const entry = timetableData.find(e => e.day === day && e.slot_id === slot.id)
                         if (!entry) return <td key={day} className="p-2" />
                         if (entry.isBreak) {
                           return (

@@ -2,107 +2,107 @@ import apiClient from "./api";
 
 export const libraryService = {
   // ==========================================================
-  // Books
+  // Book List
   // ==========================================================
 
-  getBooks(params = {}) {
-    return apiClient.get("/library/book", {
+  getBookList(params = {}) {
+    return apiClient.get("/library/book-list", {
       params,
     });
   },
 
-  getBook(id) {
-    return apiClient.get(`/library/book/${id}`);
+  getBookById(id) {
+    return apiClient.get(`/library/book-list/${id}`);
   },
 
   createBook(payload) {
-    return apiClient.post("/library/book", payload);
+    return apiClient.post("/library/book-list", payload);
   },
 
   updateBook(id, payload) {
-    return apiClient.put(`/library/book/${id}`, payload);
+    return apiClient.put(`/library/book-list/${id}`, payload);
   },
 
   deleteBook(id) {
-    return apiClient.delete(`/library/book/${id}`);
+    return apiClient.delete(`/library/book-list/${id}`);
   },
 
   // ==========================================================
-  // Book Categories
+  // Issue Return
   // ==========================================================
 
-  getCategories(params = {}) {
-    return apiClient.get("/library/category", {
+  getIssueReturns(params = {}) {
+    return apiClient.get("/library/issue-return", {
       params,
     });
   },
 
-  getCategory(id) {
-    return apiClient.get(`/library/category/${id}`);
+  getIssueReturnById(id) {
+    return apiClient.get(`/library/issue-return/${id}`);
   },
 
-  createCategory(payload) {
-    return apiClient.post("/library/category", payload);
+  createIssueReturn(payload) {
+    return apiClient.post("/library/issue-return", payload);
   },
 
-  updateCategory(id, payload) {
-    return apiClient.put(`/library/category/${id}`, payload);
+  updateIssueReturn(id, payload) {
+    return apiClient.put(`/library/issue-return/${id}`, payload);
   },
 
-  deleteCategory(id) {
-    return apiClient.delete(`/library/category/${id}`);
+  deleteIssueReturn(id) {
+    return apiClient.delete(`/library/issue-return/${id}`);
   },
 
   // ==========================================================
-  // Book Issue
+  // Library Staff Members
   // ==========================================================
 
-  getIssueRecords(params = {}) {
-    return apiClient.get("/library/book-issue", {
+  getLibraryStaffMembers(params = {}) {
+    return apiClient.get("/library/staff-member", {
       params,
     });
   },
 
-  getIssueRecord(id) {
-    return apiClient.get(`/library/book-issue/${id}`);
+  getLibraryStaffMemberById(id) {
+    return apiClient.get(`/library/staff-member/${id}`);
   },
 
-  issueBook(payload) {
-    return apiClient.post("/library/book-issue", payload);
+  createLibraryStaffMember(payload) {
+    return apiClient.post("/library/staff-member", payload);
   },
 
-  updateIssueRecord(id, payload) {
-    return apiClient.put(`/library/book-issue/${id}`, payload);
+  updateLibraryStaffMember(id, payload) {
+    return apiClient.put(`/library/staff-member/${id}`, payload);
   },
 
-  deleteIssueRecord(id) {
-    return apiClient.delete(`/library/book-issue/${id}`);
+  deleteLibraryStaffMember(id) {
+    return apiClient.delete(`/library/staff-member/${id}`);
   },
 
   // ==========================================================
-  // Library Staff
+  // Library Students
   // ==========================================================
 
-  getLibraryStaff(params = {}) {
-    return apiClient.get("/library/staff", {
+  getLibraryStudents(params = {}) {
+    return apiClient.get("/library/student", {
       params,
     });
   },
 
-  getLibraryStaffMember(id) {
-    return apiClient.get(`/library/staff/${id}`);
+  getLibraryStudentById(id) {
+    return apiClient.get(`/library/student/${id}`);
   },
 
-  createLibraryStaff(payload) {
-    return apiClient.post("/library/staff", payload);
+  createLibraryStudent(payload) {
+    return apiClient.post("/library/student", payload);
   },
 
-  updateLibraryStaff(id, payload) {
-    return apiClient.put(`/library/staff/${id}`, payload);
+  updateLibraryStudent(id, payload) {
+    return apiClient.put(`/library/student/${id}`, payload);
   },
 
-  deleteLibraryStaff(id) {
-    return apiClient.delete(`/library/staff/${id}`);
+  deleteLibraryStudent(id) {
+    return apiClient.delete(`/library/student/${id}`);
   },
 };
 

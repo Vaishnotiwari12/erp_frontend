@@ -2,163 +2,250 @@
 // Module: Examinations
 // Page: Design Admit Card
 //
-// Purpose:
-// Visual builder for the admit card template with live preview.
-//
-// Data Source:
-// examination.service.js
-//
-// Backend:
-// APIs should always be called through the service layer.
-// Never call Axios directly from this page.
+// Purpose: Visual builder for admit card template with live preview.
+// Payload Schema: { header, school_logo }
 // ====================================================================
 
-import { useState } from 'react'
-import { IdCard, Eye, Save, RotateCcw } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { IdCard, RotateCcw, Printer, Download, Save, Upload, Trash2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { FormSection } from '@/components/FormSection'
-import { useAsyncData } from '@/hooks/useAsyncData'
 import { examinationService } from '@/services/examination.service'
 import { useToast } from '@/hooks/use-toast'
 
-const FIELDS = ['Student Name', 'Admission No', 'Class', 'Section', 'Roll No', 'Exam Center', 'Subjects', 'Dates']
+const INITIAL_FORM = {
+  header: 'ABC PUBLIC SCHOOL',
+  school_logo: '',
+}
+
+const ADMIT_CARD_DETAILS = [
+  { label: 'Admission No', val: '10234' },
+  { label: 'Roll No', val: '18' },
+  { label: 'Student Name', val: 'Rahul Sharma' },
+  { label: 'Father Name', val: 'Rajesh Sharma' },
+  { label: 'Class', val: 'X-A' },
+  { label: 'Exam Group', val: 'Annual Exam 2026' },
+  { label: 'Reporting Time', val: '08:30 AM' },
+  { label: 'Exam Time', val: '09:00 AM' },
+  { label: 'Exam Hall / Room', val: 'Hall A (Room 102)' },
+]
 
 export default function DesignAdmitCardPage() {
   const { toast } = useToast()
-  const { data } = useAsyncData(() => examinationService.getAdmitCardTemplate(), [])
-  const [form, setForm] = useState({
-    show_logo: true,
-    header_text: 'Scholaria ERP - Admit Card',
-    show_qr: true,
-    show_barcode: true,
-    watermark: 'SCHOLARIA',
-    show_principal_signature: true,
-    show_controller_signature: true,
-    fields: FIELDS.slice(),
-    paper_size: 'A4',
-    orientation: 'portrait',
-  })
+  const fileInputRef = useRef(null)
+  const [form, setForm] = useState(INITIAL_FORM)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const toggle = (key) => setForm((f) => ({ ...f, [key]: !f[key] }))
-  const toggleField = (f) => setForm((s) => ({ ...s, fields: s.fields.includes(f) ? s.fields.filter((x) => x !== f) : [...s.fields, f] }))
-
-  const save = async () => {
-    await examinationService.updateAdmitCardTemplate(form)
-    toast({ title: 'Admit card template saved' })
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid File', description: 'Please select an image file.', variant: 'destructive' })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      setForm((f) => ({ ...f, school_logo: evt.target?.result || '' }))
+      toast({ title: 'Logo Uploaded' })
+    }
+    reader.readAsDataURL(file)
   }
 
-  const reset = () => {
-    setForm({ show_logo: true, header_text: 'Scholaria ERP - Admit Card', show_qr: true, show_barcode: true, watermark: 'SCHOLARIA', show_principal_signature: true, show_controller_signature: true, fields: FIELDS.slice(), paper_size: 'A4', orientation: 'portrait' })
-    toast({ title: 'Template reset to default' })
+  const handleSave = async () => {
+    if (!form.header.trim()) {
+      toast({ title: 'Validation Error', description: 'School Header is required.', variant: 'destructive' })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const payload = {
+        header: form.header.trim(),
+        school_logo: form.school_logo.trim(),
+      }
+      if (examinationService.updateAdmitCardTemplate) {
+        await examinationService.updateAdmitCardTemplate(payload)
+      } else if (examinationService.createAdmitCardDesign) {
+        await examinationService.createAdmitCardDesign(payload)
+      }
+      toast({ title: '✓ Admit Card Template Saved Successfully' })
+    } catch (error) {
+      toast({
+        title: 'Save Failed',
+        description: error?.response?.data?.message || error?.message || 'Failed to save admit card template.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  const handlePrint = () => window.print()
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Examinations', to: '/examinations/exam-groups' }, { label: 'Design Admit Card' }]} />
+    <div className="space-y-6 animate-fade-in pb-10">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #printable-admit-card, #printable-admit-card * { visibility: visible; }
+          #printable-admit-card {
+            position: absolute; left: 0; top: 0; width: 100% !important;
+            margin: 0 !important; padding: 20px !important; box-shadow: none !important;
+          }
+        }
+      `}</style>
+
+      <Breadcrumbs
+        items={[
+          { label: 'Home', to: '/dashboard' },
+          { label: 'Examinations', to: '/examinations/exam-groups' },
+          { label: 'Design Admit Card' },
+        ]}
+      />
+
       <PageHeader
         title="Design Admit Card"
         description="Visual builder for the admit card template with live preview."
         icon={IdCard}
         actions={
-          <>
-            <Button variant="outline" onClick={reset}><RotateCcw className="mr-2 h-4 w-4" /> Reset</Button>
-            <Button onClick={save}><Save className="mr-2 h-4 w-4" /> Save Template</Button>
-          </>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setForm(INITIAL_FORM)}>
+              <RotateCcw className="mr-1.5 h-4 w-4" /> Reset
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="mr-1.5 h-4 w-4" /> Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Download className="mr-1.5 h-4 w-4" /> Download PDF
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              <Save className="mr-1.5 h-4 w-4" /> {isSaving ? 'Saving...' : 'Save Template'}
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Builder controls */}
-        <div className="space-y-4 rounded-xl border bg-card p-5">
-          <h3 className="text-sm font-semibold">Template Settings</h3>
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* LEFT SIDE: Template Settings */}
+        <div className="lg:col-span-5 space-y-4 rounded-xl border bg-card p-5 shadow-sm h-fit">
+          <h3 className="text-sm font-semibold border-b pb-2">Template Settings</h3>
           <FormSection columns={1}>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">School Logo</Label><p className="text-xs text-muted-foreground">Display institution logo</p></div>
-              <Switch checked={form.show_logo} onCheckedChange={() => toggle('show_logo')} />
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                School Header <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={form.header}
+                onChange={(e) => setForm((f) => ({ ...f, header: e.target.value }))}
+                placeholder="e.g. ABC PUBLIC SCHOOL"
+              />
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">QR Code</Label><p className="text-xs text-muted-foreground">Embed verification QR</p></div>
-              <Switch checked={form.show_qr} onCheckedChange={() => toggle('show_qr')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Barcode</Label><p className="text-xs text-muted-foreground">Roll number barcode</p></div>
-              <Switch checked={form.show_barcode} onCheckedChange={() => toggle('show_barcode')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Principal Signature</Label><p className="text-xs text-muted-foreground">Show principal sign-off</p></div>
-              <Switch checked={form.show_principal_signature} onCheckedChange={() => toggle('show_principal_signature')} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><Label className="text-sm font-medium">Controller Signature</Label><p className="text-xs text-muted-foreground">Show controller sign-off</p></div>
-              <Switch checked={form.show_controller_signature} onCheckedChange={() => toggle('show_controller_signature')} />
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">School Logo</Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              {form.school_logo ? (
+                <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-2.5">
+                  <div className="flex items-center gap-3">
+                    <img src={form.school_logo} alt="Logo Preview" className="h-9 w-9 object-contain rounded border bg-white p-0.5" />
+                    <span className="text-xs font-medium text-emerald-600">✓ logo.png uploaded</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    onClick={() => setForm((f) => ({ ...f, school_logo: '' }))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full text-xs"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Upload Logo
+                </Button>
+              )}
             </div>
           </FormSection>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Header Text</Label>
-            <Input value={form.header_text} onChange={(e) => setForm((f) => ({ ...f, header_text: e.target.value }))} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Watermark</Label>
-            <Input value={form.watermark} onChange={(e) => setForm((f) => ({ ...f, watermark: e.target.value }))} />
-          </div>
-          <FormSection columns={2}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Paper Size</Label>
-              <select value={form.paper_size} onChange={(e) => setForm((f) => ({ ...f, paper_size: e.target.value }))} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="A4">A4</option><option value="Letter">Letter</option><option value="Legal">Legal</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Orientation</Label>
-              <select value={form.orientation} onChange={(e) => setForm((f) => ({ ...f, orientation: e.target.value }))} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="portrait">Portrait</option><option value="landscape">Landscape</option>
-              </select>
-            </div>
-          </FormSection>
-          <div className="space-y-2">
-            <Label className="text-xs">Student Detail Fields</Label>
-            <div className="flex flex-wrap gap-2">
-              {FIELDS.map((f) => (
-                <button key={f} type="button" onClick={() => toggleField(f)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${form.fields.includes(f) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground'}`}>
-                  {form.fields.includes(f) ? '✓ ' : ''}{f}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Live preview */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><Eye className="h-4 w-4" /> Live Preview</div>
-          <div className={`mx-auto rounded-xl border bg-white p-6 shadow-sm ${form.orientation === 'landscape' ? 'aspect-[1.414/1]' : 'aspect-[1/1.414]'} max-w-md`}>
-            <div className="relative h-full">
-              {form.watermark ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl font-bold text-black/[0.04]">{form.watermark}</div> : null}
-              <div className="relative flex flex-col items-center gap-3">
-                {form.show_logo ? (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary"><IdCard className="h-6 w-6" /></div>
-                ) : null}
-                <h2 className="text-center text-base font-bold">{form.header_text}</h2>
-                <div className="h-px w-full bg-border" />
-                <div className="grid w-full grid-cols-2 gap-y-2 text-xs">
-                  {form.fields.map((f) => (
-                    <div key={f} className="flex justify-between border-b border-dashed pb-1">
-                      <span className="text-muted-foreground">{f}:</span><span className="font-medium">—</span>
+        {/* RIGHT SIDE: Live Preview */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+            <span>Live Preview</span>
+          </div>
+
+          <div className="overflow-y-auto max-h-[85vh] p-4 bg-slate-100 dark:bg-slate-900/50 rounded-xl border flex justify-center">
+            {/* Hardcoded light mode white paper for authentic print view */}
+            <div
+              id="printable-admit-card"
+              className="w-full max-w-[210mm] bg-white text-black border border-gray-300 shadow-xl rounded-sm p-6 space-y-5"
+            >
+              {/* Header Section */}
+              <div className="text-center border-b border-gray-300 pb-3">
+                {form.school_logo ? (
+                  <img src={form.school_logo} alt="School Logo" className="mx-auto mb-2 h-14 w-14 object-contain" />
+                ) : (
+                  <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-700 font-bold text-xs border">
+                    LOGO
+                  </div>
+                )}
+                <h1 className="text-lg font-black tracking-wide text-black uppercase">
+                  {form.header || 'SCHOOL NAME'}
+                </h1>
+                <p className="text-xs font-semibold text-gray-700 mt-0.5">ANNUAL EXAMINATION</p>
+                <p className="text-xs font-black text-gray-900 tracking-wider uppercase underline decoration-gray-400 decoration-1 underline-offset-4 mt-1">
+                  ADMIT CARD
+                </p>
+              </div>
+
+              {/* Admit Card Content & Candidate Photo */}
+              <div className="grid grid-cols-12 gap-4 items-start">
+                {/* Details Grid */}
+                <div className="col-span-8 border border-gray-300 bg-gray-50 rounded p-3 text-xs space-y-1.5">
+                  {ADMIT_CARD_DETAILS.map((info) => (
+                    <div key={info.label} className="flex justify-between border-b border-gray-200 pb-1 last:border-b-0 last:pb-0">
+                      <span className="font-semibold text-gray-600">{info.label} :</span>
+                      <span className="font-bold text-black text-right">{info.val}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex w-full items-end justify-between pt-3">
-                  {form.show_qr ? <div className="h-14 w-14 rounded border-2 border-dashed border-muted-foreground/40" /> : <span />}
-                  {form.show_barcode ? <div className="flex h-8 items-end gap-0.5">{Array.from({ length: 12 }).map((_, i) => <div key={i} className="w-0.5 bg-foreground" style={{ height: `${10 + (i % 4) * 6}px` }} />)}</div> : <span />}
+
+                {/* Candidate Photo Box */}
+                <div className="col-span-4 flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-300 bg-gray-50 rounded p-2 text-center">
+                  <User className="h-12 w-12 text-gray-400 mb-1" />
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase">Candidate Photo</span>
+                  <span className="text-[9px] text-gray-400 mt-0.5">Affix Stamp Size Photo</span>
                 </div>
-                <div className="flex w-full justify-between pt-4 text-xs">
-                  {form.show_principal_signature ? <div className="text-center"><div className="mb-1 h-8 w-24 border-b border-dashed" /><span className="text-muted-foreground">Principal</span></div> : <span />}
-                  {form.show_controller_signature ? <div className="text-center"><div className="mb-1 h-8 w-24 border-b border-dashed" /><span className="text-muted-foreground">Controller</span></div> : <span />}
+              </div>
+
+              {/* Instructions Disclaimer */}
+              <div className="border-t border-b border-gray-200 py-2 text-[10px] text-gray-600 space-y-0.5">
+                <p className="font-bold text-gray-800">Important Instructions for Candidate:</p>
+                <p>1. Please bring this Admit Card to the Examination Hall on all exam days.</p>
+                <p>2. Report to the examination hall at least 30 minutes before commencement of the exam.</p>
+              </div>
+
+              {/* Principal Signature */}
+              <div className="mt-8 flex justify-end text-xs pt-4 text-black">
+                <div className="text-center">
+                  <div className="mb-1 w-36 border-b border-gray-400" />
+                  <span className="font-bold text-black">Principal Signature</span>
                 </div>
               </div>
             </div>

@@ -2,27 +2,29 @@ import apiClient from "./api";
 
 export const transportService = {
   // ==========================================================
-  // Routes
+  // Transport Routes
   // ==========================================================
 
-  getRoutes(params = {}) {
-    return apiClient.get("/transport/route", { params });
+  getTransportRoutes(params = {}) {
+    return apiClient.get("/transport/routes", {
+      params,
+    });
   },
 
-  getRoute(id) {
-    return apiClient.get(`/transport/route/${id}`);
+  getTransportRouteById(id) {
+    return apiClient.get(`/transport/routes/${id}`);
   },
 
-  createRoute(payload) {
-    return apiClient.post("/transport/route", payload);
+  createTransportRoute(payload) {
+    return apiClient.post("/transport/routes", payload);
   },
 
-  updateRoute(id, payload) {
-    return apiClient.put(`/transport/route/${id}`, payload);
+  updateTransportRoute(id, payload) {
+    return apiClient.put(`/transport/routes/${id}`, payload);
   },
 
-  deleteRoute(id) {
-    return apiClient.delete(`/transport/route/${id}`);
+  deleteTransportRoute(id) {
+    return apiClient.delete(`/transport/routes/${id}`);
   },
 
   // ==========================================================
@@ -30,47 +32,25 @@ export const transportService = {
   // ==========================================================
 
   getVehicles(params = {}) {
-    return apiClient.get("/transport/vehicle", { params });
+    return apiClient.get("/transport/vehicles", {
+      params,
+    });
   },
 
-  getVehicle(id) {
-    return apiClient.get(`/transport/vehicle/${id}`);
+  getVehicleById(id) {
+    return apiClient.get(`/transport/vehicles/${id}`);
   },
 
   createVehicle(payload) {
-    return apiClient.post("/transport/vehicle", payload);
+    return apiClient.post("/transport/vehicles", payload);
   },
 
   updateVehicle(id, payload) {
-    return apiClient.put(`/transport/vehicle/${id}`, payload);
+    return apiClient.put(`/transport/vehicles/${id}`, payload);
   },
 
   deleteVehicle(id) {
-    return apiClient.delete(`/transport/vehicle/${id}`);
-  },
-
-  // ==========================================================
-  // Drivers
-  // ==========================================================
-
-  getDrivers(params = {}) {
-    return apiClient.get("/transport/driver", { params });
-  },
-
-  getDriver(id) {
-    return apiClient.get(`/transport/driver/${id}`);
-  },
-
-  createDriver(payload) {
-    return apiClient.post("/transport/driver", payload);
-  },
-
-  updateDriver(id, payload) {
-    return apiClient.put(`/transport/driver/${id}`, payload);
-  },
-
-  deleteDriver(id) {
-    return apiClient.delete(`/transport/driver/${id}`);
+    return apiClient.delete(`/transport/vehicles/${id}`);
   },
 
   // ==========================================================
@@ -78,10 +58,12 @@ export const transportService = {
   // ==========================================================
 
   getPickupPoints(params = {}) {
-    return apiClient.get("/transport/pickup-point", { params });
+    return apiClient.get("/transport/pickup-point", {
+      params,
+    });
   },
 
-  getPickupPoint(id) {
+  getPickupPointById(id) {
     return apiClient.get(`/transport/pickup-point/${id}`);
   },
 
@@ -98,51 +80,107 @@ export const transportService = {
   },
 
   // ==========================================================
-  // Vehicle Assignment
+  // Route Pickup Points (Assign Pickup Point)
   // ==========================================================
 
-  getAssignments(params = {}) {
-    return apiClient.get("/transport/assign-vehicle", { params });
+  getRoutePickupPoints(params = {}) {
+    return apiClient.get("/transport/route-pickup-point", {
+      params,
+    });
   },
 
-  getAssignment(id) {
+  getRoutePickupPointById(id) {
+    return apiClient.get(`/transport/route-pickup-point/${id}`);
+  },
+
+  createRoutePickupPoint(payload) {
+    return apiClient.post("/transport/route-pickup-point", payload);
+  },
+
+  updateRoutePickupPoint(id, payload) {
+    return apiClient.put(`/transport/route-pickup-point/${id}`, payload);
+  },
+
+  deleteRoutePickupPoint(id) {
+    return apiClient.delete(`/transport/route-pickup-point/${id}`);
+  },
+
+  // ==========================================================
+  // Assign Vehicle
+  // ==========================================================
+
+  getAssignVehicles(params = {}) {
+    return apiClient.get("/transport/assign-vehicle", {
+      params,
+    });
+  },
+
+  getAssignVehicleById(id) {
     return apiClient.get(`/transport/assign-vehicle/${id}`);
   },
 
-  assignVehicle(payload) {
+  createAssignVehicle(payload) {
     return apiClient.post("/transport/assign-vehicle", payload);
   },
 
-  updateAssignment(id, payload) {
+  updateAssignVehicle(id, payload) {
     return apiClient.put(`/transport/assign-vehicle/${id}`, payload);
   },
 
-  deleteAssignment(id) {
+  deleteAssignVehicle(id) {
     return apiClient.delete(`/transport/assign-vehicle/${id}`);
   },
 
   // ==========================================================
-  // Transport Fees
+  // Transport Fees Master
   // ==========================================================
 
-  getTransportFees(params = {}) {
-    return apiClient.get("/transport/fees", { params });
+  getTransportFeesMaster(params = {}) {
+    return apiClient.get("/transport/fees-master", {
+      params,
+    });
   },
 
-  getTransportFee(id) {
-    return apiClient.get(`/transport/fees/${id}`);
+  getTransportFeesMasterById(id) {
+    return apiClient.get(`/transport/fees-master/${id}`);
   },
 
-  createTransportFee(payload) {
-    return apiClient.post("/transport/fees", payload);
+  createTransportFeesMaster(payload) {
+    return apiClient.post("/transport/fees-master", payload);
   },
 
-  updateTransportFee(id, payload) {
-    return apiClient.put(`/transport/fees/${id}`, payload);
+  updateTransportFeesMaster(id, payload) {
+    return apiClient.put(`/transport/fees-master/${id}`, payload);
   },
 
-  deleteTransportFee(id) {
-    return apiClient.delete(`/transport/fees/${id}`);
+  deleteTransportFeesMaster(id) {
+    return apiClient.delete(`/transport/fees-master/${id}`);
+  },
+
+  // ==========================================================
+  // Student Transport Fees
+  // ==========================================================
+
+  getStudentTransportFees(params = {}) {
+    return apiClient.get("/transport/student-fees", {
+      params,
+    });
+  },
+
+  getStudentTransportFeeById(id) {
+    return apiClient.get(`/transport/student-fees/${id}`);
+  },
+
+  createStudentTransportFee(payload) {
+    return apiClient.post("/transport/student-fees", payload);
+  },
+
+  updateStudentTransportFee(id, payload) {
+    return apiClient.put(`/transport/student-fees/${id}`, payload);
+  },
+
+  deleteStudentTransportFee(id) {
+    return apiClient.delete(`/transport/student-fees/${id}`);
   },
 };
 

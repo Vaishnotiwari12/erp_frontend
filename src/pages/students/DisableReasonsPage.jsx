@@ -1,405 +1,135 @@
 import { useMemo, useState } from 'react'
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  RefreshCw,
-  AlertCircle,
-} from 'lucide-react'
-
-import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/PageHeader'
-
+import { Ban, Pencil, Plus, Trash2, Search, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
+import { SearchBar } from '@/components/SearchBar'
+import { DataTable } from '@/components/DataTable'
+import { ActionDropdown } from '@/components/ActionDropdown'
+import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
+import { useDisableReasons } from '@/hooks/useStudents'
 
-const mockReasons = [
-  {
-    id: '1',
-    reason: 'Transfer Certificate Issued',
-    description: 'Student transferred to another school',
-    status: 'Active',
-  },
-  {
-    id: '2',
-    reason: 'Long Absence',
-    description: 'Absent for more than 90 days',
-    status: 'Active',
-  },
-  {
-    id: '3',
-    reason: 'Fees Pending',
-    description: 'Fees overdue',
-    status: 'Inactive',
-  },
-]
+function ReasonForm({ initial, onSubmit }) {
+  const [reason, setReason] = useState(initial?.reason || '')
+  return (
+    <form id="reason-form" onSubmit={(event) => { event.preventDefault(); if (reason.trim()) onSubmit({ reason: reason.trim() }) }} className="space-y-6">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Disable Reason *</Label>
+        <Input 
+          autoFocus 
+          required 
+          value={reason} 
+          onChange={(e) => setReason(e.target.value)} 
+          placeholder="Enter the reason for disabling a student"
+          className="h-10"
+        />
+        <p className="text-xs text-muted-foreground">This reason will be displayed when a student is disabled.</p>
+      </div>
+      <button type="submit" className="hidden" aria-hidden="true">Save</button>
+    </form>
+  )
+}
 
 export default function DisableReasonsPage() {
-  const [search, setSearch] = useState('')
-  const [reasons, setReasons] = useState(mockReasons)
-
-  const [openForm, setOpenForm] = useState(false)
-  const [openDelete, setOpenDelete] = useState(false)
-
-  const [selected, setSelected] = useState(null)
-
-  const filteredReasons = useMemo(() => {
-    return reasons.filter((item) =>
-      item.reason.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [reasons, search])
-
+  const { rows, isLoading, error, refetch, search, setSearch, saveReason, deleteReason } = useDisableReasons()
+  const [addOpen, setAddOpen] = useState(false)
+  const [edit, setEdit] = useState(null)
+  const [remove, setRemove] = useState(null)
+  const columns = useMemo(() => [{ accessorKey: 'reason', header: 'Reason' }, { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—' }], [])
+  const save = async (payload, id) => { await saveReason(payload, id); id ? setEdit(null) : setAddOpen(false) }
+  const onDelete = async () => { if (remove) { await deleteReason(remove._id); setRemove(null) } }
   return (
-    <div className="space-y-6">
-
-      <Breadcrumbs
-        items={[
-          { label: 'Home', to: '/' },
-          { label: 'Student Information' },
-          { label: 'Disable Reasons' },
-        ]}
-      />
-
-      <PageHeader
-        title="Disable Reasons"
-        description="Manage student disable reasons."
-
-        actions={
-          <div className="flex gap-2">
-
-            <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-
-            <Button onClick={() => setOpenForm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Reason
-            </Button>
-
-          </div>
-        }
-      />
-
-      {/* Stats */}
-
-      <div className="grid gap-4 md:grid-cols-3">
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Total Reasons
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold">
-              {reasons.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Active
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-green-600">
-              {
-                reasons.filter((r) => r.status === 'Active').length
-              }
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Inactive
-            </p>
-
-            <h2 className="mt-2 text-3xl font-bold text-red-600">
-              {
-                reasons.filter((r) => r.status === 'Inactive').length
-              }
-            </h2>
-          </CardContent>
-        </Card>
-
+    <div className="space-y-8 animate-fade-in">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Students', to: '/students' }, { label: 'Disable Reasons' }]} />
+      
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Disable Reasons</h1>
+          <p className="text-muted-foreground">Manage reasons for disabling student records.</p>
+        </div>
+        <Button size="lg" onClick={() => setAddOpen(true)} className="gap-2">
+          <Plus className="h-5 w-5" />
+          Add Reason
+        </Button>
       </div>
-
-      {/* Search */}
-
-      <Card>
-
-        <CardContent className="p-5">
-
-          <div className="relative">
-
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Disable Reason..."
-              className="pl-10"
-            />
-
+      
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <SearchBar 
+            value={search} 
+            onChange={setSearch} 
+            placeholder="Search by reason..." 
+            className="pl-10"
+          />
+        </div>
+        
+        {isLoading ? (
+          <div className="py-12">
+            <LoadingSkeleton variant="table" rows={5} cols={3} />
           </div>
-
-        </CardContent>
-
-      </Card>
-
-      {/* Table */}
-
-      <Card>
-
-        <CardContent className="p-0">
-
-          <Table>
-
-            <TableHeader>
-
-              <TableRow>
-
-                <TableHead>Reason</TableHead>
-
-                <TableHead>Description</TableHead>
-
-                <TableHead>Status</TableHead>
-
-                <TableHead className="text-right">
-                  Actions
-                </TableHead>
-
-              </TableRow>
-
-            </TableHeader>
-
-            <TableBody>
-
-              {filteredReasons.length === 0 && (
-
-                <TableRow>
-
-                  <TableCell
-                    colSpan={4}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    <AlertCircle className="mx-auto mb-2 h-8 w-8" />
-
-                    No Disable Reasons Found
-
-                  </TableCell>
-
-                </TableRow>
-
-              )}
-
-              {filteredReasons.map((item) => (
-
-                <TableRow key={item.id}>
-
-                  <TableCell className="font-medium">
-                    {item.reason}
-                  </TableCell>
-
-                  <TableCell>
-                    {item.description}
-                  </TableCell>
-
-                  <TableCell>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        item.status === 'Active'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-
-                  </TableCell>
-
-                  <TableCell>
-
-                    <div className="flex justify-end gap-2">
-
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setSelected(item)
-                          setOpenForm(true)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => {
-                          setSelected(item)
-                          setOpenDelete(true)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-
-                    </div>
-
-                  </TableCell>
-
-                </TableRow>
-
-              ))}
-
-            </TableBody>
-
-          </Table>
-
-        </CardContent>
-
-      </Card>
-
-
-            {/* Add / Edit Dialog */}
-
-      <Dialog open={openForm} onOpenChange={setOpenForm}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {selected ? 'Edit Disable Reason' : 'Add Disable Reason'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-5 py-2">
-            <div className="space-y-2">
-              <Label>Reason</Label>
-              <Input
-                defaultValue={selected?.reason || ''}
-                placeholder="Enter disable reason"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                rows={5}
-                defaultValue={selected?.description || ''}
-                placeholder="Write description..."
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelected(null)
-                setOpenForm(false)
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              onClick={() => {
-                // TODO: Connect create/update API
-                setSelected(null)
-                setOpenForm(false)
-              }}
-            >
-              {selected ? 'Update Reason' : 'Create Reason'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-
-      <Dialog open={openDelete} onOpenChange={setOpenDelete}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Disable Reason</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete
-            </p>
-
-            <div className="rounded-lg border bg-muted p-4">
-              <p className="font-semibold">
-                {selected?.reason}
-              </p>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {selected?.description}
-              </p>
-            </div>
-
-            <p className="text-sm text-red-600">
-              This action cannot be undone.
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelected(null)
-                setOpenDelete(false)
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              variant="destructive"
-              onClick={() => {
-                // TODO: Connect delete API
-
-                setReasons((prev) =>
-                  prev.filter((item) => item.id !== selected?.id)
-                )
-
-                setSelected(null)
-                setOpenDelete(false)
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+        ) : error ? (
+          <NoData 
+            title="Unable to load reasons" 
+            description={error.message || 'The backend could not return disable reasons. Please try again.'} 
+            actionLabel="Retry" 
+            onAction={refetch}
+            icon={AlertTriangle}
+          />
+        ) : rows.length === 0 ? (
+          <NoData 
+            title="No disable reasons" 
+            description="Create a disable reason before adding disabled student records." 
+            actionLabel="Add Reason" 
+            onAction={() => setAddOpen(true)}
+            icon={Ban}
+          />
+        ) : (
+          <DataTable 
+            columns={columns} 
+            data={rows} 
+            enableExport 
+            exportFilename="disable-reasons" 
+            rowActions={(row) => <ActionDropdown actions={[
+              { label: 'Edit', icon: Pencil, onClick: () => setEdit(row) }, 
+              { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setRemove(row) }
+            ]} />} 
+          />
+        )}
+      </div>
+      
+      <Drawer 
+        open={addOpen} 
+        onOpenChange={setAddOpen} 
+        title="Add Disable Reason" 
+        description="Create a new reason for disabling students." 
+        width="sm:max-w-md"
+        footer={<DrawerFooter formId="reason-form" onCancel={() => setAddOpen(false)} submitLabel="Create Reason" />}
+      >
+        {addOpen ? <ReasonForm onSubmit={(payload) => save(payload)} /> : null}
+      </Drawer>
+      
+      <Drawer 
+        open={Boolean(edit)} 
+        onOpenChange={(open) => !open && setEdit(null)} 
+        title="Edit Disable Reason" 
+        description={edit?.reason}
+        width="sm:max-w-md"
+        footer={<DrawerFooter formId="reason-form" onCancel={() => setEdit(null)} submitLabel="Save Changes" />}
+      >
+        {edit ? <ReasonForm initial={edit} onSubmit={(payload) => save(payload, edit._id)} /> : null}
+      </Drawer>
+      
+      <DeleteDialog 
+        open={Boolean(remove)} 
+        onOpenChange={(open) => !open && setRemove(null)} 
+        entityName={remove?.reason || 'reason'} 
+        onConfirm={onDelete} 
+      />
     </div>
   )
 }

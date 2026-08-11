@@ -6,51 +6,51 @@ export const frontOfficeService = {
   // ==========================================================
 
   getEnquiries(params = {}) {
-    return apiClient.get("/front-office/admission-enquiry", {
+    return apiClient.get("/office/admission-enquiry", {
       params,
     });
   },
 
   getEnquiry(id) {
-    return apiClient.get(`/front-office/admission-enquiry/${id}`);
+    return apiClient.get(`/office/admission-enquiry/${id}`);
   },
 
   createEnquiry(payload) {
-    return apiClient.post("/front-office/admission-enquiry", payload);
+    return apiClient.post("/office/admission-enquiry", payload);
   },
 
   updateEnquiry(id, payload) {
-    return apiClient.put(`/front-office/admission-enquiry/${id}`, payload);
+    return apiClient.put(`/office/admission-enquiry/${id}`, payload);
   },
 
   deleteEnquiry(id) {
-    return apiClient.delete(`/front-office/admission-enquiry/${id}`);
+    return apiClient.delete(`/office/admission-enquiry/${id}`);
   },
 
   // ==========================================================
-  // Visitor
+  // Visitor Book
   // ==========================================================
 
   getVisitors(params = {}) {
-    return apiClient.get("/front-office/visitor", {
+    return apiClient.get("/office/visitor-book", {
       params,
     });
   },
 
   getVisitor(id) {
-    return apiClient.get(`/front-office/visitor/${id}`);
+    return apiClient.get(`/office/visitor-book/${id}`);
   },
 
   createVisitor(payload) {
-    return apiClient.post("/front-office/visitor", payload);
+    return apiClient.post("/office/visitor-book", payload);
   },
 
   updateVisitor(id, payload) {
-    return apiClient.put(`/front-office/visitor/${id}`, payload);
+    return apiClient.put(`/office/visitor-book/${id}`, payload);
   },
 
   deleteVisitor(id) {
-    return apiClient.delete(`/front-office/visitor/${id}`);
+    return apiClient.delete(`/office/visitor-book/${id}`);
   },
 
   // ==========================================================
@@ -58,25 +58,25 @@ export const frontOfficeService = {
   // ==========================================================
 
   getCallLogs(params = {}) {
-    return apiClient.get("/front-office/phone-call-log", {
+    return apiClient.get("/office/phone-call-log", {
       params,
     });
   },
 
   getCallLog(id) {
-    return apiClient.get(`/front-office/phone-call-log/${id}`);
+    return apiClient.get(`/office/phone-call-log/${id}`);
   },
 
   createCallLog(payload) {
-    return apiClient.post("/front-office/phone-call-log", payload);
+    return apiClient.post("/office/phone-call-log", payload);
   },
 
   updateCallLog(id, payload) {
-    return apiClient.put(`/front-office/phone-call-log/${id}`, payload);
+    return apiClient.put(`/office/phone-call-log/${id}`, payload);
   },
 
   deleteCallLog(id) {
-    return apiClient.delete(`/front-office/phone-call-log/${id}`);
+    return apiClient.delete(`/office/phone-call-log/${id}`);
   },
 
   // ==========================================================
@@ -84,25 +84,25 @@ export const frontOfficeService = {
   // ==========================================================
 
   getDispatches(params = {}) {
-    return apiClient.get("/front-office/postal-dispatch", {
+    return apiClient.get("/office/postal-dispatch", {
       params,
     });
   },
 
   getDispatch(id) {
-    return apiClient.get(`/front-office/postal-dispatch/${id}`);
+    return apiClient.get(`/office/postal-dispatch/${id}`);
   },
 
   createDispatch(payload) {
-    return apiClient.post("/front-office/postal-dispatch", payload);
+    return apiClient.post("/office/postal-dispatch", payload);
   },
 
   updateDispatch(id, payload) {
-    return apiClient.put(`/front-office/postal-dispatch/${id}`, payload);
+    return apiClient.put(`/office/postal-dispatch/${id}`, payload);
   },
 
   deleteDispatch(id) {
-    return apiClient.delete(`/front-office/postal-dispatch/${id}`);
+    return apiClient.delete(`/office/postal-dispatch/${id}`);
   },
 
   // ==========================================================
@@ -110,25 +110,25 @@ export const frontOfficeService = {
   // ==========================================================
 
   getReceives(params = {}) {
-    return apiClient.get("/front-office/postal-receive", {
+    return apiClient.get("/office/postal-receive", {
       params,
     });
   },
 
   getReceive(id) {
-    return apiClient.get(`/front-office/postal-receive/${id}`);
+    return apiClient.get(`/office/postal-receive/${id}`);
   },
 
   createReceive(payload) {
-    return apiClient.post("/front-office/postal-receive", payload);
+    return apiClient.post("/office/postal-receive", payload);
   },
 
   updateReceive(id, payload) {
-    return apiClient.put(`/front-office/postal-receive/${id}`, payload);
+    return apiClient.put(`/office/postal-receive/${id}`, payload);
   },
 
   deleteReceive(id) {
-    return apiClient.delete(`/front-office/postal-receive/${id}`);
+    return apiClient.delete(`/office/postal-receive/${id}`);
   },
 
   // ==========================================================
@@ -136,25 +136,25 @@ export const frontOfficeService = {
   // ==========================================================
 
   getComplaints(params = {}) {
-    return apiClient.get("/front-office/complaint", {
+    return apiClient.get("/office/complaint", {
       params,
     });
   },
 
   getComplaint(id) {
-    return apiClient.get(`/front-office/complaint/${id}`);
+    return apiClient.get(`/office/complaint/${id}`);
   },
 
   createComplaint(payload) {
-    return apiClient.post("/front-office/complaint", payload);
+    return apiClient.post("/office/complaint", payload);
   },
 
   updateComplaint(id, payload) {
-    return apiClient.put(`/front-office/complaint/${id}`, payload);
+    return apiClient.put(`/office/complaint/${id}`, payload);
   },
 
   deleteComplaint(id) {
-    return apiClient.delete(`/front-office/complaint/${id}`);
+    return apiClient.delete(`/office/complaint/${id}`);
   },
 
   // ==========================================================
@@ -162,25 +162,25 @@ export const frontOfficeService = {
   // ==========================================================
 
   getSetup(params = {}) {
-    return apiClient.get("/front-office/setup", {
+    return apiClient.get("/office/setup", {
       params,
     });
   },
 
   getSetupItem(id) {
-    return apiClient.get(`/front-office/setup/${id}`);
+    return apiClient.get(`/office/setup/${id}`);
   },
 
   createSetupItem(payload) {
-    return apiClient.post("/front-office/setup", payload);
+    return apiClient.post("/office/setup", payload);
   },
 
   updateSetupItem(id, payload) {
-    return apiClient.put(`/front-office/setup/${id}`, payload);
+    return apiClient.put(`/office/setup/${id}`, payload);
   },
 
   deleteSetupItem(id) {
-    return apiClient.delete(`/front-office/setup/${id}`);
+    return apiClient.delete(`/office/setup/${id}`);
   },
 };
 

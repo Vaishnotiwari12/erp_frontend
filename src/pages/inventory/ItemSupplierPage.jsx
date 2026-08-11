@@ -3,7 +3,7 @@
 // Page: Item Supplier
 //
 // Purpose:
-// Manage inventory suppliers and their contact information.
+// Manage inventory suppliers.
 //
 // Data Source:
 // inventory.service.js
@@ -14,13 +14,7 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  Truck,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
+import { Truck, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,41 +27,47 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useItemSuppliers } from '@/hooks/useInventory'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { inventoryService } from '@/services/inventory.service'
 import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'supplier_name', label: 'Supplier Name' },
   { key: 'phone', label: 'Phone' },
   { key: 'email', label: 'Email' },
   { key: 'address', label: 'Address' },
-  { key: 'status', label: 'Status' },
   { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function ItemSupplierPage() {
-  const {
-    rows, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
-    saveItemSupplier, deleteItemSupplier,
-  } = useItemSuppliers()
-
+  const { toast } = useToast()
+  const { data: suppliers, isLoading, refetch } = useAsyncData(() => inventoryService.getItemSuppliers(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveItemSupplier(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const rows = suppliers || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    return !q || 
+      (r.supplier_name || '').toLowerCase().includes(q) ||
+      (r.phone || '').toLowerCase().includes(q) ||
+      (r.email || '').toLowerCase().includes(q) ||
+      (r.address || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -78,14 +78,14 @@ export default function ItemSupplierPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Truck className="h-4 w-4" />
           </div>
-          <span className="font-medium hover:underline">{row.original.supplier_name}</span>
+          <span className="font-medium hover:underline">{row.original.supplier_name || 'Unnamed'}</span>
         </button>
       ),
     },
-    { accessorKey: 'phone', header: 'Phone', cell: ({ row }) => <span className="text-sm">{row.original.phone || '—'}</span> },
-    { accessorKey: 'email', header: 'Email', cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.email || '—'}</span> },
+    { accessorKey: 'phone', header: 'Phone', cell: ({ row }) => row.original.phone || '—' },
+    { accessorKey: 'email', header: 'Email', cell: ({ row }) => row.original.email || '—' },
     { accessorKey: 'address', header: 'Address', cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.address || '—'}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -95,161 +95,194 @@ export default function ItemSupplierPage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await inventoryService.updateItemSupplier(id, payload)
+        toast({ title: 'Supplier updated successfully' })
+        setEditRow(null)
+      } else {
+        await inventoryService.createItemSupplier(payload)
+        toast({ title: 'Supplier created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save supplier:', error)
+      toast({ title: 'Failed to save supplier', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await inventoryService.deleteItemSupplier(id)
+      toast({ title: 'Supplier deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete supplier:', error)
+      toast({ title: 'Failed to delete supplier', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Inventory' }, { label: 'Item Supplier' }]} />
       <PageHeader
         title="Item Suppliers"
-        description="Manage inventory suppliers and their contact information."
+        description="Manage inventory suppliers."
         icon={Truck}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>}
       />
 
+      <div className="grid gap-4 sm:grid-cols-1">
+        <StatCard label="Total Suppliers" value={stats.total} icon={Truck} accent="primary" />
+      </div>
+
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by supplier name, email, or phone…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by name, phone, email, or address…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="inventory-suppliers" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="item-suppliers" />
         </div>
       </FilterBar>
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={5} cols={5} />
-      ) : rows.length === 0 ? (
-        <NoData title="No suppliers found" description="Add a new supplier to get started." actionLabel="Add Supplier" onAction={() => setAddOpen(true)} />
+      ) : filtered.length === 0 ? (
+        <NoData title="No suppliers found" description="Add a supplier to get started." actionLabel="Add Supplier" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="inventory-suppliers"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Supplier Form Drawer used for both Add and Edit. */}
-      <SupplierFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Supplier' : 'Add Supplier'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Supplier' : 'Add Supplier'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update supplier details' : 'Add a new supplier'}</DialogDescription>
+          </DialogHeader>
+          <ItemSupplierForm 
+            initial={editRow} 
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Supplier Details"
-        description={viewRow?.supplier_name}
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
         {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Truck className="h-5 w-5" />
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {[
+              { label: 'Supplier Name', value: viewRow.supplier_name || 'Unnamed' },
+              { label: 'Phone', value: viewRow.phone || '—' },
+              { label: 'Email', value: viewRow.email || '—' },
+              { label: 'Address', value: viewRow.address || '—' },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+              { label: 'Updated', value: formatDate(viewRow.updatedAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value}</dd>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.supplier_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.email || '—'}</p>
-              </div>
-              <StatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-1 gap-y-4">
-              {[
-                { label: 'Phone', value: viewRow.phone || '—' },
-                { label: 'Email', value: viewRow.email || '—' },
-                { label: 'Address', value: viewRow.address || '—' },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+            ))}
+          </dl>
         )}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.supplier_name}
-        onConfirm={() => deleteItemSupplier(deleteRow._id)}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Supplier</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this supplier? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Supplier Form Drawer (shared by Add and Edit) ────────────────────────────
-function SupplierFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    supplier_name: initial?.supplier_name || '',
-    phone: initial?.phone || '',
-    email: initial?.email || '',
-    address: initial?.address || '',
-    status: initial?.status || 'active',
+function ItemSupplierForm({ initial, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    supplier_name: '',
+    phone: '',
+    email: '',
+    address: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        supplier_name: initial.supplier_name || '',
+        phone: initial.phone || '',
+        email: initial.email || '',
+        address: initial.address || '',
+      })
+    }
+  }, [initial])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Supplier contact information"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Supplier'}
-          submitDisabled={!form.supplier_name.trim()}
-          onSubmit={() => onSubmit(form)}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="supplier_name">Supplier Name *</Label>
+        <Input
+          id="supplier_name"
+          value={formData.supplier_name}
+          onChange={(e) => setFormData({ ...formData, supplier_name: e.target.value })}
+          required
         />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Supplier Name <span className="text-destructive">*</span></Label>
-            <Input value={form.supplier_name} onChange={(e) => set('supplier_name', e.target.value)} placeholder="e.g. EduSupplies Ltd" required />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Phone</Label>
-              <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+1 555-0100" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="contact@supplier.com" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Address</Label>
-            <Textarea value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="Supplier address" rows={2} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+      </div>
+      <div>
+        <Label htmlFor="phone">Phone</Label>
+        <Input
+          id="phone"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="address">Address</Label>
+        <Textarea
+          id="address"
+          value={formData.address}
+          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          placeholder="Supplier address..."
+          rows={3}
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

@@ -62,7 +62,29 @@ export const hrService = {
   },
 
   createStaff(payload) {
-    return apiClient.post("/hr/staff-directory", payload);
+    const formData = new FormData();
+    
+    // Add all text fields
+    if (payload.employee_id) formData.append('employee_id', payload.employee_id);
+    if (payload.name) formData.append('name', payload.name);
+    if (payload.email) formData.append('email', payload.email);
+    if (payload.phone) formData.append('phone', payload.phone);
+    if (payload.department_id) formData.append('department_id', payload.department_id);
+    if (payload.designation_id) formData.append('designation_id', payload.designation_id);
+    if (payload.joining_date) formData.append('joining_date', payload.joining_date);
+    if (payload.salary) formData.append('salary', payload.salary);
+    if (payload.role) formData.append('role', payload.role);
+    if (payload.status) formData.append('status', payload.status);
+    
+    // Add file fields
+    if (payload.staff_photo) formData.append('staff_photo', payload.staff_photo);
+    if (payload.documents && Array.isArray(payload.documents)) {
+      payload.documents.forEach((doc) => {
+        formData.append('documents', doc);
+      });
+    }
+    
+    return apiClient.post("/hr/staff-directory", formData);
   },
 
   updateStaff(id, payload) {
@@ -81,7 +103,7 @@ export const hrService = {
     return apiClient.get("/hr/staff-attendance", { params });
   },
 
-  getAttendanceRecord(id) {
+  getAttendanceById(id) {
     return apiClient.get(`/hr/staff-attendance/${id}`);
   },
 
@@ -101,23 +123,23 @@ export const hrService = {
   // Apply Leave
   // ==========================================================
 
-  getLeaveApplications(params = {}) {
+  getApplyLeaves(params = {}) {
     return apiClient.get("/hr/apply-leave", { params });
   },
 
-  getLeaveApplication(id) {
+  getApplyLeave(id) {
     return apiClient.get(`/hr/apply-leave/${id}`);
   },
 
-  applyLeave(payload) {
+  createApplyLeave(payload) {
     return apiClient.post("/hr/apply-leave", payload);
   },
 
-  updateLeaveApplication(id, payload) {
+  updateApplyLeave(id, payload) {
     return apiClient.put(`/hr/apply-leave/${id}`, payload);
   },
 
-  deleteLeaveApplication(id) {
+  deleteApplyLeave(id) {
     return apiClient.delete(`/hr/apply-leave/${id}`);
   },
 

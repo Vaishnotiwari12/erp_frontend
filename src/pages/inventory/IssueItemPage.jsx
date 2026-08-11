@@ -3,7 +3,7 @@
 // Page: Issue Item
 //
 // Purpose:
-// Issue inventory items to students and staff, and track returns.
+// Issue inventory items to students and staff.
 //
 // Data Source:
 // inventory.service.js
@@ -14,13 +14,7 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  ClipboardList,
-  Plus,
-  Eye,
-  Trash2,
-  RotateCcw,
-} from 'lucide-react'
+import { ClipboardList, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,170 +27,249 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useIssueItems } from '@/hooks/useInventory'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { inventoryService } from '@/services/inventory.service'
+import { studentService } from '@/services/student.service'
+import { hrService } from '@/services/hr.service'
 import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'item_name', label: 'Item' },
-  { key: 'issued_to_name', label: 'Issued To' },
   { key: 'issued_to_type', label: 'Type' },
+  { key: 'issued_to_name', label: 'Issued To' },
   { key: 'quantity', label: 'Quantity' },
   { key: 'issue_date', label: 'Issue Date' },
-  { key: 'return_date', label: 'Return Date' },
-  { key: 'status', label: 'Status' },
   { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function IssueItemPage() {
-  const {
-    rows, items, stats, isLoading,
-    search, setSearch, typeFilter, setTypeFilter,
-    statusFilter, setStatusFilter,
-    createIssueItem, returnItem, deleteIssueItem,
-  } = useIssueItems()
-
+  const { toast } = useToast()
+  const { data: issueItems, isLoading, refetch } = useAsyncData(() => inventoryService.getIssueItems(), [])
+  const { data: items, isLoading: itemsLoading } = useAsyncData(() => inventoryService.getItems(), [])
+  const { data: students, isLoading: studentsLoading } = useAsyncData(() => studentService.list(), [])
+  const { data: staff, isLoading: staffLoading } = useAsyncData(() => hrService.getStaff(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
-  const [returnRow, setReturnRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleAdd = async (payload) => {
-    await createIssueItem(payload)
-    setAddOpen(false)
-  }
+  const rows = issueItems || []
+  const allItems = items || []
+  const allStudents = students || []
+  const allStaff = staff || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const item = allItems.find(i => i._id === r.item_id)
+    let issuedToName = ''
+    if (r.issued_to_type === 'student') {
+      const student = allStudents.find(s => s._id === r.issued_to_id)
+      issuedToName = typeof student === 'string' ? student : student?.full_name || student?.first_name || 'Unknown'
+    } else if (r.issued_to_type === 'staff') {
+      const staffMember = allStaff.find(s => s._id === r.issued_to_id)
+      issuedToName = typeof staffMember === 'string' ? staffMember : staffMember?.full_name || staffMember?.first_name || 'Unknown'
+    }
+    return !q || 
+      (item?.item_name || '').toLowerCase().includes(q) ||
+      issuedToName.toLowerCase().includes(q) ||
+      (r.issued_to_type || '').toLowerCase().includes(q)
+  }), [rows, search, allItems, allStudents, allStaff])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    totalIssued: rows.reduce((sum, r) => sum + (r.quantity || 0), 0),
+    toStudents: rows.filter(r => r.issued_to_type === 'student').length,
+    toStaff: rows.filter(r => r.issued_to_type === 'staff').length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'item_name',
+      accessorKey: 'item_id',
       header: 'Item',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ClipboardList className="h-4 w-4" />
-          </div>
-          <span className="font-medium hover:underline">{row.original.item_name}</span>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const item = allItems.find(i => i._id === row.original.item_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <ClipboardList className="h-4 w-4" />
+            </div>
+            <span className="font-medium hover:underline">{item?.item_name || 'Unknown'}</span>
+          </button>
+        )
+      },
     },
     {
-      accessorKey: 'issued_to_name',
-      header: 'Issued To',
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row.original.issued_to_name}</span>
-          <Badge variant={row.original.issued_to_type === 'student' ? 'default' : 'secondary'} className={row.original.issued_to_type === 'staff' ? 'mt-0.5 w-fit bg-orange-100 text-orange-700 hover:bg-orange-100' : 'mt-0.5 w-fit'}>
-            {row.original.issued_to_type}
-          </Badge>
-        </div>
-      ),
+      accessorKey: 'issued_to_type',
+      header: 'Type',
+      cell: ({ row }) => <Badge variant={row.original.issued_to_type === 'student' ? 'secondary' : 'outline'}>{row.original.issued_to_type || '—'}</Badge>,
     },
-    { accessorKey: 'quantity', header: 'Qty', cell: ({ row }) => <span className="font-medium">{row.original.quantity}</span> },
+    {
+      accessorKey: 'issued_to_id',
+      header: 'Issued To',
+      cell: ({ row }) => {
+        let name = 'Unknown'
+        if (row.original.issued_to_type === 'student') {
+          const student = allStudents.find(s => s._id === row.original.issued_to_id)
+          name = typeof student === 'string' ? student : student?.full_name || student?.first_name || 'Unknown'
+        } else if (row.original.issued_to_type === 'staff') {
+          const staffMember = allStaff.find(s => s._id === row.original.issued_to_id)
+          name = typeof staffMember === 'string' ? staffMember : staffMember?.full_name || staffMember?.first_name || 'Unknown'
+        }
+        return <span className="text-sm">{name}</span>
+      },
+    },
+    { accessorKey: 'quantity', header: 'Quantity', cell: ({ row }) => `${row.original.quantity || 0}` },
     { accessorKey: 'issue_date', header: 'Issue Date', cell: ({ row }) => formatDate(row.original.issue_date) },
-    { accessorKey: 'return_date', header: 'Return Date', cell: ({ row }) => row.original.return_date ? formatDate(row.original.return_date) : <span className="text-muted-foreground">Not Returned</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-  ], [])
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [allItems, allStudents, allStaff])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
-    { label: 'Return Item', icon: RotateCcw, onClick: () => setReturnRow(r), disabled: r.status !== 'issued' },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
     { separator: true },
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
+
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await inventoryService.updateIssueItem(id, payload)
+        toast({ title: 'Issue updated successfully' })
+        setEditRow(null)
+      } else {
+        await inventoryService.createIssueItem(payload)
+        toast({ title: 'Item issued successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save issue:', error)
+      toast({ title: 'Failed to save issue', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await inventoryService.deleteIssueItem(id)
+      toast({ title: 'Issue deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete issue:', error)
+      toast({ title: 'Failed to delete issue', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Inventory' }, { label: 'Issue Item' }]} />
       <PageHeader
-        title="Issue Items"
-        description="Issue inventory items to students and staff, and track returns."
+        title="Issue Item"
+        description="Issue inventory items to students and staff."
         icon={ClipboardList}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Issue Item</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard label="Total Issues" value={stats.total} icon={ClipboardList} accent="primary" />
-        <StatCard label="Currently Issued" value={stats.issued} icon={ClipboardList} accent="chart2" />
-        <StatCard label="Returned" value={stats.returned} icon={ClipboardList} accent="success" />
+        <StatCard label="Total Issued Qty" value={stats.totalIssued} icon={ClipboardList} accent="success" />
+        <StatCard label="To Students" value={stats.toStudents} icon={ClipboardList} accent="blue" />
+        <StatCard label="To Staff" value={stats.toStaff} icon={ClipboardList} accent="purple" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by item or issued to…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by item, name, or type…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="inventory-issues" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All types</option>
-            <option value="student">Student</option>
-            <option value="staff">Staff</option>
-          </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="issued">Issued</option>
-            <option value="returned">Returned</option>
-          </select>
+          <ExportButtons 
+            rows={filtered.map(r => {
+              let issuedToName = 'Unknown'
+              if (r.issued_to_type === 'student') {
+                const student = allStudents.find(s => s._id === r.issued_to_id)
+                issuedToName = typeof student === 'string' ? student : student?.full_name || student?.first_name || 'Unknown'
+              } else if (r.issued_to_type === 'staff') {
+                const staffMember = allStaff.find(s => s._id === r.issued_to_id)
+                issuedToName = typeof staffMember === 'string' ? staffMember : staffMember?.full_name || staffMember?.first_name || 'Unknown'
+              }
+              return {
+                ...r,
+                item_name: allItems.find(i => i._id === r.item_id)?.item_name || 'Unknown',
+                issued_to_name: issuedToName,
+              }
+            })} 
+            columns={EXPORT_COLS} 
+            filename="issue-items" 
+          />
         </div>
       </FilterBar>
 
       {isLoading ? (
         <LoadingSkeleton variant="table" rows={5} cols={6} />
-      ) : rows.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <NoData title="No issues found" description="Issue an item to get started." actionLabel="Issue Item" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="inventory-issues"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Issue Form Drawer. */}
-      <IssueFormDrawer
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        items={items}
-        onSubmit={handleAdd}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Issue' : 'Issue Item'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update issue details' : 'Issue an item to a student or staff member'}</DialogDescription>
+          </DialogHeader>
+          <IssueItemForm 
+            initial={editRow} 
+            items={allItems}
+            students={allStudents}
+            staff={allStaff}
+            itemsLoading={itemsLoading}
+            studentsLoading={studentsLoading}
+            staffLoading={staffLoading}
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Issue Details"
-        description={viewRow?.item_name}
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <ClipboardList className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.item_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.issued_to_name}</p>
-              </div>
-              <StatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {viewRow && (() => {
+          const item = allItems.find(i => i._id === viewRow.item_id)
+          let issuedToName = 'Unknown'
+          if (viewRow.issued_to_type === 'student') {
+            const student = allStudents.find(s => s._id === viewRow.issued_to_id)
+            issuedToName = typeof student === 'string' ? student : student?.full_name || student?.first_name || 'Unknown'
+          } else if (viewRow.issued_to_type === 'staff') {
+            const staffMember = allStaff.find(s => s._id === viewRow.issued_to_id)
+            issuedToName = typeof staffMember === 'string' ? staffMember : staffMember?.full_name || staffMember?.first_name || 'Unknown'
+          }
+          return (
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               {[
-                { label: 'Issued To', value: viewRow.issued_to_name },
-                { label: 'Type', value: viewRow.issued_to_type },
-                { label: 'Quantity', value: viewRow.quantity },
+                { label: 'Item', value: item?.item_name || 'Unknown' },
+                { label: 'Type', value: viewRow.issued_to_type || '—' },
+                { label: 'Issued To', value: issuedToName },
+                { label: 'Quantity', value: viewRow.quantity || 0 },
                 { label: 'Issue Date', value: formatDate(viewRow.issue_date) },
-                { label: 'Return Date', value: viewRow.return_date ? formatDate(viewRow.return_date) : 'Not Returned' },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
+                { label: 'Created', value: formatDate(viewRow.createdAt) },
+                { label: 'Updated', value: formatDate(viewRow.updatedAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
@@ -204,96 +277,153 @@ export default function IssueItemPage() {
                 </div>
               ))}
             </dl>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      {/* Return confirmation */}
-      <DeleteDialog
-        open={!!returnRow}
-        onOpenChange={(o) => !o && setReturnRow(null)}
-        title="Return Item"
-        entityName={returnRow?.item_name}
-        description={`This will mark ${returnRow?.item_name} issued to ${returnRow?.issued_to_name} as returned.`}
-        confirmLabel="Return"
-        onConfirm={() => returnItem(returnRow._id, returnRow.issued_to_name)}
-      />
-
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.item_name}
-        onConfirm={() => deleteIssueItem(deleteRow._id)}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Issue</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this issue record? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Issue Form Drawer ────────────────────────────────────────────────────────
-function IssueFormDrawer({ open, onOpenChange, items, onSubmit }) {
-  const [form, setForm] = useState({
+function IssueItemForm({ initial, items, students, staff, itemsLoading, studentsLoading, staffLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
     item_id: '',
     issued_to_type: 'student',
-    issued_to_name: '',
-    quantity: 1,
-    issue_date: new Date().toISOString().slice(0, 10),
+    issued_to_id: '',
+    quantity: '',
+    issue_date: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        item_id: initial.item_id || '',
+        issued_to_type: initial.issued_to_type || 'student',
+        issued_to_id: initial.issued_to_id || '',
+        quantity: initial.quantity || '',
+        issue_date: initial.issue_date ? initial.issue_date.split('T')[0] : '',
+      })
+    } else {
+      setFormData({
+        item_id: items[0]?._id || '',
+        issued_to_type: 'student',
+        issued_to_id: students[0]?._id || '',
+        quantity: '',
+        issue_date: new Date().toISOString().split('T')[0],
+      })
+    }
+  }, [initial, items, students])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit({
+      ...formData,
+      quantity: Number(formData.quantity) || 0,
+    })
+  }
+
+  const getIssuedToOptions = () => {
+    if (formData.issued_to_type === 'student') {
+      return students.map(s => ({
+        value: s._id,
+        label: typeof s === 'string' ? s : s.full_name || s.first_name || 'Unknown',
+      }))
+    } else {
+      return staff.map(s => ({
+        value: s._id,
+        label: typeof s === 'string' ? s : s.full_name || s.first_name || 'Unknown',
+      }))
+    }
+  }
+
+  const issuedToOptions = getIssuedToOptions()
+  const issuedToLoading = formData.issued_to_type === 'student' ? studentsLoading : staffLoading
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Issue Item"
-      description="Issue an inventory item to a student or staff member"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel="Issue"
-          submitDisabled={!form.item_id || !form.issued_to_name.trim()}
-          onSubmit={() => onSubmit(form)}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="item_id">Item *</Label>
+        <select
+          id="item_id"
+          value={formData.item_id}
+          onChange={(e) => setFormData({ ...formData, item_id: e.target.value })}
+          disabled={itemsLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select item</option>
+          {items.map((i) => (
+            <option key={i._id} value={i._id}>{i.item_name || 'Unnamed'}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="issued_to_type">Issue To *</Label>
+        <select
+          id="issued_to_type"
+          value={formData.issued_to_type}
+          onChange={(e) => setFormData({ ...formData, issued_to_type: e.target.value, issued_to_id: '' })}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="student">Student</option>
+          <option value="staff">Staff</option>
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="issued_to_id">{formData.issued_to_type === 'student' ? 'Student' : 'Staff'} *</Label>
+        <select
+          id="issued_to_id"
+          value={formData.issued_to_id}
+          onChange={(e) => setFormData({ ...formData, issued_to_id: e.target.value })}
+          disabled={issuedToLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select {formData.issued_to_type === 'student' ? 'student' : 'staff'}</option>
+          {issuedToOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="quantity">Quantity *</Label>
+        <Input
+          id="quantity"
+          type="number"
+          min="1"
+          value={formData.quantity}
+          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+          required
         />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Item <span className="text-destructive">*</span></Label>
-            <select value={form.item_id} onChange={(e) => set('item_id', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="">Select item</option>
-              {items.filter((i) => i.status === 'active').map((i) => (
-                <option key={i._id} value={i._id}>{i.item_name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Issued To Type</Label>
-              <select value={form.issued_to_type} onChange={(e) => set('issued_to_type', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="student">Student</option>
-                <option value="staff">Staff</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Quantity</Label>
-              <Input type="number" min="1" value={form.quantity} onChange={(e) => set('quantity', parseInt(e.target.value) || 1)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Issued To Name <span className="text-destructive">*</span></Label>
-            <Input value={form.issued_to_name} onChange={(e) => set('issued_to_name', e.target.value)} placeholder="e.g. Aarav Sharma" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Issue Date</Label>
-            <Input type="date" value={form.issue_date} onChange={(e) => set('issue_date', e.target.value)} />
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+      </div>
+      <div>
+        <Label htmlFor="issue_date">Issue Date *</Label>
+        <Input
+          id="issue_date"
+          type="date"
+          value={formData.issue_date}
+          onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
+          required
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

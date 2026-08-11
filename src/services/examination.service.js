@@ -174,7 +174,9 @@ export const examinationService = {
   // ==========================================================
 
   printMarksheet(studentId) {
-    return apiClient.get(`/exam/print-marksheet/${studentId}`);
+    return apiClient.get(`/exam/print-marksheet/${studentId}`, {
+      responseType: 'blob' // Important for PDF responses
+    });
   },
 
   // ==========================================================
@@ -182,8 +184,38 @@ export const examinationService = {
   // ==========================================================
 
   printAdmitCard(studentId) {
-    return apiClient.get(`/exam/print-admit-card/${studentId}`);
+    return apiClient.get(`/exam/print-admit-card/${studentId}`, {
+      responseType: 'blob' // Important for PDF responses
+    });
   },
+
+  // ==========================================================
+  // Alias methods used by hooks/pages
+  // ==========================================================
+
+  // Hooks use remove* instead of delete*
+  async removeExamGroup(id) { return this.deleteExamGroup(id); },
+  async removeSchedule(id) { return this.deleteExamSchedule(id); },
+  async removeResult(id) { return this.deleteExamResult(id); },
+  async removeMarksGrade(id) { return this.deleteMarksGrade(id); },
+  async removeMarksDivision(id) { return this.deleteMarksDivision(id); },
+
+  // Hooks use create*/update* with short nouns
+  async createSchedule(payload) { return this.createExamSchedule(payload); },
+  async updateSchedule(id, payload) { return this.updateExamSchedule(id, payload); },
+  async createResult(payload) { return this.createExamResult(payload); },
+  async updateResult(id, payload) { return this.updateExamResult(id, payload); },
+
+  // Hooks use bulkDeleteExamGroups
+  async bulkDeleteExamGroups(ids) {
+    return apiClient.post('/exam/group/bulk-delete', { ids });
+  },
+
+  // Print/Design pages use different names
+  // async getAdmitCards(params = {}) { return this.getAdmitCardDesigns(params); },
+  async getMarksheets(params = {}) { return this.getMarksheetDesigns(params); },
+  async updateAdmitCardTemplate(id, payload) { return this.updateAdmitCardDesign(id, payload); },
+  async updateMarksheetTemplate(id, payload) { return this.updateMarksheetDesign(id, payload); },
 };
 
 export default examinationService;

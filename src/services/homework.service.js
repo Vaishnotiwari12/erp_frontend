@@ -6,25 +6,25 @@ export const homeworkService = {
   // ==========================================================
 
   getHomeworks(params = {}) {
-    return apiClient.get("/homework/homework", {
+    return apiClient.get("/homework/add", {
       params,
     });
   },
 
   getHomework(id) {
-    return apiClient.get(`/homework/homework/${id}`);
+    return apiClient.get(`/homework/add/${id}`);
   },
 
   createHomework(payload) {
-    return apiClient.post("/homework/homework", payload);
+    return apiClient.post("/homework/add", payload);
   },
 
   updateHomework(id, payload) {
-    return apiClient.put(`/homework/homework/${id}`, payload);
+    return apiClient.put(`/homework/add/${id}`, payload);
   },
 
   deleteHomework(id) {
-    return apiClient.delete(`/homework/homework/${id}`);
+    return apiClient.delete(`/homework/add/${id}`);
   },
 
   // ==========================================================

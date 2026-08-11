@@ -17,7 +17,7 @@ import { useMemo, useState, useCallback } from 'react'
 import { attendanceService } from '@/services/attendance.service'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { useToast } from '@/hooks/use-toast'
-import { fullName } from '@/utils/format'
+
 
 // ─── useStudentAttendance ──────────────────────────────────────────────────────
 // Manages student attendance list, filtering, stats, and mark/bulk operations.
@@ -30,6 +30,17 @@ export function useStudentAttendance() {
   const [sectionFilter, setSectionFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('')
+  
+  const deleteAttendance = useCallback(
+  async (id) => {
+    await attendanceService.remove(id)
+    toast({
+      title: "Attendance deleted",
+    })
+    refetch()
+  },
+  [refetch, toast]
+)
 
   const rows = data || []
 
@@ -38,13 +49,22 @@ export function useStudentAttendance() {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const name = fullName(r.name)
+        let name, rollNumber
+        if (typeof r.student_id === 'object' && r.student_id !== null) {
+          name = r.student_id.name ? `${r.student_id.name.first} ${r.student_id.name.last}` : ''
+          rollNumber = r.student_id.roll_number || ''
+        } else {
+          // student_id is a string ID - we can't look it up here without the map
+          name = ''
+          rollNumber = ''
+        }
+        
         const q = search.toLowerCase()
-        const matchSearch = !q || name.toLowerCase().includes(q) || r.admission_no.toLowerCase().includes(q)
-        const matchClass = classFilter === 'all' || r.class === classFilter
+        const matchSearch = !q || name.toLowerCase().includes(q) || rollNumber.toLowerCase().includes(q)
+        const matchClass = classFilter === 'all' || r.class_id === classFilter
         const matchSection = sectionFilter === 'all' || r.section === sectionFilter
         const matchStatus = statusFilter === 'all' || r.status === statusFilter
-        const matchDate = !dateFilter || r.date === dateFilter
+        const matchDate = !dateFilter || r.attendance_date === dateFilter
         return matchSearch && matchClass && matchSection && matchStatus && matchDate
       }),
     [rows, search, classFilter, sectionFilter, statusFilter, dateFilter],
@@ -63,8 +83,9 @@ export function useStudentAttendance() {
 
   const markStatus = useCallback(
     async (row, status) => {
-      await attendanceService.markAttendance(row._id, status)
-      toast({ title: 'Attendance marked', description: `${fullName(row.name)} marked ${status}.` })
+      await attendanceService.markAttendance(row._id, { status })
+      const name = row.student_id?.name ? `${row.student_id.name.first} ${row.student_id.name.last}` : 'Student'
+      toast({ title: 'Attendance marked', description: `${name} marked ${status}.` })
       refetch()
     },
     [refetch, toast],
@@ -72,7 +93,7 @@ export function useStudentAttendance() {
 
   const bulkMark = useCallback(
     async (selected, status) => {
-      await attendanceService.bulkMark(selected.map((r) => r._id), status)
+      await attendanceService.bulkMark({ ids: selected.map((r) => r._id), status })
       toast({ title: `${selected.length} students marked ${status}` })
       refetch()
     },
@@ -81,8 +102,17 @@ export function useStudentAttendance() {
 
   const updateAttendance = useCallback(
     async (id, payload) => {
-      await attendanceService.markAttendance(id, payload.status)
+      await attendanceService.markAttendance(id, { status: payload.status })
       toast({ title: 'Attendance updated' })
+      refetch()
+    },
+    [refetch, toast],
+  )
+
+  const createAttendance = useCallback(
+    async (payload) => {
+      await attendanceService.create(payload)
+      toast({ title: 'Attendance created' })
       refetch()
     },
     [refetch, toast],
@@ -101,6 +131,8 @@ export function useStudentAttendance() {
     markStatus,
     bulkMark,
     updateAttendance,
+    createAttendance,
+    deleteAttendance,
   }
 }
 
@@ -120,9 +152,9 @@ export function useAttendanceByDate(date) {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const name = fullName(r.name)
+        const name = r.student_id?.name ? `${r.student_id.name.first} ${r.student_id.name.last}` : ''
         const q = search.toLowerCase()
-        const matchSearch = !q || name.toLowerCase().includes(q) || r.admission_no.toLowerCase().includes(q)
+        const matchSearch = !q || name.toLowerCase().includes(q) || r.student_id?.roll_number?.toLowerCase().includes(q)
         const matchStatus = statusFilter === 'all' || r.status === statusFilter
         return matchSearch && matchStatus
       }),
@@ -172,15 +204,13 @@ export function useLeaveApprovals() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const matchSearch = !q || r.student_name.toLowerCase().includes(q) || r.admission_no.toLowerCase().includes(q)
+        const matchSearch = !q || r.student_id?.toLowerCase().includes(q)
         const matchStatus = status === 'all' || r.status === status
-        const matchClass = classFilter === 'all' || r.class === classFilter
-        const matchSection = sectionFilter === 'all' || r.section === sectionFilter
-        const matchFrom = !fromDate || new Date(r.from) >= new Date(fromDate)
-        const matchTo = !toDate || new Date(r.to) <= new Date(toDate)
-        return matchSearch && matchStatus && matchClass && matchSection && matchFrom && matchTo
+        const matchFrom = !fromDate || new Date(r.from_date) >= new Date(fromDate)
+        const matchTo = !toDate || new Date(r.to_date) <= new Date(toDate)
+        return matchSearch && matchStatus && matchFrom && matchTo
       }),
-    [rows, search, status, classFilter, sectionFilter, fromDate, toDate],
+    [rows, search, status, fromDate, toDate],
   )
 
   const stats = useMemo(
@@ -195,8 +225,8 @@ export function useLeaveApprovals() {
 
   const approveLeave = useCallback(
     async (app) => {
-      await attendanceService.updateLeave(app._id, 'approved')
-      toast({ title: 'Leave approved', description: `${app.student_name}'s leave has been approved.` })
+      await attendanceService.updateLeave(app._id, { status: 'approved' })
+      toast({ title: 'Leave approved', description: 'Leave has been approved.' })
       refetch()
     },
     [refetch, toast],
@@ -204,8 +234,8 @@ export function useLeaveApprovals() {
 
   const rejectLeave = useCallback(
     async (app) => {
-      await attendanceService.updateLeave(app._id, 'rejected')
-      toast({ title: 'Leave rejected', description: `${app.student_name}'s leave has been rejected.` })
+      await attendanceService.updateLeave(app._id, { status: 'rejected' })
+      toast({ title: 'Leave rejected', description: 'Leave has been rejected.' })
       refetch()
     },
     [refetch, toast],
@@ -224,5 +254,6 @@ export function useLeaveApprovals() {
     toDate, setToDate,
     approveLeave,
     rejectLeave,
+    
   }
 }

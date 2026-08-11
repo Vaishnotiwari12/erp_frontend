@@ -13,15 +13,13 @@
 // Never call Axios directly from this page.
 // ====================================================================
 
-import { useMemo, useState } from 'react'
-import { Star, TrendingUp, Award, Users, Eye, Pencil } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Star, TrendingUp, Award, Users, Eye, Pencil, Trash2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -30,10 +28,10 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { hrService } from '@/services/hr.service'
 import { formatDate, initials } from '@/utils/format'
@@ -41,14 +39,10 @@ import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
 const EXPORT_COLS = [
-  { key: 'teacher', label: 'Teacher' },
-  { key: 'department', label: 'Department' },
-  { key: 'overall_rating', label: 'Overall Rating' },
-  { key: 'teaching_skills', label: 'Teaching Skills' },
-  { key: 'punctuality', label: 'Punctuality' },
-  { key: 'student_engagement', label: 'Student Engagement' },
-  { key: 'rated_by', label: 'Rated By' },
-  { key: 'rated_on', label: 'Rated On' },
+  { key: 'teacher_name', label: 'Teacher' },
+  { key: 'rating', label: 'Rating' },
+  { key: 'comments', label: 'Comments' },
+  { key: 'createdAt', label: 'Rated On' },
 ]
 
 // Renders filled/empty stars for a numeric rating out of 5
@@ -72,74 +66,101 @@ function ratingColor(val) {
 
 export default function TeachersRatingPage() {
   const { toast } = useToast()
-  const { data, isLoading, refetch } = useAsyncData(() => hrService.getTeachersRating(), [])
+  const { data: ratings, isLoading, refetch } = useAsyncData(() => hrService.getTeacherRatings(), [])
+  const { data: staffList, isLoading: staffLoading } = useAsyncData(() => hrService.getStaff(), [])
+  
   const [search, setSearch] = useState('')
-  const [deptFilter, setDeptFilter] = useState('all')
   const [viewRow, setViewRow] = useState(null)
   const [editRow, setEditRow] = useState(null)
+  const [deleteRow, setDeleteRow] = useState(null)
 
-  const rows = data || []
-
-  const departments = useMemo(() => Array.from(new Set(rows.map((r) => r.department))), [rows])
+  const rows = ratings || []
+  const staff = staffList || []
 
   const filtered = useMemo(() => rows.filter((r) => {
-    const matchSearch = !search || r.teacher.toLowerCase().includes(search.toLowerCase()) || r.department.toLowerCase().includes(search.toLowerCase())
-    const matchDept = deptFilter === 'all' || r.department === deptFilter
-    return matchSearch && matchDept
-  }), [rows, search, deptFilter])
+    const teacher = staff.find(s => s._id === r.teacher_id)
+    const q = search.toLowerCase()
+    return !q || (teacher?.name || '').toLowerCase().includes(q)
+  }), [rows, search, staff])
 
   const stats = useMemo(() => {
     if (!rows.length) return { avg: 0, excellent: 0, total: 0 }
-    const avg = rows.reduce((s, r) => s + Number(r.overall_rating), 0) / rows.length
+    const avg = rows.reduce((s, r) => s + Number(r.rating), 0) / rows.length
     return {
       avg: avg.toFixed(2),
-      excellent: rows.filter((r) => Number(r.overall_rating) >= 4).length,
+      excellent: rows.filter((r) => Number(r.rating) >= 4).length,
       total: rows.length,
     }
   }, [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'teacher',
+      accessorKey: 'teacher_id',
       header: 'Teacher',
-      cell: ({ row }) => (
-        <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-            {initials(row.original.teacher)}
-          </div>
-          <div>
-            <p className="font-medium hover:underline">{row.original.teacher}</p>
-            <p className="text-xs text-muted-foreground">{row.original.department}</p>
-          </div>
-        </button>
-      ),
+      cell: ({ row }) => {
+        const teacher = staff.find(s => s._id === row.original.teacher_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              {initials(teacher?.name || 'Unknown')}
+            </div>
+            <div>
+              <p className="font-medium hover:underline">{teacher?.name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground">{teacher?.designation_id || '—'}</p>
+            </div>
+          </button>
+        )
+      },
     },
-    { accessorKey: 'teaching_skills', header: 'Teaching', cell: ({ row }) => <StarRating value={row.original.teaching_skills} /> },
-    { accessorKey: 'punctuality', header: 'Punctuality', cell: ({ row }) => <StarRating value={row.original.punctuality} /> },
-    { accessorKey: 'student_engagement', header: 'Engagement', cell: ({ row }) => <StarRating value={row.original.student_engagement} /> },
     {
-      accessorKey: 'overall_rating',
-      header: 'Overall',
+      accessorKey: 'rating',
+      header: 'Rating',
       cell: ({ row }) => (
-        <span className={cn('text-base font-bold', ratingColor(Number(row.original.overall_rating)))}>
-          {Number(row.original.overall_rating).toFixed(1)}
+        <span className={cn('text-base font-bold', ratingColor(Number(row.original.rating)))}>
+          <StarRating value={row.original.rating} />
         </span>
       ),
     },
-    { accessorKey: 'rated_by', header: 'Rated By', cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.rated_by}</span> },
-    { accessorKey: 'rated_on', header: 'Rated On', cell: ({ row }) => formatDate(row.original.rated_on) },
-  ], [])
+    { accessorKey: 'comments', header: 'Comments', cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground line-clamp-1 max-w-[200px]">{row.original.comments || '—'}</span>
+    ) },
+    { accessorKey: 'createdAt', header: 'Rated On', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [staff])
 
   const rowActions = (r) => [
     { label: 'View Details', icon: Eye, onClick: () => setViewRow(r) },
-    { label: 'Update Rating', icon: Pencil, onClick: () => setEditRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
+    { separator: true },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
-  const handleUpdateRating = async (payload) => {
-    await hrService.updateRating(editRow._id, payload)
-    toast({ title: 'Rating updated', description: editRow.teacher })
-    setEditRow(null)
-    refetch()
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await hrService.updateTeacherRating(id, payload)
+        toast({ title: 'Rating updated' })
+      } else {
+        await hrService.createTeacherRating(payload)
+        toast({ title: 'Rating created' })
+      }
+      setEditRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to save rating:', error)
+      toast({ title: 'Failed to save rating', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await hrService.deleteTeacherRating(id)
+      toast({ title: 'Rating deleted' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete rating:', error)
+      toast({ title: 'Failed to delete rating', variant: 'destructive' })
+    }
   }
 
   return (
@@ -149,6 +170,7 @@ export default function TeachersRatingPage() {
         title="Teachers Rating"
         description="View and manage performance evaluations for teaching staff."
         icon={Star}
+        actions={<Button onClick={() => setEditRow({})}><Star className="mr-2 h-4 w-4" /> Add Rating</Button>}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -158,26 +180,20 @@ export default function TeachersRatingPage() {
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search teacher or department…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search teacher name…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
           <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="teachers-rating" />
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All departments</option>
-            {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={6} cols={7} />
+        <LoadingSkeleton variant="table" rows={6} cols={4} />
       ) : filtered.length === 0 ? (
-        <NoData title="No ratings found" />
+        <NoData title="No ratings found" description="Add teacher ratings to see them here." actionLabel="Add Rating" onAction={() => setEditRow({})} />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          exportFilename="teachers-rating"
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
@@ -187,132 +203,176 @@ export default function TeachersRatingPage() {
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Rating Details"
-        description={viewRow?.teacher}
         width="sm:max-w-lg"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                {initials(viewRow.teacher)}
-              </div>
-              <div>
-                <p className="font-semibold">{viewRow.teacher}</p>
-                <p className="text-sm text-muted-foreground">{viewRow.department}</p>
-              </div>
-              <span className={cn('ml-auto text-3xl font-bold', ratingColor(Number(viewRow.overall_rating)))}>
-                {Number(viewRow.overall_rating).toFixed(1)}
-              </span>
-            </div>
-
-            {/* Criteria breakdown bars */}
-            <div className="space-y-4">
-              {[
-                { label: 'Teaching Skills', key: 'teaching_skills' },
-                { label: 'Punctuality', key: 'punctuality' },
-                { label: 'Student Engagement', key: 'student_engagement' },
-                { label: 'Classroom Management', key: 'classroom_management' },
-                { label: 'Subject Knowledge', key: 'subject_knowledge' },
-              ].map((c) => (
-                <div key={c.key} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{c.label}</span>
-                    <span className="text-muted-foreground">{Number(viewRow[c.key]).toFixed(1)} / 5</span>
-                  </div>
-                  <Progress value={Number(viewRow[c.key]) * 20} className="h-2" />
+        {viewRow && (() => {
+          const teacher = staff.find(s => s._id === viewRow.teacher_id)
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 rounded-xl border bg-muted/30 p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                  {initials(teacher?.name || 'Unknown')}
                 </div>
-              ))}
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <div><dt className="text-xs text-muted-foreground">Rated By</dt><dd className="text-sm font-medium">{viewRow.rated_by}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Rated On</dt><dd className="text-sm font-medium">{formatDate(viewRow.rated_on)}</dd></div>
-            </dl>
-
-            {viewRow.comments && (
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Comments</p>
-                <p className="rounded-lg border bg-muted/20 p-3 text-sm">{viewRow.comments}</p>
+                <div>
+                  <h3 className="text-lg font-semibold">{teacher?.name || 'Unknown'}</h3>
+                  <p className="text-sm text-muted-foreground">{teacher?.designation_id || '—'}</p>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Overall Rating</span>
+                  <span className={cn('text-2xl font-bold', ratingColor(Number(viewRow.rating)))}>
+                    <StarRating value={viewRow.rating} />
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Comments</span>
+                  <p className="mt-1 text-sm">{viewRow.comments || 'No comments provided'}</p>
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Rated On: {formatDate(viewRow.createdAt)}</p>
+                <p>Updated: {formatDate(viewRow.updatedAt)}</p>
+              </div>
+            </div>
+          )
+        })()}
       </Drawer>
 
-      {/* Edit Rating Drawer */}
-      {editRow && (
-        <RatingEditDrawer
-          open={!!editRow}
-          onOpenChange={(o) => !o && setEditRow(null)}
-          initial={editRow}
-          onSubmit={handleUpdateRating}
-        />
-      )}
+      {/* Add/Edit Dialog */}
+      <Dialog open={!!editRow} onOpenChange={(o) => { if (!o) setEditRow(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow?._id ? 'Edit Rating' : 'Add Rating'}</DialogTitle>
+            <DialogDescription>{editRow?._id ? 'Update the teacher rating' : 'Add a new teacher rating'}</DialogDescription>
+          </DialogHeader>
+          <RatingForm 
+            initial={editRow} 
+            staff={staff} 
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => setEditRow(null)} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Rating</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this rating? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// Slider-based rating editor for each criterion
-function RatingEditDrawer({ open, onOpenChange, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    teaching_skills: initial?.teaching_skills ?? 3,
-    punctuality: initial?.punctuality ?? 3,
-    student_engagement: initial?.student_engagement ?? 3,
-    classroom_management: initial?.classroom_management ?? 3,
-    subject_knowledge: initial?.subject_knowledge ?? 3,
-    comments: initial?.comments || '',
+// ─── RatingForm Component ───────────────────────────────────────────────────────
+function RatingForm({ initial, staff, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    teacher_id: '',
+    rater_id: '',
+    rating: 5,
+    comments: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useEffect(() => {
+    if (initial) {
+      setFormData({
+        teacher_id: initial.teacher_id || '',
+        rater_id: initial.rater_id || '',
+        rating: initial.rating || 5,
+        comments: initial.comments || '',
+      })
+    } else {
+      setFormData({
+        teacher_id: staff[0]?._id || '',
+        rater_id: staff[0]?._id || '',
+        rating: 5,
+        comments: '',
+      })
+    }
+  }, [initial, staff])
 
-  const avgRating = () => {
-    const fields = ['teaching_skills', 'punctuality', 'student_engagement', 'classroom_management', 'subject_knowledge']
-    const sum = fields.reduce((s, k) => s + Number(form[k]), 0)
-    return (sum / fields.length).toFixed(2)
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
   }
 
-  const CRITERIA = [
-    { label: 'Teaching Skills', key: 'teaching_skills' },
-    { label: 'Punctuality', key: 'punctuality' },
-    { label: 'Student Engagement', key: 'student_engagement' },
-    { label: 'Classroom Management', key: 'classroom_management' },
-    { label: 'Subject Knowledge', key: 'subject_knowledge' },
-  ]
-
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Update Rating"
-      description={initial.teacher}
-      width="sm:max-w-md"
-      footer={<DrawerFooter onCancel={() => onOpenChange(false)} submitLabel="Save Rating" onSubmit={() => onSubmit({ ...form, overall_rating: avgRating() })} />}
-    >
-      <div className="space-y-5">
-        {CRITERIA.map((c) => (
-          <div key={c.key} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">{c.label}</Label>
-              <span className="text-sm font-semibold text-primary">{form[c.key]} / 5</span>
-            </div>
-            <input type="range" min="1" max="5" step="0.5" value={form[c.key]}
-              onChange={(e) => set(c.key, Number(e.target.value))}
-              className="w-full accent-primary" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Poor</span><span>Excellent</span>
-            </div>
-          </div>
-        ))}
-        <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-center">
-          <p className="text-xs text-muted-foreground">Calculated Overall Rating</p>
-          <p className="text-2xl font-bold text-primary">{avgRating()}</p>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="teacher_id">Teacher *</Label>
+        <select
+          id="teacher_id"
+          value={formData.teacher_id}
+          onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select teacher</option>
+          {staff.map((s) => (
+            <option key={s._id} value={s._id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="rater_id">Rater *</Label>
+        <select
+          id="rater_id"
+          value={formData.rater_id}
+          onChange={(e) => setFormData({ ...formData, rater_id: e.target.value })}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select rater</option>
+          {staff.map((s) => (
+            <option key={s._id} value={s._id}>{s.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label htmlFor="rating">Rating (1-5) *</Label>
+        <div className="flex items-center gap-4 mt-2">
+          <Input
+            id="rating"
+            type="range"
+            min="1"
+            max="5"
+            step="0.5"
+            value={formData.rating}
+            onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) })}
+            className="flex-1"
+          />
+          <span className="text-2xl font-bold w-12 text-center">{formData.rating}</span>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Comments</Label>
-          <Textarea value={form.comments} onChange={(e) => set('comments', e.target.value)} rows={3} placeholder="Evaluator remarks…" />
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <span>Poor</span>
+          <span>Excellent</span>
         </div>
       </div>
-    </Drawer>
+      <div>
+        <Label htmlFor="comments">Comments</Label>
+        <Textarea
+          id="comments"
+          value={formData.comments}
+          onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+          placeholder="Provide feedback or comments"
+          rows={4}
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save Rating</Button>
+      </DialogFooter>
+    </form>
   )
 }

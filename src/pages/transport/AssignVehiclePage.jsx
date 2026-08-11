@@ -3,7 +3,7 @@
 // Page: Assign Vehicle
 //
 // Purpose:
-// Assign students to vehicles with capacity validation.
+// Assign vehicles to transport routes.
 //
 // Data Source:
 // transport.service.js
@@ -14,11 +14,10 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import { UserPlus, Eye, Trash2, Bus, Users, Search, CircleAlert as AlertCircle } from 'lucide-react'
+import { Link, Plus, Eye, Pencil, Trash2, Truck, Route as RouteIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
 import { PageHeader } from '@/components/PageHeader'
 import { SearchBar } from '@/components/SearchBar'
@@ -27,333 +26,293 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { CapacityIndicator } from '@/components/CapacityIndicator'
-import { useVehicleAssignments } from '@/hooks/useTransport'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { transportService } from '@/services/transport.service'
 import { formatDate } from '@/utils/format'
 import { useToast } from '@/hooks/use-toast'
-import { cn } from '@/lib/utils'
 
 const EXPORT_COLS = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'admission_no', label: 'Admission No' },
-  { key: 'class', label: 'Class' },
-  { key: 'vehicle_number', label: 'Vehicle' },
   { key: 'route_name', label: 'Route' },
-  { key: 'pickup_point_name', label: 'Pickup Point' },
-  { key: 'pickup_time', label: 'Pickup Time' },
-  { key: 'status', label: 'Status' },
+  { key: 'vehicle_number', label: 'Vehicle' },
+  { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function AssignVehiclePage() {
   const { toast } = useToast()
-  const {
-    rows: filtered, allAssignments: rows, stats, isLoading,
-    search, setSearch, vehicleFilter, setVehicleFilter,
-    assignVehicle, deleteAssignment,
-  } = useVehicleAssignments()
-  const { data: vehiclesData } = useAsyncData(() => transportService.getVehicles(), [])
-  const { data: routesData } = useAsyncData(() => transportService.getRoutes(), [])
-  const { data: pickupPointsData } = useAsyncData(() => transportService.getPickupPoints(), [])
-  const [assignOpen, setAssignOpen] = useState(false)
+  const { data: assignVehicles, isLoading, refetch } = useAsyncData(() => transportService.getAssignVehicles(), [])
+  const { data: routes, isLoading: routesLoading } = useAsyncData(() => transportService.getTransportRoutes(), [])
+  const { data: vehicles, isLoading: vehiclesLoading } = useAsyncData(() => transportService.getVehicles(), [])
+  
+  const [search, setSearch] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const vehicles = vehiclesData || []
-  const routes = routesData || []
-  const pickupPoints = pickupPointsData || []
+  const rows = assignVehicles || []
+  const allRoutes = routes || []
+  const allVehicles = vehicles || []
 
-  const handleAssign = async (payload) => {
-    // Capacity validation before assigning students.
-    const vehicle = vehicles.find((v) => v._id === payload.vehicle_id)
-    if (vehicle && vehicle.occupied >= vehicle.capacity) {
-      toast({ title: 'Vehicle is full', description: `${vehicle.vehicle_number} has no available seats.`, variant: 'destructive' })
-      return
-    }
-    await assignVehicle(payload)
-    setAssignOpen(false)
-  }
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    const route = allRoutes.find(rt => rt._id === r.route_id)
+    const vehicle = allVehicles.find(v => v._id === r.vehicle_id)
+    return !q || 
+      (route?.route_name || '').toLowerCase().includes(q) ||
+      (vehicle?.vehicle_number || '').toLowerCase().includes(q)
+  }), [rows, search, allRoutes, allVehicles])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    assigned: rows.length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
-      accessorKey: 'student_name',
-      header: 'Student',
-      cell: ({ row }) => (
-        <button className="flex flex-col text-left" onClick={() => setViewRow(row.original)}>
-          <span className="font-medium hover:underline">{row.original.student_name}</span>
-          <span className="text-xs text-muted-foreground">{row.original.admission_no}</span>
-        </button>
-      ),
+      accessorKey: 'route_id',
+      header: 'Route',
+      cell: ({ row }) => {
+        const route = allRoutes.find(r => r._id === row.original.route_id)
+        return (
+          <button className="flex items-center gap-3 text-left" onClick={() => setViewRow(row.original)}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+              <RouteIcon className="h-4 w-4" />
+            </div>
+            <span className="font-medium hover:underline">{route?.route_name || 'Unknown'}</span>
+          </button>
+        )
+      },
     },
-    { accessorKey: 'class', header: 'Class', cell: ({ row }) => <Badge variant="outline">{row.original.class}</Badge> },
-    { accessorKey: 'vehicle_number', header: 'Vehicle', cell: ({ row }) => (
-      <span className="flex items-center gap-1.5">
-        <Bus className="h-3.5 w-3.5 text-muted-foreground" />
-        {row.original.vehicle_number}
-      </span>
-    ) },
-    { accessorKey: 'route_name', header: 'Route', cell: ({ row }) => <Badge variant="secondary">{row.original.route_name}</Badge> },
-    { accessorKey: 'pickup_point_name', header: 'Pickup Point' },
-    { accessorKey: 'pickup_time', header: 'Time' },
-  ], [])
+    {
+      accessorKey: 'vehicle_id',
+      header: 'Vehicle',
+      cell: ({ row }) => {
+        const vehicle = allVehicles.find(v => v._id === row.original.vehicle_id)
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-success/10 text-sm font-bold text-success">
+              <Truck className="h-4 w-4" />
+            </div>
+            <span className="font-medium">{vehicle?.vehicle_number || 'Unknown'}</span>
+          </div>
+        )
+      },
+    },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
+  ], [allRoutes, allVehicles])
 
   const rowActions = (r) => [
     { label: 'View', icon: Eye, onClick: () => setViewRow(r) },
+    { label: 'Edit', icon: Pencil, onClick: () => setEditRow(r) },
     { separator: true },
-    { label: 'Remove', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
+    { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
+
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await transportService.updateAssignVehicle(id, payload)
+        toast({ title: 'Assignment updated successfully' })
+        setEditRow(null)
+      } else {
+        await transportService.createAssignVehicle(payload)
+        toast({ title: 'Assignment created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save assignment:', error)
+      toast({ title: 'Failed to save assignment', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await transportService.deleteAssignVehicle(id)
+      toast({ title: 'Assignment deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete assignment:', error)
+      toast({ title: 'Failed to delete assignment', variant: 'destructive' })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Transport' }, { label: 'Assign Vehicle' }]} />
       <PageHeader
         title="Assign Vehicle"
-        description="Assign students to vehicles with capacity validation."
-        icon={UserPlus}
-        actions={<Button onClick={() => setAssignOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Assign Student</Button>}
+        description="Assign vehicles to transport routes."
+        icon={Link}
+        actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Assignment</Button>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total Assignments" value={stats.total} icon={Users} accent="primary" />
-        <StatCard label="Vehicles in Use" value={stats.vehicles} icon={Bus} accent="chart2" />
-        <StatCard label="Routes Covered" value={stats.routes} icon={Bus} accent="success" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard label="Total Assignments" value={stats.total} icon={Link} accent="primary" />
+        <StatCard label="Routes with Vehicle" value={stats.assigned} icon={Truck} accent="success" />
       </div>
 
       <FilterBar>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by student, admission no, or vehicle…" className="max-w-sm" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search by route or vehicle…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="vehicle-assignments" />
-          <select value={vehicleFilter} onChange={(e) => setVehicleFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All vehicles</option>
-            {vehicles.map((v) => <option key={v._id} value={v._id}>{v.vehicle_number}</option>)}
-          </select>
+          <ExportButtons 
+            rows={filtered.map(r => ({
+              ...r,
+              route_name: allRoutes.find(rt => rt._id === r.route_id)?.route_name || 'Unknown',
+              vehicle_number: allVehicles.find(v => v._id === r.vehicle_id)?.vehicle_number || 'Unknown',
+            }))} 
+            columns={EXPORT_COLS} 
+            filename="assign-vehicles" 
+          />
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={6} />
+        <LoadingSkeleton variant="table" rows={5} cols={3} />
       ) : filtered.length === 0 ? (
-        <NoData title="No assignments found" description="Assign a student to a vehicle to get started." actionLabel="Assign Student" onAction={() => setAssignOpen(true)} />
+        <NoData title="No assignments found" description="Assign a vehicle to a route to get started." actionLabel="Add Assignment" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
           data={filtered}
-          enableSelection
-          enableExport
-          exportFilename="vehicle-assignments"
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      <AssignVehicleDrawer
-        open={assignOpen}
-        onOpenChange={setAssignOpen}
-        vehicles={vehicles}
-        routes={routes}
-        pickupPoints={pickupPoints}
-        onSubmit={handleAssign}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Assignment' : 'Assign Vehicle'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update vehicle assignment' : 'Assign a vehicle to a route'}</DialogDescription>
+          </DialogHeader>
+          <AssignVehicleForm 
+            initial={editRow} 
+            routes={allRoutes}
+            vehicles={allVehicles}
+            routesLoading={routesLoading}
+            vehiclesLoading={vehiclesLoading}
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Assignment Details"
-        description={viewRow?.student_name}
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
-        {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Users className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.student_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.admission_no} · {viewRow.class}</p>
-              </div>
-            </div>
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+        {viewRow && (() => {
+          const route = allRoutes.find(r => r._id === viewRow.route_id)
+          const vehicle = allVehicles.find(v => v._id === viewRow.vehicle_id)
+          return (
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
               {[
-                { label: 'Vehicle', value: viewRow.vehicle_number },
-                { label: 'Route', value: viewRow.route_name },
-                { label: 'Pickup Point', value: viewRow.pickup_point_name },
-                { label: 'Pickup Time', value: viewRow.pickup_time },
-                { label: 'Assigned On', value: formatDate(viewRow.assigned_at) },
+                { label: 'Route', value: route?.route_name || 'Unknown' },
+                { label: 'Vehicle', value: vehicle?.vehicle_number || 'Unknown' },
+                { label: 'Vehicle Type', value: vehicle?.type || '—' },
+                { label: 'Created', value: formatDate(viewRow.createdAt) },
+                { label: 'Updated', value: formatDate(viewRow.updatedAt) },
               ].map((f) => (
                 <div key={f.label} className="space-y-0.5">
                   <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value || '—'}</dd>
+                  <dd className="text-sm font-medium">{f.value}</dd>
                 </div>
               ))}
             </dl>
-          </div>
-        )}
+          )
+        })()}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.student_name}
-        onConfirm={async () => {
-          await deleteAssignment(deleteRow._id)
-          setDeleteRow(null)
-        }}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Assignment</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this assignment? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Assign Vehicle Drawer ───────────────────────────────────────────────────
-// Staff search for a student, pick a vehicle (with capacity check), and
-// select a route + pickup point.
-function AssignVehicleDrawer({ open, onOpenChange, vehicles, routes, pickupPoints, onSubmit }) {
-  const [form, setForm] = useState({
-    student_name: '',
-    student_id: '',
-    admission_no: '',
-    class: '',
-    vehicle_id: '',
+function AssignVehicleForm({ initial, routes, vehicles, routesLoading, vehiclesLoading, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
     route_id: '',
-    pickup_point_id: '',
+    vehicle_id: '',
   })
-  const [studentSearch, setStudentSearch] = useState('')
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
-
-  // Selected vehicle — used for capacity validation display.
-  const selectedVehicle = vehicles.find((v) => v._id === form.vehicle_id)
-  const availableSeats = selectedVehicle ? selectedVehicle.capacity - selectedVehicle.occupied : 0
-  const isFull = selectedVehicle && selectedVehicle.occupied >= selectedVehicle.capacity
-
-  // Filter pickup points by selected route — cascading dropdown.
-  const filteredPickupPoints = useMemo(() => {
-    if (!form.route_id) return pickupPoints
-    return pickupPoints.filter((p) => p.route_id === form.route_id)
-  }, [pickupPoints, form.route_id])
-
-  const handleSubmit = () => {
-    if (!form.student_name.trim() || !form.vehicle_id) {
-      return
+  useState(() => {
+    if (initial) {
+      setFormData({
+        route_id: initial.route_id || '',
+        vehicle_id: initial.vehicle_id || '',
+      })
+    } else {
+      setFormData({
+        route_id: routes[0]?._id || '',
+        vehicle_id: vehicles[0]?._id || '',
+      })
     }
-    const vehicle = vehicles.find((v) => v._id === form.vehicle_id)
-    const route = routes.find((r) => r._id === form.route_id)
-    const pickup = pickupPoints.find((p) => p._id === form.pickup_point_id)
-    onSubmit({
-      ...form,
-      vehicle_number: vehicle?.vehicle_number || '',
-      route_name: route?.name || '',
-      pickup_point_name: pickup?.name || '',
-      pickup_time: pickup?.time || '',
-    })
+  }, [initial, routes, vehicles])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
   }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Assign Student to Vehicle"
-      description="Select a student, vehicle, route, and pickup point"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel="Assign"
-          submitDisabled={!form.student_name.trim() || !form.vehicle_id}
-          onSubmit={handleSubmit}
-        />
-      }
-    >
-      <div className="space-y-4">
-        <FormSection columns={1}>
-          {/* Student search — type the student name and admission number */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Student Name <span className="text-destructive">*</span></Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={studentSearch}
-                onChange={(e) => { setStudentSearch(e.target.value); set('student_name', e.target.value) }}
-                placeholder="Search student name…"
-                className="pl-9"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Admission No</Label>
-              <Input value={form.admission_no} onChange={(e) => set('admission_no', e.target.value)} placeholder="ADM-1001" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Class</Label>
-              <Input value={form.class} onChange={(e) => set('class', e.target.value)} placeholder="10-A" />
-            </div>
-          </div>
-        </FormSection>
-
-        {/* Vehicle selection with capacity indicator */}
-        <div className="space-y-2">
-          <Label className="text-xs">Select Vehicle <span className="text-destructive">*</span></Label>
-          <select value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="">Select a vehicle</option>
-            {vehicles.filter((v) => v.status === 'active').map((v) => (
-              <option key={v._id} value={v._id}>{v.vehicle_number} ({v.occupied}/{v.capacity} seats)</option>
-            ))}
-          </select>
-          {/* Capacity validation — show warning if vehicle is full. */}
-          {selectedVehicle && (
-            <div className="rounded-lg border p-3">
-              {isFull ? (
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">This vehicle is at full capacity.</span>
-                </div>
-              ) : (
-                <>
-                  <CapacityIndicator occupied={selectedVehicle.occupied} capacity={selectedVehicle.capacity} />
-                  <p className="mt-1.5 text-xs text-muted-foreground">{availableSeats} seat(s) available</p>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        <FormSection columns={1}>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Route</Label>
-              <select value={form.route_id} onChange={(e) => { set('route_id', e.target.value); set('pickup_point_id', '') }}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                <option value="">Select route</option>
-                {routes.filter((r) => r.status === 'active').map((r) => (
-                  <option key={r._id} value={r._id}>{r.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Pickup Point</Label>
-              <select value={form.pickup_point_id} onChange={(e) => set('pickup_point_id', e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                disabled={!form.route_id}>
-                <option value="">Select pickup point</option>
-                {filteredPickupPoints.map((p) => (
-                  <option key={p._id} value={p._id}>{p.name} ({p.time})</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </FormSection>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="route_id">Route *</Label>
+        <select
+          id="route_id"
+          value={formData.route_id}
+          onChange={(e) => setFormData({ ...formData, route_id: e.target.value })}
+          disabled={routesLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select route</option>
+          {routes.map((r) => (
+            <option key={r._id} value={r._id}>{r.route_name || 'Unnamed'}</option>
+          ))}
+        </select>
       </div>
-    </Drawer>
+      <div>
+        <Label htmlFor="vehicle_id">Vehicle *</Label>
+        <select
+          id="vehicle_id"
+          value={formData.vehicle_id}
+          onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
+          disabled={vehiclesLoading}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          required
+        >
+          <option value="">Select vehicle</option>
+          {vehicles.map((v) => (
+            <option key={v._id} value={v._id}>{v.vehicle_number || 'Unknown'} ({v.type || '—'})</option>
+          ))}
+        </select>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

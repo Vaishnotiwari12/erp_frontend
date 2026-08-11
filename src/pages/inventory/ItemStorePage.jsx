@@ -3,7 +3,7 @@
 // Page: Item Store
 //
 // Purpose:
-// Manage inventory stores/warehouses and their locations.
+// Manage inventory stores.
 //
 // Data Source:
 // inventory.service.js
@@ -14,13 +14,7 @@
 // ====================================================================
 
 import { useMemo, useState } from 'react'
-import {
-  Warehouse,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
+import { Warehouse, Plus, Eye, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,39 +26,43 @@ import { StatCard } from '@/components/StatCard'
 import { ActionDropdown } from '@/components/ActionDropdown'
 import { DataTable } from '@/components/DataTable'
 import { Drawer, DrawerFooter } from '@/components/Drawer'
-import { DeleteDialog } from '@/components/DeleteDialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExportButtons } from '@/components/ExportButtons'
 import { LoadingSkeleton } from '@/components/LoadingSkeleton'
 import { NoData } from '@/components/NoData'
-import { FormSection } from '@/components/FormSection'
-import { StatusBadge } from '@/components/StatusBadge'
-import { useItemStores } from '@/hooks/useInventory'
+import { useAsyncData } from '@/hooks/useAsyncData'
+import { inventoryService } from '@/services/inventory.service'
 import { formatDate } from '@/utils/format'
+import { useToast } from '@/hooks/use-toast'
 
 const EXPORT_COLS = [
   { key: 'store_name', label: 'Store Name' },
   { key: 'location', label: 'Location' },
-  { key: 'status', label: 'Status' },
   { key: 'createdAt', label: 'Created At' },
 ]
 
 export default function ItemStorePage() {
-  const {
-    rows, isLoading,
-    search, setSearch, statusFilter, setStatusFilter,
-    saveItemStore, deleteItemStore,
-  } = useItemStores()
-
+  const { toast } = useToast()
+  const { data: stores, isLoading, refetch } = useAsyncData(() => inventoryService.getItemStores(), [])
+  
+  const [search, setSearch] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [editRow, setEditRow] = useState(null)
   const [viewRow, setViewRow] = useState(null)
   const [deleteRow, setDeleteRow] = useState(null)
 
-  const handleSave = async (payload, id) => {
-    await saveItemStore(payload, id)
-    if (id) setEditRow(null)
-    else setAddOpen(false)
-  }
+  const rows = stores || []
+
+  const filtered = useMemo(() => rows.filter((r) => {
+    const q = search.toLowerCase()
+    return !q || 
+      (r.store_name || '').toLowerCase().includes(q) ||
+      (r.location || '').toLowerCase().includes(q)
+  }), [rows, search])
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+  }), [rows])
 
   const columns = useMemo(() => [
     {
@@ -75,13 +73,12 @@ export default function ItemStorePage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Warehouse className="h-4 w-4" />
           </div>
-          <span className="font-medium hover:underline">{row.original.store_name}</span>
+          <span className="font-medium hover:underline">{row.original.store_name || 'Unnamed'}</span>
         </button>
       ),
     },
-    { accessorKey: 'location', header: 'Location', cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.location || '—'}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-    { accessorKey: 'createdAt', header: 'Created On', cell: ({ row }) => formatDate(row.original.createdAt) },
+    { accessorKey: 'location', header: 'Location', cell: ({ row }) => row.original.location || '—' },
+    { accessorKey: 'createdAt', header: 'Created', cell: ({ row }) => formatDate(row.original.createdAt) },
   ], [])
 
   const rowActions = (r) => [
@@ -91,147 +88,169 @@ export default function ItemStorePage() {
     { label: 'Delete', icon: Trash2, variant: 'destructive', onClick: () => setDeleteRow(r) },
   ]
 
+  const handleSave = async (payload, id) => {
+    try {
+      if (id) {
+        await inventoryService.updateItemStore(id, payload)
+        toast({ title: 'Store updated successfully' })
+        setEditRow(null)
+      } else {
+        await inventoryService.createItemStore(payload)
+        toast({ title: 'Store created successfully' })
+        setAddOpen(false)
+      }
+      refetch()
+    } catch (error) {
+      console.error('Failed to save store:', error)
+      toast({ title: 'Failed to save store', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await inventoryService.deleteItemStore(id)
+      toast({ title: 'Store deleted successfully' })
+      setDeleteRow(null)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete store:', error)
+      toast({ title: 'Failed to delete store', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Inventory' }, { label: 'Item Store' }]} />
       <PageHeader
         title="Item Stores"
-        description="Manage inventory stores, warehouses, and their locations."
+        description="Manage inventory stores."
         icon={Warehouse}
         actions={<Button onClick={() => setAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Store</Button>}
       />
 
+      <div className="grid gap-4 sm:grid-cols-1">
+        <StatCard label="Total Stores" value={stats.total} icon={Warehouse} accent="primary" />
+      </div>
+
       <FilterBar>
         <SearchBar value={search} onChange={setSearch} placeholder="Search by store name or location…" className="max-w-sm" />
         <div className="flex flex-wrap items-center gap-2">
-          <ExportButtons rows={rows} columns={EXPORT_COLS} filename="inventory-stores" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <ExportButtons rows={filtered} columns={EXPORT_COLS} filename="item-stores" />
         </div>
       </FilterBar>
 
       {isLoading ? (
-        <LoadingSkeleton variant="table" rows={5} cols={4} />
-      ) : rows.length === 0 ? (
-        <NoData title="No stores found" description="Add a new store to get started." actionLabel="Add Store" onAction={() => setAddOpen(true)} />
+        <LoadingSkeleton variant="table" rows={5} cols={3} />
+      ) : filtered.length === 0 ? (
+        <NoData title="No stores found" description="Add a store to get started." actionLabel="Add Store" onAction={() => setAddOpen(true)} />
       ) : (
         <DataTable
           columns={columns}
-          data={rows}
-          enableSelection
-          enableExport
-          exportFilename="inventory-stores"
+          data={filtered}
           rowActions={(r) => <ActionDropdown actions={rowActions(r)} />}
         />
       )}
 
-      {/* Reusable Store Form Drawer used for both Add and Edit. */}
-      <StoreFormDrawer
-        open={addOpen || !!editRow}
-        onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}
-        title={editRow ? 'Edit Store' : 'Add Store'}
-        initial={editRow}
-        onSubmit={(payload) => handleSave(payload, editRow?._id)}
-      />
+      {/* Add/Edit Dialog */}
+      <Dialog open={addOpen || !!editRow} onOpenChange={(o) => { if (!o) { setAddOpen(false); setEditRow(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editRow ? 'Edit Store' : 'Add Store'}</DialogTitle>
+            <DialogDescription>{editRow ? 'Update store details' : 'Add a new store'}</DialogDescription>
+          </DialogHeader>
+          <ItemStoreForm 
+            initial={editRow} 
+            onSubmit={(payload) => handleSave(payload, editRow?._id)} 
+            onCancel={() => { setAddOpen(false); setEditRow(null) }} 
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Detail drawer */}
+      {/* View Drawer */}
       <Drawer
         open={!!viewRow}
         onOpenChange={(o) => !o && setViewRow(null)}
         title="Store Details"
-        description={viewRow?.store_name}
         width="sm:max-w-md"
         footer={<Button variant="outline" onClick={() => setViewRow(null)}>Close</Button>}
       >
         {viewRow && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 rounded-xl border bg-muted/30 p-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Warehouse className="h-5 w-5" />
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            {[
+              { label: 'Store Name', value: viewRow.store_name || 'Unnamed' },
+              { label: 'Location', value: viewRow.location || '—' },
+              { label: 'Created', value: formatDate(viewRow.createdAt) },
+              { label: 'Updated', value: formatDate(viewRow.updatedAt) },
+            ].map((f) => (
+              <div key={f.label} className="space-y-0.5">
+                <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm font-medium">{f.value}</dd>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold">{viewRow.store_name}</p>
-                <p className="text-xs text-muted-foreground">{viewRow.location || '—'}</p>
-              </div>
-              <StatusBadge status={viewRow.status} />
-            </div>
-
-            <dl className="grid grid-cols-1 gap-y-4">
-              {[
-                { label: 'Location', value: viewRow.location || '—' },
-                { label: 'Created On', value: formatDate(viewRow.createdAt) },
-              ].map((f) => (
-                <div key={f.label} className="space-y-0.5">
-                  <dt className="text-xs font-medium text-muted-foreground">{f.label}</dt>
-                  <dd className="text-sm font-medium">{f.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+            ))}
+          </dl>
         )}
       </Drawer>
 
-      <DeleteDialog
-        open={!!deleteRow}
-        onOpenChange={(o) => !o && setDeleteRow(null)}
-        entityName={deleteRow?.store_name}
-        onConfirm={() => deleteItemStore(deleteRow._id)}
-      />
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteRow} onOpenChange={(o) => !o && setDeleteRow(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Store</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this store? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRow(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleDelete(deleteRow._id)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-// ─── Store Form Drawer (shared by Add and Edit) ──────────────────────────────
-function StoreFormDrawer({ open, onOpenChange, title, initial, onSubmit }) {
-  const [form, setForm] = useState({
-    store_name: initial?.store_name || '',
-    location: initial?.location || '',
-    status: initial?.status || 'active',
+function ItemStoreForm({ initial, onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({
+    store_name: '',
+    location: '',
   })
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }))
+  useState(() => {
+    if (initial) {
+      setFormData({
+        store_name: initial.store_name || '',
+        location: initial.location || '',
+      })
+    }
+  }, [initial])
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    onSubmit(formData)
+  }
 
   return (
-    <Drawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={title}
-      description="Store information and location"
-      width="sm:max-w-md"
-      footer={
-        <DrawerFooter
-          onCancel={() => onOpenChange(false)}
-          submitLabel={initial ? 'Save Changes' : 'Add Store'}
-          submitDisabled={!form.store_name.trim()}
-          onSubmit={() => onSubmit(form)}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="store_name">Store Name *</Label>
+        <Input
+          id="store_name"
+          value={formData.store_name}
+          onChange={(e) => setFormData({ ...formData, store_name: e.target.value })}
+          required
         />
-      }
-    >
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit(form) }} className="space-y-4">
-        <FormSection columns={1}>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Store Name <span className="text-destructive">*</span></Label>
-            <Input value={form.store_name} onChange={(e) => set('store_name', e.target.value)} placeholder="e.g. Main Warehouse" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Location</Label>
-            <Input value={form.location} onChange={(e) => set('location', e.target.value)} placeholder="e.g. Ground Floor, Block A" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Status</Label>
-            <select value={form.status} onChange={(e) => set('status', e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </FormSection>
-        <button type="submit" className="hidden" />
-      </form>
-    </Drawer>
+      </div>
+      <div>
+        <Label htmlFor="location">Location</Label>
+        <Input
+          id="location"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit">Save</Button>
+      </DialogFooter>
+    </form>
   )
 }

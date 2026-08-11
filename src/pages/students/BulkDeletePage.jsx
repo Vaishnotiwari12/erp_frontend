@@ -1,291 +1,157 @@
 import { useState } from 'react'
-import { Trash2, RefreshCw, Search, Download } from 'lucide-react'
-
+import { Trash2, RefreshCw, Search, CheckSquare2, AlertTriangle } from 'lucide-react'
 import Breadcrumbs from '@/components/breadcrumbs/Breadcrumbs'
-import PageHeader from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { SearchBar } from '@/components/SearchBar'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { NoData } from '@/components/NoData'
+import StatusBadge from '@/components/StatusBadge'
+import { DeleteDialog } from '@/components/DeleteDialog'
+import { useBulkDelete } from '@/hooks/useStudents'
+import { fullName } from '@/utils/format'
 
 export default function BulkDeletePage() {
-  const [selected, setSelected] = useState([])
+  const { rows, selected, toggleSelection, selectAll, clearSelection, deleteSelected, isLoading, error, refetch, search, setSearch } = useBulkDelete()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const allSelected = rows.length > 0 && rows.every((student) => selected.some((item) => item._id === student._id))
 
-  const students = [
-    {
-      id: '1',
-      admissionNo: 'ADM001',
-      rollNo: '01',
-      name: 'Rahul Sharma',
-      father: 'Rajesh Sharma',
-      class: '10',
-      section: 'A',
-      phone: '9876543210',
-      status: 'Active',
-    },
-    {
-      id: '2',
-      admissionNo: 'ADM002',
-      rollNo: '02',
-      name: 'Priya Singh',
-      father: 'Mahesh Singh',
-      class: '10',
-      section: 'A',
-      phone: '9876543211',
-      status: 'Active',
-    },
-  ]
-
-  const toggle = (id) => {
-    setSelected((prev) =>
-      prev.includes(id)
-        ? prev.filter((item) => item !== id)
-        : [...prev, id]
-    )
-  }
-
-  const toggleAll = () => {
-    if (selected.length === students.length) {
-      setSelected([])
-    } else {
-      setSelected(students.map((s) => s.id))
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteSelected()
+      setShowDeleteDialog(false)
+    } finally {
+      setDeleting(false)
     }
   }
 
   return (
-    <div className="space-y-6">
-      <Breadcrumbs
-        items={[
-          { label: 'Home', to: '/' },
-          { label: 'Student Information' },
-          { label: 'Bulk Delete' },
-        ]}
-      />
-
-      <PageHeader
-        title="Bulk Delete Students"
-        description="Delete multiple students at once."
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-
-            <Button
-              variant="destructive"
-              disabled={!selected.length}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected ({selected.length})
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Stats */}
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Total Students
-            </p>
-            <h2 className="mt-2 text-3xl font-bold">
-              {students.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Selected
-            </p>
-            <h2 className="mt-2 text-3xl font-bold">
-              {selected.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Remaining
-            </p>
-            <h2 className="mt-2 text-3xl font-bold">
-              {students.length - selected.length}
-            </h2>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Ready To Delete
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-red-600">
-              {selected.length}
-            </h2>
-          </CardContent>
-        </Card>
+    <div className="space-y-8 animate-fade-in">
+      <Breadcrumbs items={[{ label: 'Home', to: '/dashboard' }, { label: 'Students', to: '/students' }, { label: 'Bulk Delete' }]} />
+      
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Bulk Delete Students</h1>
+          <p className="text-muted-foreground">Select and permanently delete multiple student records at once.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={refetch} disabled={isLoading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            variant="destructive" 
+            disabled={!selected.length || isLoading} 
+            onClick={() => setShowDeleteDialog(true)}
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Selected ({selected.length})
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-
-      <Card>
-        <CardContent className="p-6 space-y-4">
-
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search students..."
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <SearchBar 
+              value={search} 
+              onChange={setSearch} 
+              placeholder="Search by name, email, roll number..." 
               className="pl-10"
             />
           </div>
-
-          <div className="grid gap-4 md:grid-cols-4">
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Class" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="10">Class 10</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Section" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="A">A</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="active">
-                  Active
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="general">
-                  General
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
+          <div className="flex items-center gap-2">
+            <CheckSquare2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{selected.length}</span> selected from <span className="font-semibold text-foreground">{rows.length}</span> visible records
+            </span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Table */}
+        {isLoading ? (
+          <div className="py-12">
+            <LoadingSkeleton variant="table" rows={8} cols={9} />
+          </div>
+        ) : error ? (
+          <NoData 
+            title="Unable to load students" 
+            description={error.message || 'The backend could not return student records. Please try again.'} 
+            actionLabel="Retry" 
+            onAction={refetch} 
+            icon={AlertTriangle}
+          />
+        ) : rows.length === 0 ? (
+          <NoData 
+            title="No students available" 
+            description="There are no records matching this search criteria." 
+            icon={CheckSquare2}
+          />
+        ) : (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={allSelected} 
+                        onCheckedChange={(checked) => checked ? selectAll() : clearSelection()} 
+                        aria-label="Select all"
+                      />
+                    </TableHead>
+                    <TableHead>Roll Number</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Guardian</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Mobile</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((student) => (
+                    <TableRow key={student._id} className={selected.some((item) => item._id === student._id) ? 'bg-muted/50' : ''}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selected.some((item) => item._id === student._id)} 
+                          onCheckedChange={() => toggleSelection(student)}
+                          aria-label={`Select ${fullName(student.name)}`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{student.roll_number || '—'}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{fullName(student.name) || 'Unnamed student'}</p>
+                          <p className="text-xs text-muted-foreground">{student.email || '—'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>{student.guardian?.name || '—'}</TableCell>
+                      <TableCell>{student.class_name || '—'}</TableCell>
+                      <TableCell>{student.section || '—'}</TableCell>
+                      <TableCell>{student.mobile || '—'}</TableCell>
+                      <TableCell><StatusBadge status={student.status || 'active'} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      <Card>
-        <CardContent className="p-0">
-
-          <Table>
-
-            <TableHeader>
-
-              <TableRow>
-
-                <TableHead>
-
-                  <Checkbox
-                    checked={
-                      selected.length === students.length &&
-                      students.length > 0
-                    }
-                    onCheckedChange={toggleAll}
-                  />
-
-                </TableHead>
-
-                <TableHead>Admission No</TableHead>
-                <TableHead>Roll No</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Father</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Section</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-
-              </TableRow>
-
-            </TableHeader>
-
-            <TableBody>
-
-              {students.map((student) => (
-
-                <TableRow key={student.id}>
-
-                  <TableCell>
-
-                    <Checkbox
-                      checked={selected.includes(student.id)}
-                      onCheckedChange={() =>
-                        toggle(student.id)
-                      }
-                    />
-
-                  </TableCell>
-
-                  <TableCell>{student.admissionNo}</TableCell>
-                  <TableCell>{student.rollNo}</TableCell>
-                  <TableCell>{student.name}</TableCell>
-                  <TableCell>{student.father}</TableCell>
-                  <TableCell>{student.class}</TableCell>
-                  <TableCell>{student.section}</TableCell>
-                  <TableCell>{student.phone}</TableCell>
-                  <TableCell>{student.status}</TableCell>
-
-                </TableRow>
-
-              ))}
-
-            </TableBody>
-
-          </Table>
-
-        </CardContent>
-      </Card>
+      <DeleteDialog 
+        open={showDeleteDialog} 
+        onOpenChange={setShowDeleteDialog} 
+        entityName={`${selected.length} student${selected.length > 1 ? 's' : ''}`} 
+        onConfirm={handleDelete} 
+        loading={deleting}
+      />
     </div>
   )
 }

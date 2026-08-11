@@ -25,40 +25,37 @@
 import apiClient from './api'
 
 export const academicsService = {
-  // ==========================================================
-  // Classes
-  // ==========================================================
+  async classes(page = 1, limit = 25) {
+    const res = await apiClient.get(`/academic/class?page=${page}&limit=${limit}`)
+    return res || []
+  },
 
-  async classes(params = {}) {
-    return apiClient.get('/academic/class', {
-      params,
+  createClass(data) {
+    return apiClient.post("/academic/class", {
+      class_name: data.class_name,
     })
   },
 
-  async getClass(id) {
-    return apiClient.get(`/academic/class/${id}`)
+  updateClass(id, data) {
+    return apiClient.put(`/academic/class/${id}`, {
+      class_name: data.class_name,
+    })
   },
 
-  async createClass(payload) {
-    return apiClient.post('/academic/class', payload)
-  },
-
-  async updateClass(id, payload) {
-    return apiClient.put(`/academic/class/${id}`, payload)
-  },
-
-  async deleteClass(id) {
+  deleteClass(id) {
     return apiClient.delete(`/academic/class/${id}`)
   },
+
 
   // ==========================================================
   // Sections
   // ==========================================================
 
   async sections(params = {}) {
-    return apiClient.get('/academic/sections', {
+    const res = await apiClient.get('/academic/sections', {
       params,
     })
+    return res || []
   },
 
   async getSection(id) {
@@ -82,9 +79,10 @@ export const academicsService = {
   // ==========================================================
 
   async subjectGroups(params = {}) {
-    return apiClient.get('/academic/subject-group', {
+    const res = await apiClient.get('/academic/subject-group', {
       params,
     })
+    return res || []
   },
 
   async getSubjectGroup(id) {
@@ -108,23 +106,8 @@ export const academicsService = {
   // ==========================================================
 
   async subjects(params = {}) {
-    // Mock implementation for development
-    // TODO: Replace with: return apiClient.get('/academic/subjects', { params })
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          success: true,
-          data: [
-            { _id: 'sub-001', name: 'Mathematics', code: 'MATH', theory: 80, practical: 20, type: 'Core', group: 'Mathematics Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
-            { _id: 'sub-002', name: 'Physics', code: 'PHY', theory: 70, practical: 30, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
-            { _id: 'sub-003', name: 'Chemistry', code: 'CHEM', theory: 70, practical: 30, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-01T00:00:00Z' },
-            { _id: 'sub-004', name: 'Biology', code: 'BIO', theory: 60, practical: 40, type: 'Elective', group: 'Science Group', status: 'active', createdAt: '2024-06-02T00:00:00Z' },
-            { _id: 'sub-005', name: 'English', code: 'ENG', theory: 100, practical: 0, type: 'Core', group: 'Languages Group', status: 'active', createdAt: '2024-06-02T00:00:00Z' },
-          ],
-          message: 'Subjects fetched successfully'
-        })
-      }, 300)
-    })
+    const res = await apiClient.get('/academic/subjects', { params })
+    return res || []
   },
 
   async getSubject(id) {
@@ -148,9 +131,10 @@ export const academicsService = {
   // ==========================================================
 
   async classTeachers(params = {}) {
-    return apiClient.get('/academic/assign-teacher', {
+    const res = await apiClient.get('/academic/assign-teacher', {
       params,
     })
+    return res || []
   },
 
   async getClassTeacher(id) {
@@ -174,9 +158,10 @@ export const academicsService = {
   // ==========================================================
 
   async classTimetable(params = {}) {
-    return apiClient.get('/academic/class-timetable', {
+    const res = await apiClient.get('/academic/class-timetable', {
       params,
     })
+    return res || []
   },
 
   async getClassTimetable(id) {
@@ -202,7 +187,8 @@ export const academicsService = {
   // ==========================================================
 
   async teacherTimetable(teacherId) {
-    return apiClient.get(`/academic/teacher-timetable/${teacherId}`)
+    const res = await apiClient.get(`/academic/teacher-timetable/${teacherId}`)
+    return res || []
   },
 
   // ==========================================================
@@ -210,9 +196,10 @@ export const academicsService = {
   // ==========================================================
 
   async promotedStudents(params = {}) {
-    return apiClient.get('/academic/promote-students', {
+    const res = await apiClient.get('/academic/promote-students', {
       params,
     })
+    return res || []
   },
 
   async getPromotion(id) {
@@ -230,6 +217,15 @@ export const academicsService = {
   async deletePromotion(id) {
     return apiClient.delete(`/academic/promote-students/${id}`)
   },
+
+  // ==========================================================
+  // Alias methods used by hooks
+  // Hooks call generic update/remove/bulkDelete — route to entity-specific methods.
+  // ==========================================================
+
+  async update(id, payload) { return this.updateClass(id, payload); },
+  async remove(id) { return this.deleteClass(id); },
+  async bulkDelete(ids) { return apiClient.post('/academic/class/bulk-delete', { ids }); },
 }
 
 export default academicsService
