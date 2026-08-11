@@ -285,31 +285,30 @@ export function Sidebar({ collapsed, onNavigate }) {
       </nav>
 
       {/* User footer */}
-      {/* User footer */}
-<div className="border-t border-border/60 p-3">
-  <div
-    className={cn(
-      'flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent',
-      collapsed && 'justify-center px-0'
-    )}
-  >
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-      {initials || 'U'}
-    </div>
+      <div className="border-t border-border/60 p-3">
+        <div
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent',
+            collapsed && 'justify-center px-0'
+          )}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {initials || 'U'}
+          </div>
 
-    {!collapsed && (
-      <div className="min-w-0">
-        <p className="truncate text-[13px] font-semibold leading-tight">
-          {displayName}
-        </p>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold leading-tight">
+                {displayName}
+              </p>
 
-        <p className="truncate text-xs font-medium leading-tight text-muted-foreground capitalize">
-          {user?.role || 'Admin'}
-        </p>
+              <p className="truncate text-xs font-medium leading-tight text-muted-foreground capitalize">
+                {user?.role || 'Admin'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    )}
-  </div>
-</div>
     </aside>
   )
 }
