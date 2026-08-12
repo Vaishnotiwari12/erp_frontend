@@ -418,9 +418,9 @@ export function useClassTimetable() {
         subject_id: payload.subject_id,
         teacher_id: payload.teacher_id,
         day: payload.day,
+        period: payload.period,
         start_time: payload.start_time,
         end_time: payload.end_time,
-        room: payload.room,
       }
       if (id) {
         await academicsService.updateClassTimetable(id, data)
@@ -492,8 +492,7 @@ export function usePromotions() {
     () =>
       rows.filter((r) => {
         const q = search.toLowerCase()
-        const studentName = r.name?.first ? `${r.name?.first} ${r.name?.last}`.toLowerCase() : ''
-        const matchSearch = !q || studentName.includes(q) || (r.from_class || '').toLowerCase().includes(q) || (r.to_class || '').toLowerCase().includes(q)
+        const matchSearch = !q || (r.from_class || '').toLowerCase().includes(q) || (r.to_class || '').toLowerCase().includes(q) || (r.session || '').toLowerCase().includes(q)
         return matchSearch
       }),
     [rows, search],
